@@ -2,6 +2,7 @@ import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import gc
 import hashlib
+import inspect
 import json
 import time
 import torch
@@ -13,6 +14,7 @@ from salt_vi.engine import train, test, build_model
 from salt_vi.utils import make_dirs, Logger
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
+from salt_vi.config.validation import validate_runtime_config
 from salt_vi.utils.utils import save_train_configs, load_train_configs, time_now
 from torch.utils.tensorboard import SummaryWriter
 from copy import deepcopy
@@ -117,6 +119,26 @@ def _training_checkpoint_path(output_path):
     return os.path.join(str(output_path), "checkpoint", "checkpoint_latest.pth")
 
 
+def _load_trusted_training_checkpoint(path):
+    """Load a locally produced full-state training checkpoint.
+
+    Training checkpoints deliberately contain optimizer and Python/NumPy RNG
+    state, so they require pickle deserialization.  They are trusted local
+    assets, never untrusted downloads.  PyTorch 2.6 changed its default to
+    ``weights_only=True``; requesting the historical full-state behaviour
+    explicitly keeps automatic resume portable across supported PyTorch
+    versions.
+    """
+    kwargs = {"map_location": torch.device("cpu")}
+    try:
+        supports_weights_only = "weights_only" in inspect.signature(torch.load).parameters
+    except (TypeError, ValueError):  # pragma: no cover - defensive for custom loaders.
+        supports_weights_only = False
+    if supports_weights_only:
+        kwargs["weights_only"] = False
+    return torch.load(path, **kwargs)
+
+
 def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -148,7 +170,7 @@ def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
 def _load_training_checkpoint(path, model, optimizer, scheduler, scaler, device):
     # Keep RNG byte tensors on CPU; load_state_dict moves model and optimizer
     # tensors to their owning parameter devices.
-    checkpoint = torch.load(path, map_location=torch.device("cpu"))
+    checkpoint = _load_trusted_training_checkpoint(path)
     required = {
         "schema_version",
         "epoch",
@@ -388,6 +410,7 @@ def _initialize_spatial_backups(model, config):
 
 
 def main(config):
+    validate_runtime_config(config)
     if bool(getattr(config, "DataParallel", False)):
         raise RuntimeError(
             "Legacy DataParallel is unsupported by SALT-VI. Use one process per GPU "

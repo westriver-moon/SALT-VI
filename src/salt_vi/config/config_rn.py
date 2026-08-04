@@ -2,6 +2,8 @@ import argparse
 import ast
 import sys
 
+from .validation import SUPPORTED_JOINT_MODES
+
 
 def _parse_int_pair(value):
     parsed = ast.literal_eval(value)
@@ -48,7 +50,12 @@ def build_parser():
     parser.add_argument('--test_model_type', default='Fusion', help='the type of mode for testing["IR","Fusion","Text"]',type=str)
     parser.add_argument('--test_modality', default='Fusion', help='testing retrieval mode ["IR","Fusion","Text"]',type=str)
     parser.add_argument('--training_mode', default='RGB_IR_Text', type=str, help='RGB_Text, RGB_IR, RGB_IR_Text')
-    parser.add_argument('--joint_mode', default='ir_crossfusion', type=str, help='[ir_crossfusion, ir_selffusion, rgb_selffusion, uni, dual_text]')
+    parser.add_argument(
+        '--joint_mode',
+        default='ir_crossfusion',
+        choices=SUPPORTED_JOINT_MODES,
+        help='supported modes: image_only, ir_crossfusion, uni',
+    )
 
 
 

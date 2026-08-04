@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parallel import parallel_apply
 from salt_vi.data.loader import validate_rgb_ir_text_batch_dict
+from salt_vi.config.validation import validate_runtime_config
 from salt_vi.utils import (
     TripletLoss_WRT,
     kl_align_loss,
@@ -400,6 +401,7 @@ class CLIP2ReID(nn.Module):
     def __init__(self, args, num_classes=11003):
         super().__init__()
         self.args = args
+        validate_runtime_config(args)
         validate_fusion_compatibility(args.training_mode, args.joint_mode, args.fusion_way)
         self.max_save_model_num = args.max_save_model_num
         self.output_path = args.output_path

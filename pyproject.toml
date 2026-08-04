@@ -21,6 +21,11 @@ dependencies = [
     "importlib_resources; python_version < '3.9'",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

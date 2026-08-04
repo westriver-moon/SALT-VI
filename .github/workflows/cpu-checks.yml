@@ -1,0 +1,39 @@
+name: CPU checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -e ".[test]" build
+      - name: Run runtime contracts
+        run: python -m pytest src/salt_vi/tests
+      - name: Check CLI help
+        run: python scripts/train.py --help
+      - name: Build and inspect wheel resources
+        run: |
+          python -m build --wheel
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheel = next(Path("dist").glob("*.whl"))
+          with ZipFile(wheel) as archive:
+              members = archive.namelist()
+          assert any(name.endswith("salt_vi/data/assets/bpe_simple_vocab_16e6.txt.gz") for name in members)
+          assert any(name.endswith("salt_vi/config/default.yaml") for name in members)
+          PY

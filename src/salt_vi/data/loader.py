@@ -287,7 +287,8 @@ class Loader:
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
                                                     joint_mode=self.joint_mode,\
-                                                        Feat_Filter=self.Feat_Filter)
+                                                        Feat_Filter=self.Feat_Filter,
+                                                        text_data_root=self.text_data_root)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 self.samples = samples
 
@@ -314,7 +315,8 @@ class Loader:
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
                                                     joint_mode=self.joint_mode,\
-                                                        Feat_Filter=self.Feat_Filter)
+                                                        Feat_Filter=self.Feat_Filter,
+                                                        text_data_root=self.text_data_root)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 self.samples = samples
             
@@ -383,7 +385,8 @@ class Loader:
                                         img_size=(self.img_w, self.img_h), data_path=self.regdb_data_path,\
                                             captioner_name=self.captioner_name, \
                                                 joint_mode=self.joint_mode,gallorquery=f'query[{trial}]',\
-                                                Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text)
+                                                Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
+                                                text_data_root=self.text_data_root)
                 query_samples_list.append(query_samples)
 
             gallery_samples_list = []
@@ -397,7 +400,8 @@ class Loader:
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.regdb_data_path,transform=self.transform_test,
                                             img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,\
                                                 joint_mode=self.joint_mode,gallorquery=f'gall[{trial}]',
-                                                Feat_Filter=self.Feat_Filter, load_text=False)
+                                                Feat_Filter=self.Feat_Filter, load_text=False,
+                                                text_data_root=self.text_data_root)
                 gallery_samples_list.append(gallery_samples)
             # Preserve the legacy single-trial attributes for external callers.
             self.query_label = self.query_labels[0]
@@ -411,7 +415,8 @@ class Loader:
                                      img_size=(self.img_w, self.img_h), data_path=self.llcm_data_path,\
                                         captioner_name=self.captioner_name, \
                                             joint_mode=self.joint_mode,gallorquery='query',\
-                                            Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text)
+                                                Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
+                                                text_data_root=self.text_data_root)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -432,7 +437,8 @@ class Loader:
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.llcm_data_path,transform=self.transform_test,
                                             img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,\
                                                 joint_mode=self.joint_mode,gallorquery=f'gall[{i+1}]',
-                                                Feat_Filter=self.Feat_Filter, load_text=False)
+                                                Feat_Filter=self.Feat_Filter, load_text=False,
+                                                text_data_root=self.text_data_root)
                 gallery_samples_list.append(gallery_samples)
             return query_samples, gallery_samples_list
         else:

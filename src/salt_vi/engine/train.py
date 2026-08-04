@@ -2,6 +2,22 @@ import torch
 from salt_vi.utils import MultiItemAverageMeter
 
 
+def handle_nonfinite_gradients(scaler, optimizer, nonfinite_gradients):
+    """Handle an AMP overflow without letting a disabled scaler update weights."""
+    if not scaler.is_enabled():
+        optimizer.zero_grad(set_to_none=True)
+        raise FloatingPointError(
+            "Non-finite gradients encountered without an active AMP scaler; "
+            f"first non-finite gradient: {nonfinite_gradients[0]}"
+        )
+    previous_scale = float(scaler.get_scale())
+    # GradScaler recorded the overflow during unscale_.  With AMP enabled,
+    # step() skips the optimizer update and update() reduces the scale.
+    scaler.step(optimizer)
+    scaler.update()
+    return previous_scale, float(scaler.get_scale())
+
+
 def train(base, loaders, scaler, config, optimizer, current_epoch=None):
     base.set_train()
     base.configure_qbn_running_stats(current_epoch)
@@ -67,14 +83,11 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
         if gradients_seen == 0:
             raise RuntimeError("No gradients were produced for any trainable parameter")
         if nonfinite_gradients:
-            previous_scale = float(scaler.get_scale())
-            # GradScaler recorded the overflow during unscale_.  step() now
-            # safely skips the optimizer update and update() lowers the scale.
-            scaler.step(optimizer)
-            scaler.update()
+            previous_scale, current_scale = handle_nonfinite_gradients(
+                scaler, optimizer, nonfinite_gradients
+            )
             consecutive_amp_overflows += 1
             amp_skipped_steps += 1
-            current_scale = float(scaler.get_scale())
             print(
                 "AMP overflow: skipped optimizer step "
                 f"({consecutive_amp_overflows}/{max_consecutive_amp_overflows}); "

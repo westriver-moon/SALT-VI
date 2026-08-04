@@ -22,17 +22,29 @@ def validate_identity_batch_config(batch_size, num_pos, number_of_identities):
 
 
 def GenIdx(train_color_label, train_thermal_label):
-    color_pos = []
-    unique_label_color = np.unique(train_color_label)
-    for i in range(len(unique_label_color)):
-        tmp_pos = [k for k, v in enumerate(train_color_label) if v == unique_label_color[i]]
-        color_pos.append(tmp_pos)
+    """Return sample positions keyed by identity label for both modalities.
 
-    thermal_pos = []
-    unique_label_thermal = np.unique(train_thermal_label)
-    for i in range(len(unique_label_thermal)):
-        tmp_pos = [k for k, v in enumerate(train_thermal_label) if v == unique_label_thermal[i]]
-        thermal_pos.append(tmp_pos)
+    Labels need not be dense or start at zero.  ReID datasets commonly remap
+    labels, but making that an implementation precondition caused IndexError
+    for otherwise valid identity annotations.
+    """
+    train_color_label = np.asarray(train_color_label)
+    train_thermal_label = np.asarray(train_thermal_label)
+    color_pos = {
+        label: np.flatnonzero(train_color_label == label)
+        for label in np.unique(train_color_label)
+    }
+    thermal_pos = {
+        label: np.flatnonzero(train_thermal_label == label)
+        for label in np.unique(train_thermal_label)
+    }
+    if set(color_pos) != set(thermal_pos):
+        missing_color = sorted(set(thermal_pos) - set(color_pos))
+        missing_thermal = sorted(set(color_pos) - set(thermal_pos))
+        raise ValueError(
+            "RGB and IR identity sets are inconsistent; "
+            f"missing from RGB={missing_color}, missing from IR={missing_thermal}"
+        )
 
     return color_pos, thermal_pos
 

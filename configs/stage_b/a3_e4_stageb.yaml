@@ -108,3 +108,12 @@ visual_unfreeze_last_n_blocks: 0
 save_best_per_metric: false
 metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/a3_e4_hpt_l025/e4/events.jsonl
 metric_experiment_id: A3-E4
+# Retained best Stage-B baseline used by read-only metric-boost tooling.  This
+# is provenance metadata, not an initialization override for a fresh run.
+metric_boost_checkpoint: /home/cgv841/ybj/SALT-VI/checkpoints/stage_b/tvi_lfm_reports/a3_e4_hpt_l025/e4/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,wrt_Fix_Visual/models/model_Fusion_21.pth
+metric_boost_source_log: /home/cgv841/ybj/SALT-VI/logs/raw/source_core/reports/a3_e4_hpt_l025/e4/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,wrt_Fix_Visual/logs/log.log
+metric_boost_best_epoch: 21
+metric_boost_reference_metrics:
+  Rank-1: 0.8212727
+  mAP: 0.7984514782316725
+  mINP: 0.6989697090719730

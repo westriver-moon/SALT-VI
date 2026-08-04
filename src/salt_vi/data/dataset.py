@@ -404,7 +404,7 @@ class RegDB_Tri_Data(data.Dataset):
                     colorIndex=None, thermalIndex=None, \
                             text_length=77, llm_aug_prob=0.5,\
                                     llm_aug=False, captioner_name='Blip', joint_mode="ir_crossfusion", \
-                                        Feat_Filter=False):
+                                        Feat_Filter=False, text_data_root=None):
         # initialize text tokenizer
         self.tokenizer = SimpleTokenizer()
 
@@ -449,7 +449,9 @@ class RegDB_Tri_Data(data.Dataset):
         # Load text data
         if joint_mode == "ir_crossfusion" or joint_mode == "uni":
             print("Loading RGB Text For Training...")
-            self.text_dir_rgb = _resolve_text_dir(data_dir, 'regdb', captioner_name, 'RGB')
+            self.text_dir_rgb = _resolve_text_dir(
+                data_dir, 'regdb', captioner_name, 'RGB', text_data_root
+            )
             self.text_rgb_dict = json.load(open(self.text_dir_rgb + f'caption_llm_dict_{captioner_name}_RGB.json'))
             self.train_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in color_img_file]
             if llm_aug:
@@ -457,7 +459,9 @@ class RegDB_Tri_Data(data.Dataset):
             
             if joint_mode == "ir_crossfusion" or joint_mode == "uni":
                 print("Loading IR Text For Training...")
-                self.text_dir_ir = _resolve_text_dir(data_dir, 'regdb', captioner_name, 'IR')
+                self.text_dir_ir = _resolve_text_dir(
+                    data_dir, 'regdb', captioner_name, 'IR', text_data_root
+                )
                 self.text_ir_dict = json.load(open(self.text_dir_ir + f'caption_llm_dict_{captioner_name}_IR.json'))
                 self.train_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in thermal_img_file]
                 if llm_aug:
@@ -509,7 +513,7 @@ class LLCM_Tri_Data(data.Dataset):
                     colorIndex=None, thermalIndex=None, \
                             text_length=77, llm_aug_prob=0.5,\
                                     llm_aug=False, captioner_name='Blip', joint_mode="ir_crossfusion", \
-                                        Feat_Filter=False):
+                                        Feat_Filter=False, text_data_root=None):
         # initialize text tokenizer
         self.tokenizer = SimpleTokenizer()
 
@@ -555,7 +559,9 @@ class LLCM_Tri_Data(data.Dataset):
         # Load text data
         if joint_mode == "ir_crossfusion" or joint_mode == "uni":
             print("Loading RGB Text For Training...")
-            self.text_dir_rgb = _resolve_text_dir(data_dir, 'llcm', captioner_name, 'RGB')
+            self.text_dir_rgb = _resolve_text_dir(
+                data_dir, 'llcm', captioner_name, 'RGB', text_data_root
+            )
             self.text_rgb_dict = json.load(open(self.text_dir_rgb + f'caption_llm_dict_{captioner_name}_RGB.json'))
             self.train_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in color_img_file]
             if llm_aug:
@@ -563,7 +569,7 @@ class LLCM_Tri_Data(data.Dataset):
             
             if joint_mode == "ir_crossfusion" or joint_mode == "uni":
                 print("Loading IR Text For Training...")
-                self.text_dir_ir = _resolve_text_dir(data_dir, 'llcm', captioner_name, 'IR')
+                self.text_dir_ir = _resolve_text_dir(data_dir, 'llcm', captioner_name, 'IR', text_data_root)
                 self.text_ir_dict = json.load(open(self.text_dir_ir + f'caption_llm_dict_{captioner_name}_IR.json'))
                 self.train_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in thermal_img_file]
                 if llm_aug:

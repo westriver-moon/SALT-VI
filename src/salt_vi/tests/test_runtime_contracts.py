@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -7,11 +8,15 @@ import numpy as np
 import pytest
 import torch
 
-from salt_vi.data.dataset import PIL_LANCZOS, _infer_dataset_name
+from salt_vi.config.validation import validate_runtime_config
+from salt_vi.data.dataset import PIL_LANCZOS, _infer_dataset_name, _resolve_text_dir
 from salt_vi.data.sampler import GenIdx, IdentitySampler, validate_identity_batch_config
 from salt_vi.data.tokenizer import default_bpe
 from salt_vi.engine.build import Classifier
+from salt_vi.engine.train import handle_nonfinite_gradients
+from salt_vi.entrypoints import train as train_entry
 from salt_vi.entrypoints.train import main
+from salt_vi.models.clip_model.clip_model import CLIP
 from salt_vi.models.model import Classifier as LegacyClassifier
 from salt_vi.utils.utils import _expand_environment_values
 
@@ -46,6 +51,19 @@ def test_identity_sampler_reports_actual_yield_length():
     assert sorted(np.unique(first_batch_labels, return_counts=True)[1].tolist()) == [2, 2]
 
 
+def test_identity_sampler_accepts_non_contiguous_labels():
+    labels = np.repeat(np.array([10, 20, 30, 40]), 3)
+    color_pos, thermal_pos = GenIdx(labels, labels)
+    sampler = IdentitySampler(labels, labels, color_pos, thermal_pos, num_pos=2, batchSize=2)
+    sampled_labels = labels[sampler.index1]
+    assert set(sampled_labels).issubset({10, 20, 30, 40})
+
+
+def test_identity_sampler_rejects_inconsistent_modal_identity_sets():
+    with pytest.raises(ValueError, match="identity sets are inconsistent"):
+        GenIdx(np.array([1, 1, 2, 2]), np.array([1, 1, 3, 3]))
+
+
 def test_uni_bn_rejects_incomplete_five_group_batch():
     classifier = Classifier(pid_num=3, dim=2, uni_BN=True, joint_mode="uni")
     classifier.train()
@@ -69,6 +87,130 @@ def test_legacy_data_parallel_fails_before_loader_or_model_construction():
         main(SimpleNamespace(DataParallel=True))
 
 
+def test_runtime_validation_rejects_unimplemented_text_mode():
+    with pytest.raises(ValueError, match="Unsupported joint_mode"):
+        validate_runtime_config(
+            {"training_mode": "RGB_IR_Text", "joint_mode": "dual_text"}
+        )
+
+
+def test_runtime_validation_rejects_qbn_id_woir_combo():
+    with pytest.raises(ValueError, match="incompatible with id_woir"):
+        validate_runtime_config(
+            {
+                "training_mode": "RGB_IR_Text",
+                "joint_mode": "uni",
+                "uni_BN": True,
+                "loss_names": "id_woir",
+            }
+        )
+
+
+def test_external_text_root_has_priority(tmp_path):
+    external = tmp_path / "portable_text"
+    expected = external / "Blip_RGB"
+    expected.mkdir(parents=True)
+    assert _resolve_text_dir(
+        str(tmp_path / "regdb"), "regdb", "Blip", "RGB", str(external)
+    ) == str(expected) + os.sep
+
+
+def _disabled_scaler():
+    if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+        return torch.amp.GradScaler("cuda", enabled=False)
+    return torch.cuda.amp.GradScaler(enabled=False)
+
+
+def test_cpu_nonfinite_gradient_does_not_step_optimizer():
+    parameter = torch.nn.Parameter(torch.tensor([1.0]))
+    optimizer = torch.optim.SGD([parameter], lr=0.1)
+    parameter.grad = torch.tensor([float("inf")])
+    with pytest.raises(FloatingPointError, match="without an active AMP scaler"):
+        handle_nonfinite_gradients(_disabled_scaler(), optimizer, ["parameter"])
+    assert parameter.item() == 1.0
+    assert parameter.grad is None
+
+
+def test_training_checkpoint_round_trip_restores_full_state(tmp_path):
+    train_entry._reset_best_metrics()
+    train_entry.best_rank1_fusion = 0.8
+    model = torch.nn.Linear(2, 1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
+    scaler = _disabled_scaler()
+    loss = model(torch.ones(1, 2)).sum()
+    loss.backward()
+    optimizer.step()
+    scheduler.step()
+    expected_weight = model.weight.detach().clone()
+    checkpoint_path = tmp_path / "checkpoint_latest.pth"
+    train_entry._save_training_checkpoint(
+        str(checkpoint_path), 4, model, optimizer, scheduler, scaler
+    )
+    with torch.no_grad():
+        model.weight.zero_()
+    assert train_entry._load_training_checkpoint(
+        str(checkpoint_path), model, optimizer, scheduler, scaler, torch.device("cpu")
+    ) == 5
+    assert torch.equal(model.weight, expected_weight)
+    assert train_entry.best_rank1_fusion == 0.8
+
+
+def test_training_checkpoint_loader_requests_full_state_when_supported(monkeypatch):
+    observed = {}
+
+    def simulated_torch_load(path, map_location=None, weights_only=True):
+        observed["path"] = path
+        observed["map_location"] = map_location
+        observed["weights_only"] = weights_only
+        return {"loaded": True}
+
+    monkeypatch.setattr(train_entry.torch, "load", simulated_torch_load)
+    assert train_entry._load_trusted_training_checkpoint("trusted.pth") == {"loaded": True}
+    assert observed["weights_only"] is False
+
+
+class _ClipStateStub:
+    visual_name = "ViT-B/16"
+
+    def __init__(self):
+        self._state = {
+            "token_embedding.weight": torch.zeros(2, 2),
+            "positional_embedding": torch.zeros(2, 2),
+            "transformer.resblocks.0.attn.in_proj_weight": torch.zeros(2, 2),
+            "ln_final.weight": torch.zeros(2),
+            "ln_final.bias": torch.zeros(2),
+            "text_projection": torch.zeros(2, 2),
+        }
+        self.positional_embedding = self._state["positional_embedding"]
+        self.text_projection = self._state["text_projection"]
+
+    def state_dict(self):
+        return self._state
+
+
+def test_clip_loader_requires_all_text_transformer_weights():
+    stub = _ClipStateStub()
+    incomplete = {
+        key: torch.ones_like(value)
+        for key, value in stub.state_dict().items()
+        if not key.startswith("transformer.")
+    }
+    with pytest.raises(RuntimeError, match="transformer.resblocks"):
+        CLIP.load_param(stub, incomplete)
+
+
+def test_clip_loader_accepts_dataparallel_prefixed_full_text_state():
+    stub = _ClipStateStub()
+    prefixed = {
+        "module." + key: torch.ones_like(value)
+        for key, value in stub.state_dict().items()
+    }
+    summary = CLIP.load_param(stub, prefixed)
+    assert len(summary["loaded_keys"]) == len(stub.state_dict())
+    assert all(torch.equal(value, torch.ones_like(value)) for value in stub.state_dict().values())
+
+
 def test_config_environment_placeholders_expand_recursively(monkeypatch):
     monkeypatch.setenv("SALT_VI_TEST_ROOT", "/tmp/salt-vi")
     payload = {"path": "${SALT_VI_TEST_ROOT}/data", "items": ["${SALT_VI_TEST_ROOT}/a"]}
@@ -76,3 +218,12 @@ def test_config_environment_placeholders_expand_recursively(monkeypatch):
         "path": "/tmp/salt-vi/data",
         "items": ["/tmp/salt-vi/a"],
     }
+
+
+def test_metric_boost_uses_a_retained_canonical_baseline_config():
+    repository_root = Path(__file__).resolve().parents[3]
+    config = repository_root / "configs" / "stage_b" / "a3_e4_stageb.yaml"
+    assert config.is_file()
+    payload = config.read_text(encoding="utf-8")
+    assert "metric_boost_checkpoint:" in payload
+    assert "vit_source_core_sysu_no_sff_parameter_add_pa05.yaml" not in payload

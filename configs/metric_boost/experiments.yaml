@@ -4,12 +4,12 @@ source:
   branch: codex/metric-boost-prep
   base_branch: main
   base_commit: cb4be596896be0ab21438778321e60ac6b31d7c8
-  e4_config: configs/stage_b/vit_source_core_sysu_no_sff_parameter_add_pa05.yaml
+  e4_config: configs/stage_b/a3_e4_stageb.yaml
   checkpoint_resolution: log_backed_auto_discovery
 reference:
-  Rank-1: 0.81620
-  mAP: 0.78663
-  mINP: 0.67711
+  Rank-1: 0.8212727
+  mAP: 0.7984514782316725
+  mINP: 0.6989697090719730
   tolerance_fraction: 0.0005
 protocol:
   dataset: SYSU-MM01

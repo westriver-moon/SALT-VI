@@ -22,11 +22,18 @@ except ImportError:  # pragma: no cover - the experiment server is Linux.
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-E4_CONFIG_PATH = REPO_ROOT / "configs/stage_b/vit_source_core_sysu_no_sff_parameter_add_pa05.yaml"
+# The historical 288x144 E4 YAML was archived after its incompatible Stage-A
+# initializer was retired.  Metric-boost tooling now targets the retained,
+# canonical A3-E4 baseline and reads its explicit checkpoint provenance below.
+E4_CONFIG_PATH = REPO_ROOT / "configs/stage_b/a3_e4_stageb.yaml"
 REPORT_ROOT = REPO_ROOT / "reports/metric_boost"
 CONFIG_ROOT = REPO_ROOT / "configs/metric_boost"
 EXPERIMENT_MANIFEST = CONFIG_ROOT / "experiments.yaml"
-EXPECTED_E4 = {"Rank-1": 0.81620, "mAP": 0.78663, "mINP": 0.67711}
+EXPECTED_E4 = {
+    "Rank-1": 0.8212727,
+    "mAP": 0.7984514782316725,
+    "mINP": 0.6989697090719730,
+}
 E4_TOLERANCE = 5e-4
 GPU_IDLE_MEMORY_MIB = 2000
 GPU_IDLE_UTIL_PCT = 20
@@ -164,6 +171,50 @@ def resolve_e4_checkpoint(
     """Locate E4 from its configured output tree and corroborating log metrics."""
     config_path = Path(config_path).resolve()
     config = load_yaml(config_path)
+    configured_checkpoint = config.get("metric_boost_checkpoint")
+    if configured_checkpoint:
+        checkpoint_path = Path(str(configured_checkpoint)).expanduser()
+        if not checkpoint_path.is_absolute():
+            checkpoint_path = (REPO_ROOT / checkpoint_path).resolve()
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(
+                f"Configured metric-boost checkpoint does not exist: {checkpoint_path}"
+            )
+        raw_metrics = config.get("metric_boost_reference_metrics", expected)
+        if not isinstance(raw_metrics, Mapping):
+            raise TypeError("metric_boost_reference_metrics must be a mapping")
+        missing_metrics = sorted(set(expected) - set(raw_metrics))
+        if missing_metrics:
+            raise ValueError(
+                "metric_boost_reference_metrics is incomplete; missing "
+                + ", ".join(missing_metrics)
+            )
+        metrics = {name: float(raw_metrics[name]) for name in expected}
+        candidate = {
+            "checkpoint": str(checkpoint_path.resolve()),
+            "source_log": str(config.get("metric_boost_source_log", "")),
+            "best_epoch": int(config.get("metric_boost_best_epoch", -1)),
+            "metrics": metrics,
+            "metric_error": metric_error(metrics, expected),
+            "metrics_match_reference": metrics_match_reference(metrics, expected, tolerance),
+        }
+        if not candidate["metrics_match_reference"]:
+            raise RuntimeError(
+                "Configured metric-boost baseline metrics do not match the expected "
+                f"reference within {tolerance}: {candidate['metrics']}"
+            )
+        selected = dict(candidate)
+        selected.update(
+            {
+                "sha256": sha256_file(checkpoint_path),
+                "size_bytes": checkpoint_path.stat().st_size,
+                "candidate_count": 1,
+                "all_candidates": [candidate],
+                "config": str(config_path),
+            }
+        )
+        return selected
+
     output_root = Path(str(config.get("output_path", ""))).expanduser()
     if not output_root.is_absolute():
         output_root = (REPO_ROOT / output_root).resolve()

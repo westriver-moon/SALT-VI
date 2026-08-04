@@ -1,6 +1,6 @@
 # SALT-VI
 
-SALT-VI is the canonical research implementation for visible?infrared person re-identification with RGB text supervision, two-stage training, super-resolution inputs, and LLM-based caption augmentation.
+SALT-VI is the canonical research implementation for visible-infrared person re-identification with RGB text supervision, two-stage training, super-resolution inputs, and LLM-based caption augmentation.
 
 ## Repository layout
 
@@ -14,7 +14,8 @@ SALT-VI is the canonical research implementation for visible?infrared person re-
 ## Installation
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ".[test]"
+python -m pytest src/salt_vi/tests
 ```
 
 The repository does not distribute datasets or model weights. Configure public dataset roots, pretrained initialization, canonical checkpoints, and output paths before training. The experiment registry records checkpoint identities and SHA-256 values for retained runs.

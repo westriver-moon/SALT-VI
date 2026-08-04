@@ -596,6 +596,9 @@ class CLIP(nn.Module):
             state_dict = state_dict["state_dict"]
         if not isinstance(state_dict, dict):
             raise TypeError("CLIP pretrained state must be a mapping of parameter tensors")
+        state_dict = dict(state_dict)
+        if state_dict and all(str(key).startswith("module.") for key in state_dict):
+            state_dict = {str(key)[len("module.") :]: value for key, value in state_dict.items()}
 
         own_state = self.state_dict()
         loaded_keys = []
@@ -641,11 +644,10 @@ class CLIP(nn.Module):
                 failures.append((key, str(exc)))
 
         required_text_keys = {
-            "token_embedding.weight",
-            "positional_embedding",
-            "ln_final.weight",
-            "ln_final.bias",
-            "text_projection",
+            key
+            for key in own_state
+            if key in {"positional_embedding", "text_projection"}
+            or key.startswith(("token_embedding.", "transformer.", "ln_final."))
         }
         missing_required = sorted(required_text_keys - set(loaded_keys))
         if failures or missing_required:

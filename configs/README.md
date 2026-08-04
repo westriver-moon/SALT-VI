@@ -2,7 +2,7 @@
 
 运行时配置直接服务于 `src/salt_vi`。
 
-- `default.yaml`：默认训练配置
+- `src/salt_vi/config/default.yaml`：包内默认训练配置
 - `stage_a/`：视觉编码器与采样消融
 - `stage_b/`：融合、token interaction 与适配器消融
 - `metric_boost/`：指标增强实验计划
