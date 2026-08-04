@@ -1,0 +1,9 @@
+extends: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/configs/_base.yaml
+llm_aug_prob: 1.0
+llm_aug_strategy: iid_uniform
+CUDA_VISIBLE_DEVICES: '3'
+gpu_id: '0'
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T4_iid100/model_output/
+metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T4_iid100/events.jsonl
+metric_experiment_id: QWEN-T4-IID100-E30
+

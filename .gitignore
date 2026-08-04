@@ -1,0 +1,41 @@
+# Python and test caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+
+# Local Codex/editor state
+.agents/
+.codex/
+.vscode/
+.idea/
+
+# Project-owned runtime assets: retained locally, never versioned
+/checkpoints/
+/pretrained/
+/logs/
+/train_outputs/
+/runtime/
+
+# Generated experiment evidence and source snapshots
+/experiments/
+/reports/evidence/
+/reports/experiment_registry/source_tables/
+/vendor/legacy_code/
+
+# Generated datasets and model artifacts
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.safetensors
+*.npy
+*.npz
+*.h5
+/data_sources/*.local.*
+
+# Local logs and temporary outputs
+*.log
+*.out
+*.tmp
+*.bak

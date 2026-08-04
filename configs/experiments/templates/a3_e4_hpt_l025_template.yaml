@@ -1,0 +1,18 @@
+# TEMPLATE: set training_weight_init to an existing, topology-compatible A3/E4 checkpoint before use.
+extends: ../../stage_b/a3_e4_stageb.yaml
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/a3_e4_hpt_l025/hpt_l025/model_output/
+training_weight_init: REQUIRED_A3_E4_BEST_CHECKPOINT
+loss_names: id,cross_modal_hard
+lr_txt: 2.5e-6
+total_train_epoch: 20
+eval_start_epoch: 1
+eval_epoch: 1
+gallery_trials: 10
+test_flip_tta: false
+test_multi_scale: [[512, 256]]
+rerank: false
+ensemble_mode: none
+qbn_freeze_running_stats_epoch: -1
+save_best_per_metric: true
+metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/a3_e4_hpt_l025/hpt_l025/events.jsonl
+metric_experiment_id: A3-E4-HPT-L025

@@ -1,0 +1,26 @@
+extends: base_pmt_mbpatch_sr.yaml
+
+# Auxiliary tail experiment. Initialize with --weights from the completed A1
+# epoch-24 latest checkpoint; do not use --resume, which would restore the
+# exhausted optimizer state from the 24-epoch cosine schedule.
+data:
+  height: 512
+  width: 256
+  sr_modalities: []
+
+train:
+  start_epoch: 25
+  max_epoch: 32
+  # At epoch 25 this creates a conservative cosine-tail restart of 1.46e-5
+  # (rather than reusing the exhausted 3e-6 final-step LR); it decays to 1e-6.
+  base_lr: 0.0001
+  eval_interval: 2
+  save_interval: 2
+
+experiment:
+  id: PMSR-A1-bicubic-x2-tail-e32
+  purpose: auxiliary equal-budget tail extension; retain A1 epoch-24 as the formal ablation result
+  selection_rule: highest Rank-1 across tail epochs; report mAP and mINP at the same epoch
+
+output:
+  root: /home/cgv841/ybj/SALT-VI/outputs/super_resolution/PMSR-A1-bicubic-x2-tail-e32

@@ -1,0 +1,212 @@
+CAT_EVAL: false
+CUDA_VISIBLE_DEVICES: '3'
+DEBUG: false
+DEBUG_DIR: /debug_logs
+DataParallel: false
+Feat_Filter: false
+Fix_Visual: true
+LOG4TEST: false
+Return_B4_BN: false
+a3_e4_checkpoint_sha256: 7cd15b7b12ba138ccf6590f850dd72a11bfea16d7723a4ce101b98b0a3b1996c
+alpha: 0.9
+auto_resume_training_from_lastest_step: false
+batch_size: 32
+beta: 0.999
+captioner_name: Blip
+checkpoint_epoch: 10
+classifier_lr_factor: 1.0
+clip_download_root: ~/.cache/clip
+cmm_loss_weight: 1.0
+cmt_depth: 1
+config_select: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/configs/t6_dual_mean.yaml
+cross_modal_hard_weight: 1.25
+cross_modal_pair_weights: !!python/object/new:easydict.EasyDict
+  dictitems:
+    Fusion-Text: 1.0
+    IR-Fusion: 1.0
+    IR-Text: 1.0
+    RGB-Fusion: 1.0
+    RGB-IR: 1.0
+    RGB-Text: 1.0
+  state:
+    Fusion-Text: 1.0
+    IR-Fusion: 1.0
+    IR-Text: 1.0
+    RGB-Fusion: 1.0
+    RGB-IR: 1.0
+    RGB-Text: 1.0
+cuda: cuda
+dataset: sysu
+ensemble_mode: none
+eval_before_train: true
+eval_epoch: 1
+eval_num_regdb: 1
+eval_start_epoch: 1
+fixed_visual_data_parallel: false
+fixed_visual_device_ids:
+- 0
+freeze_text_in_image_only: true
+fusion_way: parameter_add
+gall_mode: single
+gallery_trials: 10
+gamma: 0.1
+gpu_id: '0'
+gradient_clip_norm: 0.0
+id_loss_weight: 1.0
+img_h: 512
+img_size:
+- 512
+- 256
+img_w: 256
+joint_mode: uni
+label_smoothing: 0.0
+learnable_pa: false
+llcm_data_path: datasets/llcm
+llm_aug: true
+llm_aug_index: /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json
+llm_aug_prob: 1.0
+llm_aug_rgb_only: true
+llm_aug_strategy: dual_mean
+loss_names: id,cross_modal_hard
+lr: null
+lr_factor: 5.0
+lr_txt: 7.5e-06
+lr_visual: 0.0003
+lrscheduler: cosine
+max_save_model_num: 1
+metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T6_dual_mean/events.jsonl
+metric_experiment_id: QWEN-T6-DUAL-MEAN-E30
+milestones: !!python/tuple
+- 40
+- 60
+- 100
+mode: train
+momentum: 0.9
+num_pos: 4
+num_workers: 8
+optimizer: AdamW
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T6_dual_mean/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_LLM_1.0_id,cross_modal_hard_Fix_Visual
+pa: 0.5
+pa_init: 0.5
+patch_gem_learnable: true
+patch_gem_p: 3.0
+patch_gem_variant: signed_power_mean
+patch_pool_gamma_init: 0.0
+pid_num: 395
+pmt_assert_batch_layout: true
+pmt_attention_dropout: 0.0
+pmt_backbone_lr_factor: 0.5
+pmt_cross_modal_triplet_weight: 1.0
+pmt_dcl_weight: 0.5
+pmt_depth: 12
+pmt_drop_path_rate: 0.1
+pmt_dropout: 0.03
+pmt_embed_dim: 768
+pmt_mlp_ratio: 4.0
+pmt_msct_margin: 0.1
+pmt_msct_weight: 0.25
+pmt_msel_weight: 0.5
+pmt_num_heads: 12
+pmt_patch_embed: !!python/object/new:easydict.EasyDict
+  dictitems:
+    anchor_branch: 0
+    branches: &id005
+    - !!python/object/new:easydict.EasyDict
+      dictitems:
+        patch_size: &id001
+        - 16
+        - 16
+        stride_size: &id002
+        - 12
+        - 12
+      state:
+        patch_size: *id001
+        stride_size: *id002
+    - !!python/object/new:easydict.EasyDict
+      dictitems:
+        patch_size: &id003
+        - 16
+        - 8
+        stride_size: &id004
+        - 12
+        - 6
+      state:
+        patch_size: *id003
+        stride_size: *id004
+  state:
+    anchor_branch: 0
+    branches: *id005
+pmt_patch_size:
+- 16
+- 16
+pmt_pretrained: /home/cgv841/ybj/SALT-VI/pretrained/pmt_sysu/jx_vit_base_p16_224-80ecf9dd.pth
+pmt_progressive_epoch: 6
+pmt_recipe: false
+pmt_recipe_transforms: true
+pmt_stage_a_loss_plugin: legacy_dcl_v1
+pmt_stride_size:
+- 12
+- 12
+pmt_transition_epochs: 4
+pmt_triplet_margin: 0.1
+pooling: GEM
+power: 0.9
+pretrain_choice: PMT_VIT
+pretrain_path: default
+prj_output_dim: 768
+qbn_freeze_running_stats_epoch: -1
+regdb_data_path: datasets/regdb
+regdb_test_mode: t-v
+rerank: false
+resume_test_model: -1
+resume_train_epoch: -1
+sampler_type: identity_auto_replace
+save_best_per_metric: true
+seed: 0
+stride_size: 16
+sysu_data_path: /home/cgv841/datasets/SYSU-MM01/
+sysu_source_size:
+- 256
+- 128
+sysu_sr_data_root: /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1
+sysu_sr_exact_size: true
+sysu_sr_modalities:
+- rgb
+- ir
+target_lr: 0.0
+target_lr_factor: 0.01
+temperature: 0.07
+test_batch_size: 8
+test_flip_tta: false
+test_modality: Fusion
+test_mode: all
+test_model_path: null
+test_model_type: Fusion
+test_multi_scale:
+- - 512
+  - 256
+text_bias_lr_factor: 2.0
+text_data_root: /home/cgv841/ybj/SALT-VI/datasets/sysu/Text
+text_length: 77
+text_weight_decay: 4.0e-05
+text_weight_decay_bias: 0.0
+token_interaction_plugin: none
+total_train_epoch: 30
+training_mode: RGB_IR_Text
+training_weight_init: /home/cgv841/ybj/SALT-VI/train_outputs/a3_e4_hpt_l025/e4/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,wrt_Fix_Visual/models/model_Fusion_21.pth
+trial: 1
+triplet_mining: pmt_hard
+uni_BN: false
+visual_bias_lr_factor: 1.0
+visual_forward_chunk_size: 8
+visual_lr: 1.0e-06
+visual_pooling: cls
+visual_unfreeze_last_n_blocks: 0
+visual_unfreeze_start_epoch: 3
+visual_weight_decay: 0.0001
+visual_weight_decay_bias: 0.0001
+vocab_size: 49408
+warmup_epochs: 3
+warmup_factor: 0.01
+warmup_method: linear
+wrt_loss_weight: 1.0

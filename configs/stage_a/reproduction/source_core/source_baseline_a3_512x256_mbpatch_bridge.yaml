@@ -1,0 +1,12 @@
+extends: vision_text_encoder_stage_a_vision_text_recipe_288x144_768_mbpatch.yaml
+output_path: train_outputs/stage_a_bridge/source_baseline_a3_512x256_mbpatch/
+img_h: 512
+img_w: 256
+img_size: [512, 256]
+sysu_source_size: [256, 128]
+sysu_sr_data_root: /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_exact_size: true
+total_train_epoch: 24
+seed: 0
+pid_num: 395

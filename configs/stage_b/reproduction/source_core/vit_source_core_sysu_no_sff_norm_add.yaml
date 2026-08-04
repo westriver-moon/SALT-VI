@@ -1,0 +1,67 @@
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/stageb-fusion-ablation/e3_no_sff_norm_add/results/
+CUDA_VISIBLE_DEVICES: '0'
+gpu_id: '0'
+pretrain_choice: PMT_VIT
+pmt_pretrained: /home/cgv841/ybj/SALT-VI/pretrained/pmt_sysu/jx_vit_base_p16_224-80ecf9dd.pth
+pmt_embed_dim: 768
+pmt_patch_size:
+  - 16
+  - 16
+pmt_stride_size:
+  - 12
+  - 12
+pmt_depth: 12
+pmt_num_heads: 12
+pmt_mlp_ratio: 4.0
+pmt_dropout: 0.03
+pmt_attention_dropout: 0.0
+pmt_drop_path_rate: 0.1
+training_mode: RGB_IR_Text
+joint_mode: uni
+loss_names: id,wrt
+llm_aug: false
+Feat_Filter: false
+Fix_Visual: true
+Return_B4_BN: false
+freeze_text_in_image_only: true
+pmt_recipe: false
+pmt_recipe_transforms: true
+test_model_type: Fusion
+test_modality: Fusion
+fusion_way: norm_add
+pooling: GEM
+prj_output_dim: 768
+dataset: sysu
+sysu_data_path: /home/cgv841/datasets/SYSU-MM01/
+img_h: 288
+img_w: 144
+img_size:
+  - 288
+  - 144
+batch_size: 32
+num_pos: 4
+seed: 0
+optimizer: AdamW
+lr_txt: 1.0e-05
+text_weight_decay: 4.0e-05
+text_bias_lr_factor: 2.0
+text_weight_decay_bias: 0.0
+lr_visual: 0.0003
+classifier_lr_factor: 1.0
+visual_bias_lr_factor: 1.0
+visual_weight_decay: 0.0001
+visual_weight_decay_bias: 0.0001
+alpha: 0.9
+beta: 0.999
+lrscheduler: cosine
+warmup_epochs: 3
+warmup_factor: 0.01
+target_lr_factor: 0.01
+total_train_epoch: 33
+eval_start_epoch: 2
+eval_epoch: 2
+captioner_name: Blip
+num_workers: 8
+sampler_type: identity_auto_replace
+temperature: 0.07
+training_weight_init: AUTO_FIND_PMT_VIT_IMAGE_ONLY_BEST

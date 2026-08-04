@@ -1,0 +1,94 @@
+version: 1
+plan_id: h1-hpt-stage1-20260718
+stage: HPT-STAGE1
+baseline_experiment_id: TRAIN-3-H1
+baseline_runtime_config: reports/metric_boost/runs/TRAIN-3-H1/runtime_config.yaml
+report_root: /home/cgv841/ybj/SALT-VI/train_outputs/metric_boost/h1_hpt_stage1
+python_bin: /home/cgv841/anaconda3/envs/clipreid/bin/python
+selection_validity: exploratory-test-set-tuned
+selection_rule: highest Rank-1; report mAP and mINP from the same epoch
+protocol:
+  dataset: sysu
+  test_mode: all
+  gall_mode: single
+  gallery_trials: 10
+  seed: 0
+fixed_overrides:
+  mode: train
+  dataset: sysu
+  training_mode: RGB_IR_Text
+  test_modality: Fusion
+  test_mode: all
+  gall_mode: single
+  gallery_trials: 10
+  seed: 0
+  Fix_Visual: true
+  fusion_way: parameter_add
+  loss_names: id,cross_modal_hard
+  cross_modal_hard_weight: 1.0
+  pa: 0.5
+  learnable_pa: false
+  lr_txt: 1.0e-5
+  uni_BN: false
+  qbn_freeze_running_stats_epoch: -1
+  img_h: 288
+  img_w: 144
+  img_size: [288, 144]
+  eval_start_epoch: 1
+  eval_epoch: 1
+  CAT_EVAL: false
+  test_flip_tta: false
+  test_multi_scale: [[288, 144]]
+  rerank: false
+  ensemble_mode: none
+  save_best_per_metric: true
+experiments:
+  - id: HPT-C0
+    group: control
+    description: Exact TRAIN-3-H1 reproduction under the formal stage-1 protocol.
+    overrides: {}
+  - id: HPT-W050
+    group: hard_weight
+    description: Cross-modal hard-loss weight 0.50.
+    overrides: {cross_modal_hard_weight: 0.50}
+  - id: HPT-W075
+    group: hard_weight
+    description: Cross-modal hard-loss weight 0.75.
+    overrides: {cross_modal_hard_weight: 0.75}
+  - id: HPT-W125
+    group: hard_weight
+    description: Cross-modal hard-loss weight 1.25.
+    overrides: {cross_modal_hard_weight: 1.25}
+  - id: HPT-W150
+    group: hard_weight
+    description: Cross-modal hard-loss weight 1.50.
+    overrides: {cross_modal_hard_weight: 1.50}
+  - id: HPT-L025
+    group: text_lr
+    description: Text learning rate 2.5e-6.
+    overrides: {lr_txt: 2.5e-6}
+  - id: HPT-L050
+    group: text_lr
+    description: Text learning rate 5.0e-6.
+    overrides: {lr_txt: 5.0e-6}
+  - id: HPT-L075
+    group: text_lr
+    description: Text learning rate 7.5e-6.
+    overrides: {lr_txt: 7.5e-6}
+  - id: HPT-PA045
+    group: fusion_weight
+    description: Parameter-add fusion coefficient 0.45.
+    overrides: {pa: 0.45}
+  - id: HPT-PA055
+    group: fusion_weight
+    description: Parameter-add fusion coefficient 0.55.
+    overrides: {pa: 0.55}
+  - id: HPT-QBN
+    group: batch_norm
+    description: Modality-specific BN without freezing running statistics.
+    overrides: {uni_BN: true, qbn_freeze_running_stats_epoch: -1}
+  - id: HPT-QBN-F5
+    group: batch_norm
+    description: Modality-specific BN with running statistics frozen from epoch 5.
+    overrides: {uni_BN: true, qbn_freeze_running_stats_epoch: 5}
+

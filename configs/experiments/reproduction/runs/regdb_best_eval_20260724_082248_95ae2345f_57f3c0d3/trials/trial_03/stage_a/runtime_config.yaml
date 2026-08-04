@@ -1,0 +1,71 @@
+dataset: regdb
+regdb_data_path: /home/cgv841/datasets/RegDB
+regdb_sr_data_root: /home/cgv841/datasets/derived/RegDB-swinir-x2-pmt256-v1
+regdb_sr_modalities:
+- rgb
+- ir
+regdb_sr_exact_size: true
+text_data_root: /home/cgv841/ybj/SALT-VI/datasets/regdb/Text
+trial: 3
+eval_num_regdb: 1
+regdb_test_mode: t-v
+eval_text_policy: paired_visible_caption
+seed: 0
+pid_num: 206
+img_h: 512
+img_w: 256
+img_size:
+- 512
+- 256
+pmt_patch_embed:
+  anchor_branch: 0
+  branches:
+  - patch_size:
+    - 16
+    - 16
+    stride_size:
+    - 12
+    - 12
+  - patch_size:
+    - 16
+    - 8
+    stride_size:
+    - 12
+    - 6
+test_batch_size: 8
+visual_forward_chunk_size: 8
+uni_BN: false
+qbn_freeze_running_stats_epoch: -1
+CAT_EVAL: false
+test_flip_tta: false
+test_multi_scale:
+- - 512
+  - 256
+rerank: false
+ensemble_mode: none
+pmt_pretrained: /home/cgv841/ybj/SALT-VI/pretrained/pmt_sysu/jx_vit_base_p16_224-80ecf9dd.pth
+CUDA_VISIBLE_DEVICES: '3'
+gpu_id: '0'
+DataParallel: false
+fixed_visual_data_parallel: false
+fixed_visual_device_ids:
+- 0
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/regdb_best_eval_20260724_082248_95ae2345f_57f3c0d3/trials/trial_03/stage_a/model_output/
+extends: /home/cgv841/worktrees/ybj-regdb-best-eval/SALT-VI/config/regdb/stage_a_30ep.yaml
+mode: train
+training_mode: RGB_IR
+joint_mode: image_only
+test_model_type: IR
+test_modality: IR
+batch_size: 32
+pmt_gradient_checkpointing: true
+optimizer: AdamW
+lr_visual: 0.002
+lrscheduler: cosine
+warmup_epochs: 3
+warmup_factor: 0.01
+target_lr_factor: 0.01
+total_train_epoch: 30
+eval_start_epoch: 2
+eval_epoch: 2
+max_save_model_num: 1

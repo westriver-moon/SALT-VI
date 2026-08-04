@@ -1,0 +1,9 @@
+extends: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/configs/_base.yaml
+llm_aug_prob: 0.5
+llm_aug_strategy: balanced_cycle
+CUDA_VISIBLE_DEVICES: '2'
+gpu_id: '0'
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T3_balanced50/model_output/
+metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T3_balanced50/events.jsonl
+metric_experiment_id: QWEN-T3-BALANCED50-E30
+

@@ -1,0 +1,9 @@
+extends: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/configs/_base.yaml
+llm_aug_prob: 1.0
+llm_aug_strategy: quality_diverse_pair
+CUDA_VISIBLE_DEVICES: '2'
+gpu_id: '0'
+output_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T7_quality_pair/model_output/
+metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/qwen_text_aug_grid_e30_20260727/T7_quality_pair/events.jsonl
+metric_experiment_id: QWEN-T7-QUALITY-PAIR-E30
+
