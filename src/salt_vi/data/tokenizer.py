@@ -1,7 +1,10 @@
 import gzip
 import html
 import os
-from pathlib import Path
+try:
+    from importlib.resources import files
+except ImportError:  # Python 3.8 compatibility
+    from importlib_resources import files
 from functools import lru_cache
 
 import ftfy
@@ -12,10 +15,7 @@ import regex as re
 def default_bpe():
     """Return the project-owned BPE vocabulary independently of the working directory."""
     return str(
-        Path(__file__).resolve().parents[3]
-        / "data_sources"
-        / "tokenization"
-        / "bpe_simple_vocab_16e6.txt.gz"
+        files("salt_vi.data").joinpath("assets", "bpe_simple_vocab_16e6.txt.gz")
     )
 
 

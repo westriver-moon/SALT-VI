@@ -1,4 +1,9 @@
 # Python and test caches
+# Python packaging build artifacts
+/build/
+/dist/
+*.egg-info/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/

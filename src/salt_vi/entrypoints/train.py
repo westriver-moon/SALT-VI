@@ -8,7 +8,6 @@ import torch
 import random
 import numpy as np
 import yaml
-from torch.cuda import amp
 from salt_vi.data.loader import Loader
 from salt_vi.engine import train, test, build_model
 from salt_vi.utils import make_dirs, Logger
@@ -389,6 +388,11 @@ def _initialize_spatial_backups(model, config):
 
 
 def main(config):
+    if bool(getattr(config, "DataParallel", False)):
+        raise RuntimeError(
+            "Legacy DataParallel is unsupported by SALT-VI. Use one process per GPU "
+            "or fixed_visual_data_parallel for frozen visual replicas."
+        )
     os.environ["CUDA_VISIBLE_DEVICES"] = config.CUDA_VISIBLE_DEVICES
     device = torch.device(f'cuda:{config.gpu_id}' if torch.cuda.is_available() else "cpu")
 
@@ -513,7 +517,10 @@ def main(config):
 
         optimizer = build_optimizer(config, model)
         scheduler = build_lr_scheduler(config, optimizer)
-        scaler = amp.GradScaler()
+        if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
+            scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
+        else:
+            scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
             
         start_train_epoch = max(0, int(getattr(config, "metric_boost_resume_epoch", 0)))
         if start_train_epoch:

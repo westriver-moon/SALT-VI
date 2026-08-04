@@ -7,9 +7,26 @@ name = "salt-vi"
 version = "0.1.0"
 description = "Canonical SALT-VI research implementation"
 requires-python = ">=3.8"
+dependencies = [
+    "torch",
+    "torchvision",
+    "numpy",
+    "Pillow>=9.1",
+    "PyYAML>=6.0",
+    "easydict",
+    "regex",
+    "ftfy",
+    "tqdm",
+    "tensorboard",
+    "importlib_resources; python_version < '3.9'",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"salt_vi.data" = ["assets/*.gz"]
+"salt_vi.config" = ["default.yaml"]

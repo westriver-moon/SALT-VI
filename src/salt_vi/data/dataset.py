@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 
 PIL_BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
+PIL_LANCZOS = getattr(Image, "Resampling", Image).LANCZOS
 
 
 def tokenize(caption: str, tokenizer, text_length=77, truncate=True) -> torch.LongTensor:
@@ -51,7 +52,7 @@ def _resolve_text_dir(data_dir, dataset_name, captioner_name, modality, text_dat
 
 
 def _infer_dataset_name(data_path):
-    normalized = data_path.lower().replace("\\", "/")
+    normalized = data_path.lower().replace("\\", "/").rstrip("/")
     if "sysu-mm01" in normalized or normalized.endswith("/sysu"):
         return "sysu"
     if "regdb" in normalized:
@@ -355,7 +356,7 @@ class RegDBData(data.Dataset):
         train_color_image = []
         for i in range(len(color_img_file)):
             img = Image.open(data_dir + color_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_color_image.append(pix_array)
         train_color_image = np.array(train_color_image)
@@ -363,7 +364,7 @@ class RegDBData(data.Dataset):
         train_thermal_image = []
         for i in range(len(thermal_img_file)):
             img = Image.open(data_dir + thermal_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_thermal_image.append(pix_array)
         train_thermal_image = np.array(train_thermal_image)
@@ -424,7 +425,7 @@ class RegDB_Tri_Data(data.Dataset):
         train_color_image = []
         for i in range(len(color_img_file)):
             img = Image.open(data_dir + color_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_color_image.append(pix_array)
         train_color_image = np.array(train_color_image)
@@ -432,7 +433,7 @@ class RegDB_Tri_Data(data.Dataset):
         train_thermal_image = []
         for i in range(len(thermal_img_file)):
             img = Image.open(data_dir + thermal_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_thermal_image.append(pix_array)
         train_thermal_image = np.array(train_thermal_image)
@@ -529,7 +530,7 @@ class LLCM_Tri_Data(data.Dataset):
         train_color_image = []
         for i in range(len(color_img_file)):
             img = Image.open(data_dir+ color_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_color_image.append(pix_array)
         train_color_image = np.array(train_color_image) 
@@ -537,7 +538,7 @@ class LLCM_Tri_Data(data.Dataset):
         train_thermal_image = []
         for i in range(len(thermal_img_file)):
             img = Image.open(data_dir+ thermal_img_file[i])
-            img = img.resize((144, 288), Image.ANTIALIAS)
+            img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_thermal_image.append(pix_array)
             #print(pix_array.shape)
@@ -614,7 +615,7 @@ class TestData(data.Dataset):
         test_image = []
         for i in range(len(test_img_file)):
             img = Image.open(test_img_file[i])
-            img = img.resize((img_size[0], img_size[1]), Image.ANTIALIAS)
+            img = img.resize((img_size[0], img_size[1]), PIL_LANCZOS)
             pix_array = np.array(img)
             test_image.append(pix_array)
         test_image = np.array(test_image)

@@ -99,7 +99,7 @@ def build_parser():
     parser.add_argument('--prj_output_dim', type=int, default=2048)
     parser.add_argument("--pooling", default='GEM', type=str, help='["attnpool","GEM"]')
     parser.add_argument("--pretrain_choice", default='RN50_ORI',help='ViT-B/16,RN50,RN50_ORI,PMT_VIT') # whether use pretrained model
-    parser.add_argument("--temperature", type=float, default=0.07, help="initial temperature value, if 0, don't use temperature")
+    parser.add_argument("--temperature", type=float, default=0.07, help="initial contrastive temperature; must be finite and > 0")
     parser.add_argument("--freeze_text_in_image_only", default=False, action='store_true')
 
     ######################## cross transfomer setting ########################

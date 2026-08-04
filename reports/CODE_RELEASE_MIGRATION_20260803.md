@@ -9,7 +9,7 @@
 - canonical Python 包：`/home/cgv841/ybj/SALT-VI/src/salt_vi/`
 - 统一训练入口：`/home/cgv841/ybj/SALT-VI/scripts/train.py`
 - 视觉-文本基线：`src/salt_vi/baselines/vision_text/`
-- canonical 配置：`configs/default.yaml`、`configs/stage_a/`、`configs/stage_b/`、`configs/metric_boost/`、`configs/experiments/`、`configs/super_resolution/`、`configs/vision_text/`
+- canonical 配置：`src/salt_vi/config/default.yaml`、`configs/stage_a/`、`configs/stage_b/`、`configs/metric_boost/`、`configs/experiments/`、`configs/super_resolution/`、`configs/vision_text/`
 
 代码清单包含 142 个文件；canonical 配置共 52 个 YAML，继承链断裂数为 0。
 

@@ -584,47 +584,92 @@ class CLIP(nn.Module):
     
     
     def load_param(self, state_dict):
-        if isinstance(state_dict, dict) and 'model' in state_dict:
-            state_dict = state_dict['model']
-        if isinstance(state_dict, dict) and 'state_dict' in state_dict:
-            state_dict = state_dict['state_dict']
-        # 将pretrained_dict里不属于model_dict的键剔除掉
-        param_dict =  {}
+        """Load compatible CLIP weights and fail closed on copy errors.
+
+        Positional/projection tensors with documented resolution changes are resized
+        explicitly. Any remaining tensor mismatch is a configuration error rather
+        than a warning that silently leaves a random parameter in place.
+        """
+        if isinstance(state_dict, dict) and "model" in state_dict:
+            state_dict = state_dict["model"]
+        if isinstance(state_dict, dict) and "state_dict" in state_dict:
+            state_dict = state_dict["state_dict"]
+        if not isinstance(state_dict, dict):
+            raise TypeError("CLIP pretrained state must be a mapping of parameter tensors")
+
         own_state = self.state_dict()
-        for k, v in state_dict.items():
-            if self.visual_name == "PMT_VIT" and k.startswith("visual."):
-                continue
-            if k in own_state:
-                param_dict[k] = v
-        for k, v in param_dict.items():
-            if 'rgb_model' in k or 'ir_model' in k or 'shared_model' in k:
-                continue
-            if k == 'visual.positional_embedding' and v.shape != self.visual.positional_embedding.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_pos_embed(v, self.visual.positional_embedding, self.visual.num_y, self.visual.num_x)
-            elif k == 'positional_embedding' and v.shape != self.positional_embedding.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_text_pos_embed(v, self.context_length)
-            elif k == 'visual.attnpool.positional_embedding' and v.shape != self.visual.attnpool.positional_embedding.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_attn_pooling_pos_embed(v, self.visual.attnpool.positional_embedding.shape[0])
-            elif k == 'visual.attnpool.c_proj.weight' and v.shape != self.visual.attnpool.c_proj.weight.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_attn_pooling_pos_embed(v.float(), self.visual.attnpool.c_proj.weight.shape[0]).half()
-            elif k == 'visual.attnpool.c_proj.bias' and v.shape != self.visual.attnpool.c_proj.bias.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_prj(v.float().unsqueeze(0), self.visual.attnpool.c_proj.bias.shape[0]).squeeze().half()
-            elif k == 'text_projection' and v.shape != self.text_projection.shape:
-                print(f'===========================Resizing while copying {k}=========================')
-                v = resize_prj(v.float(), self.text_projection.shape[1]).half()
+        loaded_keys = []
+        skipped_keys = []
+        unexpected_keys = []
+        failures = []
 
-
+        for key, value in state_dict.items():
+            if self.visual_name == "PMT_VIT" and key.startswith("visual."):
+                skipped_keys.append(key)
+                continue
+            if key not in own_state:
+                unexpected_keys.append(key)
+                continue
+            if any(part in key for part in ("rgb_model", "ir_model", "shared_model")):
+                skipped_keys.append(key)
+                continue
+            if not isinstance(value, torch.Tensor):
+                failures.append((key, "source value is not a tensor"))
+                continue
 
             try:
-                self.state_dict()[k].copy_(v)
-            except:
-                print(f'===========================ERROR occur in copy {k}, {v.shape}=========================')
-                print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape, self.state_dict()[k].shape))
+                if key == "visual.positional_embedding" and value.shape != self.visual.positional_embedding.shape:
+                    value = resize_pos_embed(value, self.visual.positional_embedding, self.visual.num_y, self.visual.num_x)
+                elif key == "positional_embedding" and value.shape != self.positional_embedding.shape:
+                    value = resize_text_pos_embed(value, self.context_length)
+                elif key == "visual.attnpool.positional_embedding" and value.shape != self.visual.attnpool.positional_embedding.shape:
+                    value = resize_attn_pooling_pos_embed(value, self.visual.attnpool.positional_embedding.shape[0])
+                elif key == "visual.attnpool.c_proj.weight" and value.shape != self.visual.attnpool.c_proj.weight.shape:
+                    value = resize_attn_pooling_pos_embed(value.float(), self.visual.attnpool.c_proj.weight.shape[0]).half()
+                elif key == "visual.attnpool.c_proj.bias" and value.shape != self.visual.attnpool.c_proj.bias.shape:
+                    value = resize_prj(value.float().unsqueeze(0), self.visual.attnpool.c_proj.bias.shape[0]).squeeze().half()
+                elif key == "text_projection" and value.shape != self.text_projection.shape:
+                    value = resize_prj(value.float(), self.text_projection.shape[1]).half()
+
+                target = own_state[key]
+                if target.shape != value.shape:
+                    failures.append((key, f"shape mismatch after adaptation: source={tuple(value.shape)}, target={tuple(target.shape)}"))
+                    continue
+                target.copy_(value.to(device=target.device, dtype=target.dtype))
+                loaded_keys.append(key)
+            except (RuntimeError, TypeError, ValueError) as exc:
+                failures.append((key, str(exc)))
+
+        required_text_keys = {
+            "token_embedding.weight",
+            "positional_embedding",
+            "ln_final.weight",
+            "ln_final.bias",
+            "text_projection",
+        }
+        missing_required = sorted(required_text_keys - set(loaded_keys))
+        if failures or missing_required:
+            details = [f"{key}: {message}" for key, message in failures]
+            if missing_required:
+                details.append("missing required text keys: " + ", ".join(missing_required))
+            raise RuntimeError("CLIP pretrained weight loading failed: " + "; ".join(details))
+
+        missing_model_keys = sorted(set(own_state) - set(loaded_keys) - set(skipped_keys))
+        print(
+            "CLIP preload summary: "
+            f"loaded={len(loaded_keys)}, skipped={len(skipped_keys)}, "
+            f"unexpected={len(unexpected_keys)}, missing_model={len(missing_model_keys)}"
+        )
+        if unexpected_keys:
+            print("Unexpected pretrained keys (first 10): " + ", ".join(unexpected_keys[:10]))
+        if missing_model_keys:
+            print("Missing model keys (first 10): " + ", ".join(missing_model_keys[:10]))
+        return {
+            "loaded_keys": tuple(loaded_keys),
+            "skipped_keys": tuple(skipped_keys),
+            "unexpected_keys": tuple(unexpected_keys),
+            "missing_model_keys": tuple(missing_model_keys),
+        }
 
 def resize_prj(posemb, new_C):
     old_N, old_C = posemb.shape

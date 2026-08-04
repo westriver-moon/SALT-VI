@@ -385,7 +385,7 @@ def prepare_runtime_config(
     overrides: Mapping[str, Any],
     gpu_id: Optional[int] = None,
 ) -> Path:
-    payload = load_yaml(REPO_ROOT / "configs/default.yaml")
+    payload = load_yaml(REPO_ROOT / "src/salt_vi/config/default.yaml")
     payload.update(load_yaml(base_config_path))
     payload.update(dict(overrides))
     if payload.get("dataset") == "sysu":

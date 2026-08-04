@@ -332,6 +332,11 @@ class Classifier(nn.Module):
         if self.uni_BN:
             if self.training:
                 len_feat = len(bn_input)
+                if len_feat % 5 != 0:
+                    raise ValueError(
+                        "uni_BN training expects five equally sized modality groups; "
+                        f"received {len_feat} features"
+                    )
                 b = len_feat // 5
                 rgb_features = self.BN_RGB(bn_input[:2*b])
                 ir_features = self.BN_IR(bn_input[2*b:3*b])
@@ -435,7 +440,10 @@ class CLIP2ReID(nn.Module):
             # self.base_model.visual.conv3_.load_state_dict(self.base_model.visual.conv3.state_dict())
     
 
-        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / args.temperature))  # 0.07
+        temperature = float(args.temperature)
+        if not np.isfinite(temperature) or temperature <= 0:
+            raise ValueError(f"temperature must be finite and > 0; got {args.temperature!r}")
+        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / temperature))  # 0.07
         # self.logit_scale = torch.ones([]) * np.log(1 / args.temperature)  # 0.07
         if getattr(args, "freeze_text_in_image_only", False) and args.training_mode == "RGB_IR":
             self.freeze_text_encoder_for_image_only()
@@ -1337,10 +1345,10 @@ class CLIP2ReID(nn.Module):
                     text_rgb_feats_map = self.base_model.encode_text(text_rgb).detach()
                     text_ir_feats_map = self.base_model.encode_text(text_ir).detach()
                     t_feats = self.text_fusion_layer(text_rgb_feats_map,text_ir_feats_map,text_rgb,text_ir,way=self.args.fusion_way)
+                    pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
+                    img_feats = torch.cat((rgb_feats, ir_feats), dim=0)
                     if 'id' in loss_list:
                         # get labels
-                        pids = torch.cat([label_rgb,label_rgb,label_ir], dim=0)
-                        img_feats = torch.cat((rgb_feats, ir_feats),dim=0)
                         _,img_scores = self.classifier(img_feats)
                         ret.update({'id_loss':(self.pid_criterion(img_scores, pids))*self.args.id_loss_weight})
                         img_acc = (img_scores.max(1)[1] == pids).float().mean()
@@ -1406,9 +1414,9 @@ class CLIP2ReID(nn.Module):
                         feat_acc = (all_feat_scores.max(1)[1] == uni_pids).float().mean()
                         ret.update({'acc': feat_acc})
                     
+                    uni_woir_pids = torch.cat([label_rgb, label_rgb, label_ir, label_ir], dim=0)
+                    uni_woir_feats = torch.cat([rgb_feats, f_feats, t_feats], dim=0)
                     if "id_woir" in loss_list:
-                        uni_woir_pids = torch.cat([label_rgb,label_rgb,label_ir,label_ir],dim=0)
-                        uni_woir_feats = torch.cat([rgb_feats,f_feats,t_feats],dim=0)   
                         _, img_scores = self.classifier(uni_woir_feats)
                         ret.update({'uni_id_woir_loss':(self.pid_criterion(img_scores, uni_woir_pids))*self.args.id_loss_weight})
                         feat_acc = (img_scores.max(1)[1] == uni_woir_pids).float().mean()
@@ -1498,10 +1506,10 @@ class CLIP2ReID(nn.Module):
                     else:
                         f_feats = self.fusion_layer(text_rgb_feats_map, ir_visual, text_rgb, pa=self.current_pa(), way=self.args.fusion_way).squeeze()
                                        
+                    pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
+                    img_feats = torch.cat((ori_vi_feats, aug_vi_feats, f_feats), dim=0)
                     if 'id' in loss_list:
                         # get labels
-                        pids = torch.cat([label_rgb,label_rgb,label_ir], dim=0)
-                        img_feats = torch.cat((ori_vi_feats, aug_vi_feats, f_feats),dim=0)
                         _, img_scores = self.classifier(img_feats)
                         ret.update({'id_loss':(self.pid_criterion(img_scores, pids))*self.args.id_loss_weight})
                         img_acc = (img_scores.max(1)[1] == pids).float().mean()
@@ -1525,10 +1533,10 @@ class CLIP2ReID(nn.Module):
                     # 获取融合后的特征
                     f_feats = self.fusion_layer(text_rgb_w_feats_map, ir_visual, text_rgb_w, pa=self.current_pa(), way=self.args.fusion_way).squeeze()
                     
+                    pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
+                    img_feats = torch.cat((rgb_feats, f_feats), dim=0)
                     if 'id' in loss_list:
                         # get labels
-                        pids = torch.cat([label_rgb,label_rgb,label_ir], dim=0)
-                        img_feats = torch.cat((rgb_feats, f_feats), dim=0)
                         _, img_scores = self.classifier(img_feats)
                         ret.update({'id_loss':(self.pid_criterion(img_scores, pids))*self.args.id_loss_weight})
                         img_acc = (img_scores.max(1)[1] == pids).float().mean()
@@ -1552,10 +1560,10 @@ class CLIP2ReID(nn.Module):
                     # 获取融合后的特征
                     f_feats = self.fusion_layer(torch.cat([text_ir_feats_map,text_ir_feats_map],dim=0), rgb_visual, torch.cat([text_ir,text_ir],dim=0), pa=self.current_pa(), way=self.args.fusion_way).squeeze()
                     
+                    pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
+                    img_feats = torch.cat((f_feats, ir_feats), dim=0)
                     if 'id' in loss_list:
                         # get labels
-                        pids = torch.cat([label_rgb,label_rgb,label_ir], dim=0)
-                        img_feats = torch.cat((f_feats, ir_feats),dim=0)
                         _,img_scores = self.classifier(img_feats)
                         ret.update({'id_loss':(self.pid_criterion(img_scores, pids))*self.args.id_loss_weight})
                         img_acc = (img_scores.max(1)[1] == pids).float().mean()

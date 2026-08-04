@@ -44,7 +44,7 @@ from common import (
 )
 
 
-DEFAULT_CONFIG_PATH = REPO_ROOT / "configs/default.yaml"
+DEFAULT_CONFIG_PATH = REPO_ROOT / "src/salt_vi/config/default.yaml"
 
 
 def merged_config(config_path: Path) -> Dict[str, Any]:

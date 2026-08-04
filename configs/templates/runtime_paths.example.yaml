@@ -1,0 +1,14 @@
+# Copy the relevant entries into a new, untracked runtime YAML before training.
+# SALT-VI expands ${VAR} placeholders when loading YAML configurations.
+# Do not edit archived experiment YAML files solely to change machine paths.
+
+sysu_data_path: ${SALT_VI_SYSU_ROOT}
+regdb_data_path: ${SALT_VI_REGDB_ROOT}
+llcm_data_path: ${SALT_VI_LLCM_ROOT}
+text_data_root: ${SALT_VI_TEXT_ROOT}
+pmt_pretrained: ${SALT_VI_PRETRAINED_ROOT}/jx_vit_base_p16_224-80ecf9dd.pth
+output_path: ${SALT_VI_OUTPUT_ROOT}/
+
+# Stage-B configurations additionally require a compatible Stage-A checkpoint.
+# Consult reports/experiment_registry/experiment_registry.csv for the canonical
+# checkpoint identity and SHA-256, then set the corresponding config field.

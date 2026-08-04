@@ -23,6 +23,19 @@ def _load_yaml(path, *, unsafe=False):
         return yaml.load(handle, Loader=loader)
 
 
+def _expand_environment_values(value):
+    """Recursively expand ${VAR} placeholders in portable YAML configurations."""
+    if isinstance(value, dict):
+        return {key: _expand_environment_values(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_expand_environment_values(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_expand_environment_values(item) for item in value)
+    if isinstance(value, str):
+        return os.path.expandvars(value)
+    return value
+
+
 def _load_yaml_with_extends(path, repo_root, seen=None):
     path = os.path.abspath(path)
     seen = set() if seen is None else set(seen)
@@ -34,7 +47,7 @@ def _load_yaml_with_extends(path, repo_root, seen=None):
     payload = dict(_load_yaml(path) or {})
     parent = payload.pop("extends", None)
     if not parent:
-        return payload
+        return _expand_environment_values(payload)
     candidates = []
     if os.path.isabs(parent):
         candidates.append(parent)
@@ -45,7 +58,7 @@ def _load_yaml_with_extends(path, repo_root, seen=None):
         raise FileNotFoundError(f"Unable to resolve parent config {parent!r} from {path}")
     inherited = _load_yaml_with_extends(parent_path, repo_root, seen | {path})
     inherited.update(payload)
-    return inherited
+    return _expand_environment_values(inherited)
 
 
 def _resolve_existing_file(path, *base_dirs):

@@ -1,21 +1,34 @@
 # SALT-VI
 
-SALT-VI ???????????????????? scripts/train.py??????? src/salt_vi/?
+SALT-VI is the canonical research implementation for visible?infrared person re-identification with RGB text supervision, two-stage training, super-resolution inputs, and LLM-based caption augmentation.
 
-## ????
+## Repository layout
 
-- src/salt_vi/???????????
-- configs/?SALT-VI ???
-- experiments/???? ID ???????
-- logs/?????/?????
-- checkpoints/??????????????????
-- runtime/???????????
+- `src/salt_vi/`: canonical implementation
+- `configs/`: reproducible configurations and archived experiment YAML files
+- `reports/experiment_registry/experiment_registry.csv`: experiment registry
+- `docs/`: protocols, evidence indexes, and operational notes
+- `scripts/`: training, validation, and analysis entry points
+- `checkpoints/`, `logs/`, `pretrained/`, `runtime/`: local runtime assets; intentionally excluded from Git
 
-??????? Token interaction / bidirectional token-cycle ?????????????????????????????????? runtime/migrations/token_interaction_removal_20260804/?
+## Installation
 
-??????????????
+```bash
+python -m pip install -e .
+```
 
-## 2026-08-04 removal status
+The repository does not distribute datasets or model weights. Configure public dataset roots, pretrained initialization, canonical checkpoints, and output paths before training. The experiment registry records checkpoint identities and SHA-256 values for retained runs.
 
-The Token interaction / bidirectional token-cycle implementation has been removed from both the canonical source and the retained vendor/source_core code copy. No active training entrypoint imports or calls it. Dedicated token-cycle YAML rows are retired in the experiment registry. Historical YAML/checkpoint/audit records remain only as evidence and are not executable entrypoints; see `runtime/migrations/token_interaction_removal_20260804/`.
+## Training
 
+Use an explicit YAML configuration:
+
+```bash
+python scripts/train.py --config_select configs/stage_b/a3_e4_stageb.yaml
+```
+
+`DataParallel` is intentionally unsupported. Use one process per GPU, or the validated `fixed_visual_data_parallel` mode when the visual branch is frozen.
+
+## Reproducibility scope
+
+The source repository contains code, configurations, tests, and experiment metadata. SYSU-MM01/RegDB/LLCM datasets, derived data arrays, pretrained weights, checkpoints, and raw logs remain local assets and must be obtained separately according to their respective licenses.

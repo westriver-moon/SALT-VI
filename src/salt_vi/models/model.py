@@ -106,7 +106,7 @@ class Classifier(nn.Module):
 
     def forward(self, features):
         # features = self.GAP(features_map)
-        bn_features = self.BN(features.squeeze())
+        bn_features = self.BN(features.flatten(1))
         cls_score = self.classifier(bn_features)
         if self.training:
             return features, cls_score

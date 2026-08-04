@@ -4,7 +4,6 @@ import torch
 from torch.autograd import Variable
 from salt_vi.utils import eval_regdb, eval_sysu, eval_llcm
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def _eval_image_feature(base, visual_output, mode="RGB", use_backup=False):
@@ -42,14 +41,14 @@ def test(base, loader, config, device):
             query_loader = loader.query_loaders[i]
             n_query = len(loader.query_labels[i])
             if 'IR' in config.test_modality:
-                query_feat_ir = np.zeros((n_query, embed_dim))
+                query_feat_ir = np.zeros((n_query, embed_dim), dtype=np.float32)
             if 'Fusion' in config.test_modality:
-                query_feat_fusion = np.zeros((n_query, embed_dim))
+                query_feat_fusion = np.zeros((n_query, embed_dim), dtype=np.float32)
                 if config.CAT_EVAL:
-                    query_feat_ir_f = np.zeros((n_query, embed_dim))
-                    query_feat_text_f = np.zeros((n_query, embed_dim))
+                    query_feat_ir_f = np.zeros((n_query, embed_dim), dtype=np.float32)
+                    query_feat_text_f = np.zeros((n_query, embed_dim), dtype=np.float32)
             if 'Text' in config.test_modality:
-                query_feat_text = np.zeros((n_query, embed_dim))
+                query_feat_text = np.zeros((n_query, embed_dim), dtype=np.float32)
             with torch.no_grad():
                 # for batch_idx, (input, text, label) in enumerate(loader.query_loader):
                 for batch_idx, batch_dict in enumerate(query_loader):
@@ -108,17 +107,17 @@ def test(base, loader, config, device):
 
     else:
         if 'IR' in config.test_modality:
-            query_feat_ir = np.zeros((loader.n_query, embed_dim))
+            query_feat_ir = np.zeros((loader.n_query, embed_dim), dtype=np.float32)
         if 'Fusion' in config.test_modality:
-            query_feat_fusion = np.zeros((loader.n_query, embed_dim))
+            query_feat_fusion = np.zeros((loader.n_query, embed_dim), dtype=np.float32)
             if config.CAT_EVAL:
                 #####################
-                query_feat_ir_f = np.zeros((loader.n_query, embed_dim))
+                query_feat_ir_f = np.zeros((loader.n_query, embed_dim), dtype=np.float32)
                 #####################
-                query_feat_text_f = np.zeros((loader.n_query, embed_dim))
+                query_feat_text_f = np.zeros((loader.n_query, embed_dim), dtype=np.float32)
                 #####################
         if 'Text' in config.test_modality:
-            query_feat_text = np.zeros((loader.n_query, embed_dim))
+            query_feat_text = np.zeros((loader.n_query, embed_dim), dtype=np.float32)
         with torch.no_grad():
             # for batch_idx, (input, text, label) in enumerate(loader.query_loader):
             for batch_idx, batch_dict in enumerate(loader.query_loader):
@@ -185,9 +184,9 @@ def test(base, loader, config, device):
             gall_cam = loader.gallery_cams[i]
             n_gallery = len(gall_label)
             if 'IR' in config.test_modality and config.Fix_Visual:
-                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim))
+                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             if 'IR' in config.test_modality or 'Fusion' in config.test_modality or 'Text' in config.test_modality:
-                gall_feat = np.zeros((n_gallery, embed_dim))
+                gall_feat = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             with torch.no_grad():
                 # for batch_idx, (input, text, label) in enumerate(gall_loader):
                 for batch_idx, batch_dict in enumerate(gall_loader):
@@ -273,9 +272,9 @@ def test(base, loader, config, device):
             gall_label = loader.gallery_labels[i]
             n_gallery = len(gall_label)
             if 'IR' in config.test_modality and config.Fix_Visual:
-                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim))
+                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             if 'IR' in config.test_modality or 'Fusion' in config.test_modality or 'Text' in config.test_modality:
-                gall_feat = np.zeros((n_gallery, embed_dim))
+                gall_feat = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             with torch.no_grad():
                 for batch_idx, batch_dict in enumerate(gall_loader):
                     input = batch_dict['img']
@@ -382,9 +381,9 @@ def test(base, loader, config, device):
             gall_cam = loader.gallery_cams[i]
             n_gallery = len(gall_label)
             if 'IR' in config.test_modality and config.Fix_Visual:
-                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim))
+                    gall_feat_for_IR = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             if 'IR' in config.test_modality or 'Fusion' in config.test_modality or 'Text' in config.test_modality:
-                gall_feat = np.zeros((n_gallery, embed_dim))
+                gall_feat = np.zeros((n_gallery, embed_dim), dtype=np.float32)
             with torch.no_grad():
                 for batch_idx, batch_dict in enumerate(gall_loader):
                     input = batch_dict['img']

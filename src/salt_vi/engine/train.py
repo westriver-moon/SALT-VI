@@ -1,6 +1,5 @@
 import torch
 from salt_vi.utils import MultiItemAverageMeter
-from torch.cuda import amp
 
 
 def train(base, loaders, scaler, config, optimizer, current_epoch=None):
@@ -35,8 +34,14 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
         # 清空所有梯度
         optimizer.zero_grad()
 
-        # feature and loss computing
-        with amp.autocast(enabled=True):
+        # feature and loss computing. Prefer torch.amp on modern PyTorch while
+        # retaining a warning-free fallback for the validated legacy runtime.
+        amp_enabled = base.device.type == "cuda"
+        if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+            autocast_context = torch.amp.autocast("cuda", enabled=amp_enabled)
+        else:
+            autocast_context = torch.cuda.amp.autocast(enabled=amp_enabled)
+        with autocast_context:
 
             # get loss
             ret = base(batch_dict, mode, current_epoch=current_epoch)

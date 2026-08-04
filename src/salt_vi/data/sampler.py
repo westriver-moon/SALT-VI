@@ -1,6 +1,26 @@
 import numpy as np
 from torch.utils.data.sampler import Sampler
 
+def validate_identity_batch_config(batch_size, num_pos, number_of_identities):
+    """Validate the PK-batch contract and return identities per batch."""
+    batch_size = int(batch_size)
+    num_pos = int(num_pos)
+    number_of_identities = int(number_of_identities)
+    if batch_size <= 0 or num_pos <= 0:
+        raise ValueError(f"batch_size and num_pos must be positive; got {batch_size}, {num_pos}")
+    if batch_size % num_pos != 0:
+        raise ValueError(
+            f"batch_size ({batch_size}) must be divisible by num_pos ({num_pos}) for PK sampling"
+        )
+    identities_per_batch = batch_size // num_pos
+    if identities_per_batch > number_of_identities:
+        raise ValueError(
+            f"PK sampling requests {identities_per_batch} identities per batch, but only "
+            f"{number_of_identities} are available"
+        )
+    return identities_per_batch
+
+
 def GenIdx(train_color_label, train_thermal_label):
     color_pos = []
     unique_label_color = np.unique(train_color_label)
@@ -27,6 +47,7 @@ class IdentitySampler(Sampler):
     def __init__(self, train_color_label, train_thermal_label, color_pos, thermal_pos, num_pos, batchSize):
         uni_label = np.unique(train_color_label)
         self.n_classes = len(uni_label)
+        validate_identity_batch_config(int(batchSize) * int(num_pos), num_pos, self.n_classes)
 
         N = np.maximum(len(train_color_label), len(train_thermal_label))
         for j in range(int(N / (batchSize * num_pos)) + 1):
@@ -50,7 +71,7 @@ class IdentitySampler(Sampler):
         return iter(np.arange(len(self.index1)))
 
     def __len__(self):
-        return self.N
+        return len(self.index1)
 
 
 class AutoReplaceIdentitySampler(Sampler):
@@ -59,6 +80,7 @@ class AutoReplaceIdentitySampler(Sampler):
     def __init__(self, train_color_label, train_thermal_label, color_pos, thermal_pos, num_pos, batchSize):
         uni_label = np.unique(train_color_label)
         self.n_classes = len(uni_label)
+        validate_identity_batch_config(int(batchSize) * int(num_pos), num_pos, self.n_classes)
 
         N = np.maximum(len(train_color_label), len(train_thermal_label))
         index1 = []
@@ -85,7 +107,7 @@ class AutoReplaceIdentitySampler(Sampler):
         return iter(np.arange(len(self.index1)))
 
     def __len__(self):
-        return self.N
+        return len(self.index1)
 
 '''
 
@@ -123,5 +145,5 @@ class IdentitySampler(Sampler):
         return iter(np.arange(len(self.index1)))
 
     def __len__(self):
-        return self.N
+        return len(self.index1)
         '''

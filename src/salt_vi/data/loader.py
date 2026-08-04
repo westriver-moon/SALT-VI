@@ -5,7 +5,12 @@ import os
 from salt_vi.data.dataset import process_query_sysu, process_gallery_sysu, \
     process_test_regdb,process_gallery_llcm,process_query_llcm, SYSU_Tri_Data,RegDB_Tri_Data,LLCM_Tri_Data,Test_Tri_Data
 from salt_vi.data.processing import ChannelRandomErasing, ChannelAdapGray, ChannelExchange
-from salt_vi.data.sampler import GenIdx, IdentitySampler, AutoReplaceIdentitySampler
+from salt_vi.data.sampler import (
+    GenIdx,
+    IdentitySampler,
+    AutoReplaceIdentitySampler,
+    validate_identity_batch_config,
+)
 import torch.utils.data as data
 
 
@@ -442,8 +447,17 @@ class Loader:
         else:
             raise ValueError(f"Unsupported sampler_type: {self.sampler_type}")
 
-        sampler = sampler_cls(self.samples.train_color_label, self.samples.train_thermal_label, self.color_pos,
-                              self.thermal_pos, self.num_pos, int(self.batch_size / self.num_pos))
+        identities_per_batch = validate_identity_batch_config(
+            self.batch_size, self.num_pos, len(self.color_pos)
+        )
+        sampler = sampler_cls(
+            self.samples.train_color_label,
+            self.samples.train_thermal_label,
+            self.color_pos,
+            self.thermal_pos,
+            self.num_pos,
+            identities_per_batch,
+        )
         self.samples.cIndex = sampler.index1
         self.samples.tIndex = sampler.index2
         train_loader = data.DataLoader(self.samples, batch_size=self.batch_size,
