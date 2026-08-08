@@ -11,8 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import GenerationConfig
-from .contracts import prepare_build_contract
-from .generate import consolidate_manifest, source_is_generated
+from .contracts import prepare_contracts
+from .generate import (
+    consolidate_manifest,
+    invalidate_invalid_sources,
+    source_is_generated,
+)
 from .tasks import GenerationTask, group_tasks_by_source, load_tasks
 
 
@@ -95,10 +99,14 @@ def run_dynamic_scheduler(
         raise ValueError("records contain no generation tasks")
     for group in groups:
         indices = [task.view_index for task in group]
-        if len(group) != 5 or indices != list(range(5)):
+        if (
+            any(task.task_kind != "five_view" for task in group)
+            or len(group) != 5
+            or indices != list(range(5))
+        ):
             source_key = group[0].source_key or str(group[0].image)
             raise ValueError(f"invalid five-view source group {source_key}: {indices}")
-    prepare_build_contract(config, records_path, tasks)
+    prepare_contracts(config, records_path, tasks)
     allowed = tuple(index for index in config.gpu_allowlist if index in (1, 2, 3))
     if 0 in allowed or not allowed or max_workers > 3:
         raise ValueError("scheduler may use only physical GPUs 1, 2, 3 and at most three workers")
@@ -106,62 +114,72 @@ def run_dynamic_scheduler(
     logs = config.output_root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
 
-    while generated_source_count(groups, config.output_root, config) < len(groups):
+    repair_cycles = 0
+    while True:
+        while generated_source_count(groups, config.output_root, config) < len(groups):
+            for gpu, process in list(active.items()):
+                return_code = process.poll()
+                if return_code is not None:
+                    active.pop(gpu)
+                    if return_code not in (0, 75):
+                        raise RuntimeError(
+                            f"PASD worker on physical GPU {gpu} failed with {return_code}"
+                        )
+
+            statuses = query_gpu_status()
+            for gpu in allowed:
+                if len(active) >= max_workers or gpu in active:
+                    continue
+                status = statuses.get(gpu)
+                if status is None or not gpu_is_eligible(status, config):
+                    continue
+                log_path = logs / f"worker-gpu{gpu}-{int(time.time())}.log"
+                log_stream = log_path.open("a", encoding="utf-8")
+                worker_environment = os.environ.copy()
+                worker_environment["CUDA_VISIBLE_DEVICES"] = str(gpu)
+                command = [
+                    sys.executable,
+                    str(Path(__file__).resolve().parents[1] / "scripts" / "run_worker.py"),
+                    "--config",
+                    str(config_path),
+                    "--records",
+                    str(records_path),
+                    "--physical-gpu",
+                    str(gpu),
+                    "--batch-size",
+                    "0",
+                ]
+                if worker_max_sources is not None:
+                    command.extend(["--max-sources", str(worker_max_sources)])
+                process = subprocess.Popen(
+                    command,
+                    env=worker_environment,
+                    stdout=log_stream,
+                    stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+                log_stream.close()
+                active[gpu] = process
+
+            time.sleep(min(60, max(5, poll_seconds)))
+
         for gpu, process in list(active.items()):
-            return_code = process.poll()
-            if return_code is not None:
-                active.pop(gpu)
-                if return_code not in (0, 75):
-                    raise RuntimeError(f"PASD worker on physical GPU {gpu} failed with {return_code}")
+            return_code = process.wait()
+            active.pop(gpu)
+            if return_code not in (0, 75):
+                raise RuntimeError(
+                    f"PASD worker on physical GPU {gpu} failed with {return_code}"
+                )
 
-        statuses = query_gpu_status()
-        for gpu in allowed:
-            if len(active) >= max_workers or gpu in active:
-                continue
-            status = statuses.get(gpu)
-            if status is None or not gpu_is_eligible(status, config):
-                continue
-            log_path = logs / f"worker-gpu{gpu}-{int(time.time())}.log"
-            log_stream = log_path.open("a", encoding="utf-8")
-            environment = os.environ.copy()
-            environment["CUDA_VISIBLE_DEVICES"] = str(gpu)
-            command = [
-                sys.executable,
-                str(Path(__file__).resolve().parents[1] / "scripts" / "run_worker.py"),
-                "--config",
-                str(config_path),
-                "--records",
-                str(records_path),
-                "--physical-gpu",
-                str(gpu),
-                "--batch-size",
-                "0",
-            ]
-            if worker_max_sources is not None:
-                command.extend(["--max-sources", str(worker_max_sources)])
-            process = subprocess.Popen(
-                command,
-                env=environment,
-                stdout=log_stream,
-                stderr=subprocess.STDOUT,
-                start_new_session=True,
-            )
-            log_stream.close()
-            active[gpu] = process
-
-        if not active:
-            time.sleep(min(60, max(5, poll_seconds)))
-        else:
-            time.sleep(min(60, max(5, poll_seconds)))
-
-    for process in active.values():
-        process.wait()
-    summary = consolidate_manifest(config.output_root, tasks, config)
-    (config.output_root / "scheduler-result.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    if not summary["validated_complete"]:
-        raise RuntimeError(
-            "PASD generation finished, but final content validation did not complete"
+        summary = consolidate_manifest(
+            config.output_root, tasks, config, records_path
         )
-    return summary
+        if summary["validated_complete"]:
+            summary["repair_cycles"] = repair_cycles
+            (config.output_root / "scheduler-result.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            return summary
+        invalidate_invalid_sources(config.output_root, summary)
+        repair_cycles += 1

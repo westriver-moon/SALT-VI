@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Callable, Iterator
 from PIL import Image, ImageChops, ImageStat
 
 from .config import GenerationConfig
-from .tasks import GenerationTask, group_tasks_by_source
+from .contracts import verify_dataset_scope, verify_generation_identity
+from .tasks import GenerationTask, group_tasks_by_source, normalize_source_key
 
 if TYPE_CHECKING:
     from .runtime import PASDGenerator
@@ -65,12 +66,12 @@ def _resolved_output(task: GenerationTask, output_root: Path) -> Path:
 
 
 def _source_metadata_path(output_root: Path, source_key: str) -> Path:
-    source = Path(source_key)
+    source = Path(normalize_source_key(source_key))
     return output_root / "metadata" / source.parent / f"{source.stem}.json"
 
 
 def _source_lock_path(output_root: Path, source_key: str) -> Path:
-    source = Path(source_key)
+    source = Path(normalize_source_key(source_key))
     return output_root / ".locks" / source.parent / f"{source.stem}.lock"
 
 
@@ -96,11 +97,14 @@ def _source_lock(path: Path) -> Iterator[bool]:
         stream.close()
 
 
-def _generation_contract(tasks: list[GenerationTask], config: GenerationConfig) -> str:
-    if not config.build_contract_sha256:
-        raise ValueError("generation requires a prepared build contract")
+def _source_contract(
+    tasks: list[GenerationTask], config: GenerationConfig, input_sha256: str
+) -> str:
+    if not config.generation_identity_sha256:
+        raise ValueError("generation requires a prepared generation identity")
     payload = {
-        "generation": config.output_contract(),
+        "generation_identity_sha256": config.generation_identity_sha256,
+        "input_sha256": input_sha256,
         "tasks": [
             {
                 "image": str(task.image),
@@ -113,6 +117,7 @@ def _generation_contract(tasks: list[GenerationTask], config: GenerationConfig) 
                 "identity": task.identity,
                 "camera": task.camera,
                 "split": task.split,
+                "task_kind": task.task_kind,
             }
             for task in tasks
         ],
@@ -130,7 +135,9 @@ def _matching_source_marker(
         return None
     try:
         marker = json.loads(marker_path.read_text(encoding="utf-8"))
-        if marker.get("generation_contract_sha256") != _generation_contract(tasks, config):
+        if marker.get("source_contract_sha256") != _source_contract(
+            tasks, config, marker.get("input_sha256", "")
+        ):
             return None
         views = marker.get("views", [])
         if len(views) != len(tasks):
@@ -194,6 +201,14 @@ def source_is_validated(
         return False
 
 
+def invalidate_invalid_sources(output_root: str | Path, summary: dict) -> list[str]:
+    output_root = Path(output_root).expanduser().resolve()
+    source_keys = [entry["source_key"] for entry in summary["invalid_sources"]]
+    for source_key in source_keys:
+        _source_metadata_path(output_root, source_key).unlink()
+    return source_keys
+
+
 def generate_task(generator: "PASDGenerator", task: GenerationTask, output_root: Path) -> dict:
     output_path = _resolved_output(task, output_root)
     image = generator.generate(task.image, task.caption, task.seed, task.modality)
@@ -217,8 +232,12 @@ def generate_source_group(
 ) -> dict:
     if not tasks:
         raise ValueError("source task group is empty")
-    source_key = tasks[0].source_key or str(tasks[0].image)
-    if len(tasks) != 5 or [task.view_index for task in tasks] != list(range(5)):
+    source_key = normalize_source_key(tasks[0].source_key)
+    if (
+        any(task.task_kind != "five_view" for task in tasks)
+        or len(tasks) != 5
+        or [task.view_index for task in tasks] != list(range(5))
+    ):
         raise ValueError(f"five-view task contract is invalid for {source_key}")
     images, geometry = generator.generate_views(
         tasks[0].image,
@@ -251,7 +270,7 @@ def generate_source_group(
             }
         )
     marker = {
-        "schema_version": 4,
+        "schema_version": 5,
         "source_key": source_key,
         "image": str(tasks[0].image),
         "input_sha256": input_digest,
@@ -263,7 +282,10 @@ def generate_source_group(
         "batch_size": int(batch_size),
         "num_inference_steps": generator.config.num_inference_steps,
         "geometry": geometry,
-        "generation_contract_sha256": _generation_contract(tasks, generator.config),
+        "generation_identity_sha256": generator.config.generation_identity_sha256,
+        "source_contract_sha256": _source_contract(
+            tasks, generator.config, input_digest
+        ),
         "views": views,
         "completed_at_unix": time.time(),
     }
@@ -343,6 +365,10 @@ def consolidate_manifest(
     output_root: str | Path,
     tasks: list[GenerationTask],
     config: GenerationConfig,
+    records_path: str | Path,
+    *,
+    implementation_root: Path | None = None,
+    environment: dict | None = None,
 ) -> dict:
     output_root = Path(output_root).expanduser().resolve()
     markers = []
@@ -380,9 +406,16 @@ def consolidate_manifest(
                 digest.update(encoded)
         stream.flush()
         os.fsync(stream.fileno())
-    os.replace(temporary, manifest_path)
+    validated_complete = not ungenerated_sources and not invalid_sources
+    try:
+        if validated_complete:
+            verify_generation_identity(config, implementation_root, environment)
+            verify_dataset_scope(config, records_path, tasks)
+        os.replace(temporary, manifest_path)
+    finally:
+        temporary.unlink(missing_ok=True)
     summary = {
-        "schema_version": 4,
+        "schema_version": 5,
         "source_count": len(markers),
         "view_count": sum(len(marker["views"]) for marker in markers),
         "expected_source_count": len(groups),
@@ -391,9 +424,11 @@ def consolidate_manifest(
         "ungenerated_source_count": len(ungenerated_sources),
         "invalid_source_count": len(invalid_sources),
         "generated_complete": not ungenerated_sources,
-        "validated_complete": not ungenerated_sources and not invalid_sources,
-        "complete": not ungenerated_sources and not invalid_sources,
+        "validated_complete": validated_complete,
+        "complete": validated_complete,
         "invalid_sources": invalid_sources[:1000],
+        "generation_identity_sha256": config.generation_identity_sha256,
+        "dataset_scope_sha256": config.dataset_scope_sha256,
         "manifest_jsonl": str(manifest_path),
         "manifest_jsonl_sha256": digest.hexdigest(),
     }
@@ -401,7 +436,9 @@ def consolidate_manifest(
     return summary
 
 
-def consolidate_task_manifest(output_root: str | Path, entries: list[dict]) -> dict:
+def consolidate_task_manifest(
+    output_root: str | Path, entries: list[dict], config: GenerationConfig
+) -> dict:
     output_root = Path(output_root).expanduser().resolve()
     manifest_path = output_root / "manifest.jsonl"
     temporary = manifest_path.with_name(f".{manifest_path.name}.{os.getpid()}.tmp")
@@ -420,6 +457,8 @@ def consolidate_task_manifest(output_root: str | Path, entries: list[dict]) -> d
         "schema_version": 1,
         "task_count": len(entries),
         "complete": True,
+        "generation_identity_sha256": config.generation_identity_sha256,
+        "dataset_scope_sha256": config.dataset_scope_sha256,
         "manifest_jsonl": str(manifest_path),
         "manifest_jsonl_sha256": digest.hexdigest(),
     }
@@ -427,7 +466,14 @@ def consolidate_task_manifest(output_root: str | Path, entries: list[dict]) -> d
     return summary
 
 
-def generate_batch(config: GenerationConfig, tasks: list[GenerationTask]) -> list[dict]:
+def generate_batch(
+    config: GenerationConfig,
+    tasks: list[GenerationTask],
+    records_path: str | Path,
+    *,
+    implementation_root: Path | None = None,
+    environment: dict | None = None,
+) -> list[dict]:
     """Compatibility sequential entry point used by the small CLI."""
 
     config.output_root.mkdir(parents=True, exist_ok=True)
@@ -436,12 +482,24 @@ def generate_batch(config: GenerationConfig, tasks: list[GenerationTask]) -> lis
     generator = PASDGenerator(config)
     entries = []
     groups = group_tasks_by_source(tasks)
-    if all(len(group) == 5 for group in groups):
+    task_kinds = {task.task_kind for task in tasks}
+    if task_kinds == {"five_view"}:
         for group in groups:
             entries.append(generate_source_group(generator, group, config.output_root, 1))
-        consolidate_manifest(config.output_root, tasks, config)
+        consolidate_manifest(
+            config.output_root,
+            tasks,
+            config,
+            records_path,
+            implementation_root=implementation_root,
+            environment=environment,
+        )
         return entries
+    if task_kinds.difference({"generic"}):
+        raise ValueError(f"batch records mix incompatible task kinds: {sorted(task_kinds)}")
     for task in tasks:
         entries.append(generate_task(generator, task, config.output_root))
-    consolidate_task_manifest(config.output_root, entries)
+    verify_generation_identity(config, implementation_root, environment)
+    verify_dataset_scope(config, records_path, tasks)
+    consolidate_task_manifest(config.output_root, entries, config)
     return entries

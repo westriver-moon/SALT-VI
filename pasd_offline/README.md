@@ -84,12 +84,14 @@ The batch command writes `manifest.json` and `manifest.jsonl` beside the
 generated images. Each entry records the exact caption, seed, input path,
 output path, and SHA-256 hashes.
 
-At batch or scheduler startup, the generator writes `build-contract.json`.
-This contract identifies the model weights, caption records, source images,
-and PASD implementation by content SHA-256. Five-view workers bind each source
-marker to that build contract. Scheduler polling uses the generated state;
-final consolidation verifies image structure and content hashes before setting
-`validated_complete` and `complete`.
+At batch or scheduler startup, the generator writes `generation-identity.json`
+and `dataset-scope.json`. The generation identity binds model weights, PASD
+implementation, generation settings, dependency lock, Python and GPU runtime.
+Each five-view marker binds that identity together with its own source image,
+captions, and seeds. The dataset scope binds the current records and input set,
+so an approved pilot source remains reusable when the scope expands to the full
+dataset. Scheduler polling uses the generated state, repairs invalid sources,
+and publishes a complete manifest only after content and identity verification.
 
 ## Build SYSU caption records
 

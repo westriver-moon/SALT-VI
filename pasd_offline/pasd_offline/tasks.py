@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +19,20 @@ class GenerationTask:
     view_index: int = 0
     camera: int = -1
     split: str = ""
+    task_kind: str = "generic"
+
+
+def normalize_source_key(value: str) -> str:
+    normalized = str(value).replace("\\", "/")
+    path = Path(normalized)
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or re.match(r"^[A-Za-z]:/", normalized)
+        or any(part == ".." for part in path.parts)
+    ):
+        raise ValueError(f"source_key must be a relative path without '..': {value!r}")
+    return path.as_posix()
 
 
 def _caption_output(path: Path, caption_index: int) -> Path:
@@ -42,6 +57,7 @@ def load_tasks(
             continue
         record = json.loads(line)
         if "views" in record:
+            source_key = normalize_source_key(record.get("source_key", ""))
             views = list(record["views"])
             if mode == "first":
                 views = views[:1]
@@ -58,10 +74,11 @@ def load_tasks(
                         seed=int(view["seed"]),
                         modality=str(record.get("modality", "")),
                         identity=str(record.get("identity", "")),
-                        source_key=str(record.get("source_key", "")),
+                        source_key=source_key,
                         view_index=int(view["view_index"]),
                         camera=int(record.get("camera", -1)),
                         split=str(record.get("split", "")),
+                        task_kind="five_view",
                     )
                 )
             continue
@@ -96,6 +113,7 @@ def load_tasks(
                     view_index=int(caption_index),
                     camera=int(record.get("camera", -1)),
                     split=str(record.get("split", "")),
+                    task_kind="generic",
                 )
             )
     return tasks

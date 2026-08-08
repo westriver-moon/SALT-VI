@@ -3,7 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
+import subprocess
 import tempfile
+from importlib.metadata import version
 from pathlib import Path
 from typing import Iterable
 
@@ -11,7 +14,9 @@ from .config import GenerationConfig
 from .tasks import GenerationTask
 
 
-BUILD_CONTRACT_NAME = "build-contract.json"
+GENERATION_IDENTITY_NAME = "generation-identity.json"
+DATASET_SCOPE_NAME = "dataset-scope.json"
+RUNTIME_PACKAGES = ("torch", "diffusers", "transformers", "xformers")
 
 
 def file_sha256(path: Path) -> str:
@@ -63,6 +68,48 @@ def input_identity(tasks: Iterable[GenerationTask]) -> dict:
     return {"source_count": len(sources), "sha256": digest.hexdigest()}
 
 
+def runtime_environment_identity(config: GenerationConfig, root: Path | None = None) -> dict:
+    import torch
+
+    root = root or Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            "nvidia-smi",
+            "--query-gpu=index,name,compute_cap,driver_version",
+            "--format=csv,noheader,nounits",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    allowed = set(config.gpu_allowlist)
+    gpus = []
+    for line in result.stdout.splitlines():
+        index, name, compute_capability, driver = (
+            value.strip() for value in line.split(",", 3)
+        )
+        if int(index) in allowed:
+            gpus.append(
+                {
+                    "index": int(index),
+                    "name": name,
+                    "compute_capability": compute_capability,
+                    "driver_version": driver,
+                }
+            )
+    return {
+        "requirements_lock": content_identity(root / "requirements-lock.txt"),
+        "python": {
+            "implementation": platform.python_implementation(),
+            "version": platform.python_version(),
+        },
+        "packages": {name: version(name) for name in RUNTIME_PACKAGES},
+        "cuda_runtime": torch.version.cuda,
+        "cudnn": torch.backends.cudnn.version(),
+        "gpus": gpus,
+    }
+
+
 def _atomic_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False)
@@ -78,46 +125,128 @@ def _atomic_json(path: Path, payload: dict) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def build_contract_digest(payload: dict) -> str:
+def identity_digest(payload: dict) -> str:
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
-def prepare_build_contract(
+def generation_identity_payload(
+    config: GenerationConfig,
+    implementation_root: Path | None = None,
+    environment: dict | None = None,
+) -> dict:
+    return {
+        "schema_version": 2,
+        "generation": config.output_contract(),
+        "models": {
+            "stable_diffusion": content_identity(config.pretrained_model_path),
+            "pasd": content_identity(config.pasd_model_path),
+            "person_detector": (
+                content_identity(config.person_detector_model)
+                if config.person_detector_model is not None
+                else None
+            ),
+        },
+        "implementation": implementation_identity(implementation_root),
+        "environment": environment or runtime_environment_identity(config, implementation_root),
+    }
+
+
+def dataset_scope_payload(records_path: str | Path, tasks: list[GenerationTask]) -> dict:
+    return {
+        "schema_version": 1,
+        "records": content_identity(Path(records_path)),
+        "inputs": input_identity(tasks),
+    }
+
+
+def _write_identity(path: Path, payload: dict, digest_field: str) -> dict:
+    digest = identity_digest(payload)
+    document = {**payload, digest_field: digest}
+    _atomic_json(path, document)
+    return document
+
+
+def _load_identity(path: Path, digest_field: str) -> dict:
+    document = json.loads(path.read_text(encoding="utf-8"))
+    digest = document.pop(digest_field)
+    if identity_digest(document) != digest:
+        raise ValueError(f"identity digest mismatch: {path}")
+    document[digest_field] = digest
+    return document
+
+
+def prepare_generation_identity(
+    config: GenerationConfig,
+    implementation_root: Path | None = None,
+    environment: dict | None = None,
+) -> dict:
+    document = _write_identity(
+        config.output_root / GENERATION_IDENTITY_NAME,
+        generation_identity_payload(config, implementation_root, environment),
+        "generation_identity_sha256",
+    )
+    config.generation_identity_sha256 = document["generation_identity_sha256"]
+    return document
+
+
+def prepare_dataset_scope(
+    config: GenerationConfig, records_path: str | Path, tasks: list[GenerationTask]
+) -> dict:
+    document = _write_identity(
+        config.output_root / DATASET_SCOPE_NAME,
+        dataset_scope_payload(records_path, tasks),
+        "dataset_scope_sha256",
+    )
+    config.dataset_scope_sha256 = document["dataset_scope_sha256"]
+    return document
+
+
+def prepare_contracts(
     config: GenerationConfig,
     records_path: str | Path,
     tasks: list[GenerationTask],
     implementation_root: Path | None = None,
-) -> dict:
-    records_path = Path(records_path).expanduser().resolve()
-    models = {
-        "stable_diffusion": content_identity(config.pretrained_model_path),
-        "pasd": content_identity(config.pasd_model_path),
-        "person_detector": (
-            content_identity(config.person_detector_model)
-            if config.person_detector_model is not None
-            else None
-        ),
-    }
-    payload = {
-        "schema_version": 1,
-        "records": content_identity(records_path),
-        "inputs": input_identity(tasks),
-        "models": models,
-        "implementation": implementation_identity(implementation_root),
-    }
-    digest = build_contract_digest(payload)
-    document = {**payload, "build_contract_sha256": digest}
-    _atomic_json(config.output_root / BUILD_CONTRACT_NAME, document)
-    config.build_contract_sha256 = digest
+    environment: dict | None = None,
+) -> tuple[dict, dict]:
+    generation = prepare_generation_identity(config, implementation_root, environment)
+    scope = prepare_dataset_scope(config, records_path, tasks)
+    return generation, scope
+
+
+def load_generation_identity(config: GenerationConfig) -> dict:
+    document = _load_identity(
+        config.output_root / GENERATION_IDENTITY_NAME, "generation_identity_sha256"
+    )
+    config.generation_identity_sha256 = document["generation_identity_sha256"]
     return document
 
-def load_build_contract(config: GenerationConfig) -> dict:
-    path = config.output_root / BUILD_CONTRACT_NAME
-    document = json.loads(path.read_text(encoding="utf-8"))
-    digest = document.pop("build_contract_sha256")
-    if build_contract_digest(document) != digest:
-        raise ValueError(f"build contract digest mismatch: {path}")
-    document["build_contract_sha256"] = digest
-    config.build_contract_sha256 = digest
+
+def load_dataset_scope(config: GenerationConfig) -> dict:
+    document = _load_identity(
+        config.output_root / DATASET_SCOPE_NAME, "dataset_scope_sha256"
+    )
+    config.dataset_scope_sha256 = document["dataset_scope_sha256"]
     return document
+
+
+def verify_generation_identity(
+    config: GenerationConfig,
+    implementation_root: Path | None = None,
+    environment: dict | None = None,
+) -> None:
+    expected = load_generation_identity(config)["generation_identity_sha256"]
+    actual = identity_digest(
+        generation_identity_payload(config, implementation_root, environment)
+    )
+    if actual != expected:
+        raise ValueError("generation identity changed after dataset build started")
+
+
+def verify_dataset_scope(
+    config: GenerationConfig, records_path: str | Path, tasks: list[GenerationTask]
+) -> None:
+    expected = load_dataset_scope(config)["dataset_scope_sha256"]
+    actual = identity_digest(dataset_scope_payload(records_path, tasks))
+    if actual != expected:
+        raise ValueError("dataset scope changed after dataset build started")

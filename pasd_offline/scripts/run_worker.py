@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from pasd_offline.config import GenerationConfig  # noqa: E402
-from pasd_offline.contracts import load_build_contract  # noqa: E402
+from pasd_offline.contracts import load_generation_identity  # noqa: E402
 from pasd_offline.generate import generate_worker  # noqa: E402
 from pasd_offline.scheduler import has_foreign_compute_process  # noqa: E402
 from pasd_offline.tasks import load_tasks  # noqa: E402
@@ -29,7 +29,7 @@ def main() -> int:
     if os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",")[0].strip() != str(args.physical_gpu):
         raise RuntimeError("worker must be launched with exactly its physical GPU first in CUDA_VISIBLE_DEVICES")
     config = GenerationConfig.from_yaml(args.config)
-    load_build_contract(config)
+    load_generation_identity(config)
     tasks = load_tasks(args.records, "all", config.seed)
     result = generate_worker(
         config,
