@@ -1,0 +1,35 @@
+pretrained_model_path: ../checkpoints/stable-diffusion-v1-5
+pasd_model_path: ../checkpoints/pasd/checkpoint-100000
+output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-adaptive-512x256-5view-v1
+
+device: cuda:0
+mixed_precision: fp16
+upscale: 1
+process_size: 512
+num_inference_steps: 20
+guidance_scale: 4.0
+conditioning_scale: 1.0
+added_prompt: faithful pedestrian restoration, preserve the same identity, body shape, pose, clothing structure, accessories, natural surveillance texture, sharp details
+negative_prompt: different person, changed identity, changed pose, changed body proportions, different clothing, new accessories, altered face, painting, cartoon, artificial texture, blurry, noise, raster lines, over-smoothed
+seed: 20260808
+
+decoder_tiled_size: 2048
+encoder_tiled_size: 2048
+latent_tiled_size: 320
+latent_tiled_overlap: 8
+init_latent_with_noise: false
+added_noise_level: 0
+offset_noise_scale: 0.0
+enable_xformers: true
+
+target_height: 512
+target_width: 256
+png_compress_level: 4
+person_detector_model: ../checkpoints/yolov8n.pt
+person_detector_confidence: 0.25
+person_margin: 0.05
+
+gpu_allowlist: [1, 2, 3]
+min_free_memory_gib: 22.0
+max_gpu_utilization: 5
+worker_chunk_size: 100

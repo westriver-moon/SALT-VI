@@ -29,6 +29,8 @@ __pycache__/
 /vendor/legacy_code/
 
 # Generated datasets and model artifacts
+/data/
+/datasets/
 *.pth
 *.pt
 *.ckpt

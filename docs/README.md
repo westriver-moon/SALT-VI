@@ -10,6 +10,7 @@
 - [`docs/protocols/data_quality_and_external_screening.md`](protocols/data_quality_and_external_screening.md)
 - [`docs/protocols/experiment_governance.md`](protocols/experiment_governance.md)
 - [`docs/protocols/hyperparameter_search.md`](protocols/hyperparameter_search.md)
+- [`docs/protocols/SALT_R_TEXT_VISUAL_DEFAULT.md`](protocols/SALT_R_TEXT_VISUAL_DEFAULT.md)
 - [`docs/protocols/super_resolution/A3_E4_HPT_STAGE3.md`](protocols/super_resolution/A3_E4_HPT_STAGE3.md)
 - [`docs/protocols/super_resolution/SYSU_SR_PROTOCOL_AND_AUDIT.md`](protocols/super_resolution/SYSU_SR_PROTOCOL_AND_AUDIT.md)
 - [`docs/reference/RETIRED_IMPLEMENTATIONS.md`](reference/RETIRED_IMPLEMENTATIONS.md)

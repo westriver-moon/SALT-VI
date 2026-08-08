@@ -11,6 +11,7 @@ from salt_vi.data.sampler import (
     AutoReplaceIdentitySampler,
     validate_identity_batch_config,
 )
+from salt_vi.retrieval import get_retrieval_backend
 import torch.utils.data as data
 
 
@@ -48,13 +49,14 @@ REQUIRED_RGB_IR_TEXT_BATCH_KEYS = (
     "img_ir",
     "target_rgb",
     "target_ir",
-    "text_rgb",
-    "text_ir",
 )
 
 
-def validate_rgb_ir_text_batch_dict(batch_dict):
-    missing = [key for key in REQUIRED_RGB_IR_TEXT_BATCH_KEYS if key not in batch_dict]
+def validate_rgb_ir_text_batch_dict(batch_dict, text_modalities=("rgb", "ir")):
+    required = REQUIRED_RGB_IR_TEXT_BATCH_KEYS + tuple(
+        f"text_{modality}" for modality in text_modalities
+    )
+    missing = [key for key in required if key not in batch_dict]
     if missing:
         raise KeyError(
             "RGB_IR_Text batch_dict is missing required key(s): "
@@ -164,7 +166,7 @@ class Loader:
                 normalize,
                 ChannelRandomErasing(probability=0.5),
                 ChannelAdapGray(probability=0.6)])
-        
+
 
         all_sysu_eval_modalities_are_exact_sr = (
             config.dataset == "sysu"
@@ -189,7 +191,7 @@ class Loader:
             test_resize,
             transforms.ToTensor(),
             normalize])
-        
+
         # dataset name and path
         self.dataset = config.dataset
         self.sysu_data_path = _with_sep(config.sysu_data_path)
@@ -224,7 +226,7 @@ class Loader:
         self.test_batch_size = int(getattr(config, "test_batch_size", 128))
         if self.test_batch_size < 1:
             raise ValueError(f"test_batch_size must be positive, got {self.test_batch_size}")
-        
+
         # model setting
         self.mode = config.mode
         self.test_mode = config.test_mode
@@ -232,18 +234,39 @@ class Loader:
         self.num_workers = config.num_workers
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
+        self.retrieval_backend = get_retrieval_backend(
+            getattr(config, "retrieval_backend", "legacy")
+        )
         self.use_train_text = "Text" in self.training_mode
-        self.use_eval_text = _needs_eval_text(self.test_modality)
+        if self.retrieval_backend:
+            self.train_text_modalities = self.retrieval_backend.TRAIN_TEXT_MODALITIES
+            self.query_caption_lookup = self.retrieval_backend.QUERY_CAPTION_LOOKUP
+            self.gallery_caption_lookup = self.retrieval_backend.GALLERY_CAPTION_LOOKUP
+        else:
+            self.train_text_modalities = ("rgb", "ir")
+            self.query_caption_lookup = (
+                "identity" if _needs_eval_text(self.test_modality) else None
+            )
+            self.gallery_caption_lookup = None
+        self.use_eval_text = bool(
+            self.query_caption_lookup or self.gallery_caption_lookup
+        )
         self.joint_mode = config.joint_mode if self.use_train_text else "image_only"
 
         # nlp augmentation setting
         self.Feat_Filter = config.Feat_Filter if (self.use_train_text or self.use_eval_text) else False
         self.captioner_name = config.captioner_name
         self.text_data_root = getattr(config, "text_data_root", None)
+        self.gallery_caption_manifest = getattr(config, "gallery_caption_manifest", None)
         self.sysu_sr_data_root = getattr(config, "sysu_sr_data_root", None)
         self.sysu_sr_modalities = getattr(config, "sysu_sr_modalities", [])
         self.sysu_source_size = getattr(config, "sysu_source_size", None)
         self.sysu_sr_exact_size = bool(getattr(config, "sysu_sr_exact_size", False))
+        self.sysu_sr_backend = getattr(config, "sysu_sr_backend", "array")
+        self.sysu_sr_view_manifest = getattr(config, "sysu_sr_view_manifest", None)
+        self.sysu_sr_views_per_image = int(getattr(config, "sysu_sr_views_per_image", 1))
+        self.sysu_sr_view_sampling = getattr(config, "sysu_sr_view_sampling", "independent")
+        self.sysu_sr_eval_view_index = int(getattr(config, "sysu_sr_eval_view_index", 0))
         self.llm_aug = config.llm_aug
         self.llm_aug_prob = config.llm_aug_prob
         if "Text" in config.training_mode:
@@ -264,7 +287,12 @@ class Loader:
                                                         Feat_Filter=self.Feat_Filter,
                                                         text_data_root=self.text_data_root,
                                                         sysu_sr_data_root=self.sysu_sr_data_root,
-                                                        sysu_sr_modalities=self.sysu_sr_modalities)
+                                                        sysu_sr_modalities=self.sysu_sr_modalities,
+                                                        sysu_sr_backend=self.sysu_sr_backend,
+                                                        sysu_sr_view_manifest=self.sysu_sr_view_manifest,
+                                                        sysu_sr_views_per_image=self.sysu_sr_views_per_image,
+                                                        sysu_sr_view_sampling=self.sysu_sr_view_sampling,
+                                                        text_modalities=self.train_text_modalities)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 self.samples = samples
 
@@ -300,14 +328,14 @@ class Loader:
                                                     num_workers=self.num_workers)
                 query_loaders.append(query_loader)
             self.query_loaders = query_loaders
-            
+
             gallery_loaders = []
             for i in range(self.eval_num_regdb):
                 gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
                                              num_workers=self.num_workers)
                 gallery_loaders.append(gallery_loader)
             self.gallery_loaders = gallery_loaders
-        
+
         elif self.dataset == 'llcm':
             if self.mode == 'train':
                 samples = LLCM_Tri_Data(self.llcm_data_path, transform1=self.transform_color1, transform2=self.transform_color2,
@@ -319,7 +347,7 @@ class Loader:
                                                         text_data_root=self.text_data_root)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 self.samples = samples
-            
+
             query_samples, gallery_samples_list = self._get_test_samples(self.dataset)
             query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
                                                 num_workers=self.num_workers)
@@ -336,13 +364,19 @@ class Loader:
             query_img, query_label, query_cam = process_query_sysu(self.sysu_data_path, mode=self.test_mode)
             query_samples = Test_Tri_Data(query_img, query_label, transform=self.transform_test,
                                      img_size=(self.img_w, self.img_h), data_path=self.sysu_data_path,\
-                                        captioner_name=self.captioner_name, joint_mode=self.joint_mode,gallorquery='query',\
-                                            Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
+                                            captioner_name=self.captioner_name, joint_mode=self.joint_mode,gallorquery='query',\
+                                            Feat_Filter=self.Feat_Filter,
+                                            load_text=self.query_caption_lookup is not None,
+                                            caption_lookup=self.query_caption_lookup or "identity",
                                             text_data_root=self.text_data_root,
                                             sysu_source_size=self.sysu_source_size,
                                             sysu_sr_exact_size=self.sysu_sr_exact_size,
                                             sysu_sr_data_root=self.sysu_sr_data_root,
                                             sysu_sr_modalities=self.sysu_sr_modalities,
+                                            sysu_sr_backend=self.sysu_sr_backend,
+                                            sysu_sr_view_manifest=self.sysu_sr_view_manifest,
+                                            sysu_sr_views_per_image=self.sysu_sr_views_per_image,
+                                            sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
                                             source_modality="ir")
             self.query_label = query_label
             self.query_cam = query_cam
@@ -364,12 +398,19 @@ class Loader:
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.sysu_data_path,transform=self.transform_test,
                                         img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,
                                         joint_mode=self.joint_mode,gallorquery=f'gall[{i+1}]',
-                                        Feat_Filter=self.Feat_Filter, load_text=False,
+                                        Feat_Filter=self.Feat_Filter,
+                                        load_text=self.gallery_caption_lookup is not None,
+                                        caption_lookup=self.gallery_caption_lookup or "identity",
+                                        caption_manifest=self.gallery_caption_manifest,
                                         text_data_root=self.text_data_root,
                                         sysu_source_size=self.sysu_source_size,
                                         sysu_sr_exact_size=self.sysu_sr_exact_size,
                                         sysu_sr_data_root=self.sysu_sr_data_root,
                                         sysu_sr_modalities=self.sysu_sr_modalities,
+                                        sysu_sr_backend=self.sysu_sr_backend,
+                                        sysu_sr_view_manifest=self.sysu_sr_view_manifest,
+                                        sysu_sr_views_per_image=self.sysu_sr_views_per_image,
+                                        sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
                                         source_modality="rgb")
                 gallery_samples_list.append(gallery_samples)
             return query_samples, gallery_samples_list
@@ -427,7 +468,7 @@ class Loader:
             self.gallery_cams = []
             for i in range(10):
                 gall_img, gall_label, gall_cam = process_gallery_llcm(self.llcm_data_path, mode=1, trial=i) # vis
-                
+
                 self.gall_cam = gall_cam
                 self.gall_label = gall_label
                 self.n_gallery = len(gall_label)

@@ -148,6 +148,11 @@ sysu_sr_exact_size: true
 sysu_sr_modalities:
 - rgb
 - ir
+sysu_sr_backend: array
+sysu_sr_view_manifest: null
+sysu_sr_views_per_image: 1
+sysu_sr_view_sampling: independent
+sysu_sr_eval_view_index: 0
 target_lr: 0.0
 target_lr_factor: 0.01
 temperature: 0.07

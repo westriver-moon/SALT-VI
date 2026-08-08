@@ -7,6 +7,12 @@ import torch.utils.data as data
 from PIL import Image
 import torch
 from .tokenizer import SimpleTokenizer
+from .pasd_multiview import (
+    PASDTrainViewStore,
+    eval_view_path,
+    normalize_backend,
+    normalize_sampling,
+)
 from tqdm import tqdm
 
 
@@ -119,11 +125,32 @@ def _sysu_train_image_path(data_dir, sr_data_root, sr_modalities, modality):
     return path
 
 
-def _sysu_eval_image_path(image_path, data_path, sr_data_root, sr_modalities, modality):
+def _sysu_eval_image_path(
+    image_path,
+    data_path,
+    sr_data_root,
+    sr_modalities,
+    modality,
+    sr_backend="array",
+    sr_view_manifest=None,
+    sr_views_per_image=1,
+    sr_eval_view_index=0,
+):
     if modality not in sr_modalities:
         return image_path
     if not sr_data_root:
         raise ValueError(f"sysu_sr_data_root is required when SYSU {modality} super-resolution is enabled")
+    if normalize_backend(sr_backend) == "pasd_multiview":
+        if not sr_view_manifest:
+            raise ValueError("sysu_sr_view_manifest is required for PASD multiview evaluation")
+        return eval_view_path(
+            image_path,
+            data_path,
+            sr_data_root,
+            sr_view_manifest,
+            sr_eval_view_index,
+            sr_views_per_image,
+        )
     relative_path = os.path.relpath(image_path, data_path)
     if relative_path.startswith(".."):
         raise ValueError(f"SYSU evaluation image is outside the dataset root: {image_path}")
@@ -140,50 +167,84 @@ class SYSU_Tri_Data(data.Dataset):
                             text_length=77, llm_aug_prob=0.6,\
                                     llm_aug=False, captioner_name='GIT', joint_mode="ir_crossfusion", \
                                         Feat_Filter=False, text_data_root=None,
-                                        sysu_sr_data_root=None, sysu_sr_modalities=None): # include: Feat_Filter=False
+                                        sysu_sr_data_root=None, sysu_sr_modalities=None,
+                                        sysu_sr_backend="array", sysu_sr_view_manifest=None,
+                                        sysu_sr_views_per_image=1,
+                                        sysu_sr_view_sampling="independent",
+                                        text_modalities=("rgb", "ir")): # include: Feat_Filter=False
         # initialize text tokenizer
         self.tokenizer = SimpleTokenizer()
 
         # Load RGB data
         self.sysu_sr_modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
-        train_color_image = np.load(
-            _sysu_train_image_path(
-                data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "rgb"
-            ),
-            mmap_mode="r",
-        )
-        self.train_color_image = train_color_image
+        self.sysu_sr_backend = normalize_backend(sysu_sr_backend)
+        self.sysu_sr_views_per_image = int(sysu_sr_views_per_image)
+        self.sysu_sr_view_sampling = normalize_sampling(sysu_sr_view_sampling)
+        self.uses_pasd_multiview = self.sysu_sr_backend == "pasd_multiview"
+        if self.uses_pasd_multiview:
+            if self.sysu_sr_modalities != frozenset(("rgb", "ir")):
+                raise ValueError("PASD multiview training requires sysu_sr_modalities=[rgb, ir]")
+            if not sysu_sr_data_root or not sysu_sr_view_manifest:
+                raise ValueError("PASD multiview training requires data root and view manifest")
+            self.train_color_image = PASDTrainViewStore(
+                data_dir,
+                sysu_sr_data_root,
+                sysu_sr_view_manifest,
+                "rgb",
+                self.sysu_sr_views_per_image,
+            )
+        else:
+            self.train_color_image = np.load(
+                _sysu_train_image_path(
+                    data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "rgb"
+                ),
+                mmap_mode="r",
+            )
         self.train_color_label = np.load(data_dir + 'train_rgb_resized_label.npy')
 
         # Load IR data
-        train_thermal_image = np.load(
-            _sysu_train_image_path(
-                data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "ir"
-            ),
-            mmap_mode="r",
-        )
-        self.train_thermal_image = train_thermal_image
+        if self.uses_pasd_multiview:
+            self.train_thermal_image = PASDTrainViewStore(
+                data_dir,
+                sysu_sr_data_root,
+                sysu_sr_view_manifest,
+                "ir",
+                self.sysu_sr_views_per_image,
+            )
+        else:
+            self.train_thermal_image = np.load(
+                _sysu_train_image_path(
+                    data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "ir"
+                ),
+                mmap_mode="r",
+            )
         self.train_thermal_label = np.load(data_dir + 'train_ir_resized_label.npy')
-        
-        
+        if len(self.train_color_image) != len(self.train_color_label):
+            raise ValueError("PASD RGB source order/count does not match SYSU train labels")
+        if len(self.train_thermal_image) != len(self.train_thermal_label):
+            raise ValueError("PASD IR source order/count does not match SYSU train labels")
+
+
         # Load text data
         self.Feat_Filter = Feat_Filter
         self.joint_mode = joint_mode
         self.text_length = text_length
         self.llm_aug = llm_aug
         self.llm_aug_prob = llm_aug_prob
+        self.text_modalities = frozenset(text_modalities)
 
-        if joint_mode == "ir_crossfusion" or joint_mode == "uni":
-            print("Loading RGB Text For Training...")
-            self.text_dir_rgb = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'RGB', text_data_root)
-            self.train_text_rgb = np.load(self.text_dir_rgb + f'train_text_{captioner_name}_RGB.npy')
-            self.train_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.train_text_rgb]
-            self.train_text_label_rgb = np.load(self.text_dir_rgb + f'train_text_label_{captioner_name}_RGB.npy')
-            if llm_aug:
-                self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
-                self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
-            
-            if joint_mode == "ir_crossfusion" or joint_mode == "uni":
+        if (joint_mode == "ir_crossfusion" or joint_mode == "uni") and not self.uses_pasd_multiview:
+            if "rgb" in self.text_modalities:
+                print("Loading RGB Text For Training...")
+                self.text_dir_rgb = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'RGB', text_data_root)
+                self.train_text_rgb = np.load(self.text_dir_rgb + f'train_text_{captioner_name}_RGB.npy')
+                self.train_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.train_text_rgb]
+                self.train_text_label_rgb = np.load(self.text_dir_rgb + f'train_text_label_{captioner_name}_RGB.npy')
+                if llm_aug:
+                    self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
+                    self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
+
+            if "ir" in self.text_modalities:
                 print("Loading IR Text For Training...")
                 self.text_dir_ir = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'IR', text_data_root)
                 self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
@@ -223,7 +284,7 @@ class SYSU_Tri_Data(data.Dataset):
         #     if llm_aug:
         #         self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
         #         self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
-            
+
         #     print("Loading IR Text For Training...")
         #     self.text_dir_ir = data_dir + f'Text/{captioner_name}_IR/'
         #     self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
@@ -249,9 +310,24 @@ class SYSU_Tri_Data(data.Dataset):
         batch_dict = {}
 
         # get image and label
-        img1, target1 = self.train_color_image[self.cIndex[index]], self.train_color_label[self.cIndex[index]]
-        img2, target2 = self.train_thermal_image[self.tIndex[index]], self.train_thermal_label[self.tIndex[index]]
-        
+        color_index = int(self.cIndex[index])
+        thermal_index = int(self.tIndex[index])
+        target1 = self.train_color_label[color_index]
+        target2 = self.train_thermal_label[thermal_index]
+        if self.uses_pasd_multiview:
+            visual_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+            visual_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+            if self.sysu_sr_view_sampling == "paired":
+                text_rgb_view, text_ir_view = visual_rgb_view, visual_ir_view
+            else:
+                text_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+                text_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+            img1 = self.train_color_image.image(color_index, visual_rgb_view)
+            img2 = self.train_thermal_image.image(thermal_index, visual_ir_view)
+        else:
+            img1 = self.train_color_image[color_index]
+            img2 = self.train_thermal_image[thermal_index]
+
         # apply img transforms
         img1_0 = self.transform1(img1) # color image
         img1_1 = self.transform2(img1) # color image with augmentation
@@ -259,28 +335,40 @@ class SYSU_Tri_Data(data.Dataset):
 
         # apply text transforms
         if self.joint_mode == "ir_crossfusion" or self.joint_mode == "uni":
-            caption_id_rgb = self.train_text_rgb[self.cIndex[index]]
-            if self.llm_aug and random.random() < self.llm_aug_prob:
-                    caption_id_rgb = self.llm_text_rgb[self.cIndex[index]]
-            batch_dict['text_rgb'] = caption_id_rgb
+            if "rgb" in self.text_modalities:
+                if self.uses_pasd_multiview:
+                    caption_id_rgb = tokenize(
+                        self.train_color_image.caption(color_index, text_rgb_view), self.tokenizer
+                    )
+                else:
+                    caption_id_rgb = self.train_text_rgb[color_index]
+                    if self.llm_aug and random.random() < self.llm_aug_prob:
+                        caption_id_rgb = self.llm_text_rgb[color_index]
+                batch_dict['text_rgb'] = caption_id_rgb
 
-            caption_id_ir = self.train_text_ir[self.tIndex[index]]
-            if self.llm_aug and random.random() < self.llm_aug_prob:
-                caption_id_ir = self.llm_text_ir[self.tIndex[index]]
-            batch_dict['text_ir'] = caption_id_ir
-        
+            if "ir" in self.text_modalities:
+                if self.uses_pasd_multiview:
+                    caption_id_ir = tokenize(
+                        self.train_thermal_image.caption(thermal_index, text_ir_view), self.tokenizer
+                    )
+                else:
+                    caption_id_ir = self.train_text_ir[thermal_index]
+                    if self.llm_aug and random.random() < self.llm_aug_prob:
+                        caption_id_ir = self.llm_text_ir[thermal_index]
+                batch_dict['text_ir'] = caption_id_ir
+
         # if self.joint_mode == "rgb_selffusion":
         #     caption_id_ir = self.train_text_ir[self.tIndex[index]]
         #     if self.llm_aug and random.random() < self.llm_aug_prob:
         #             caption_id_ir = self.llm_text_ir[self.tIndex[index]]
         #     batch_dict['text_ir'] = caption_id_ir
-        
+
         # if self.joint_mode == "ir_selffusion":
         #     caption_id_rgb_w = self.train_text_rgb_w[self.cIndex[index]]
         #     if self.llm_aug and random.random() < self.llm_aug_prob:
         #             caption_id_rgb_w = self.llm_text_rgb_w[self.cIndex[index]]
         #     batch_dict['text_rgb_w'] = caption_id_rgb_w
-        
+
         # if self.joint_mode == "dual_text":
         #     caption_id_rgb = self.train_text_rgb[self.cIndex[index]]
         #     caption_id_ir = self.train_text_ir[self.tIndex[index]]
@@ -290,7 +378,7 @@ class SYSU_Tri_Data(data.Dataset):
         #             caption_id_ir = self.llm_text_ir[self.tIndex[index]]
         #     batch_dict['text_rgb'] = caption_id_rgb
         #     batch_dict['text_ir'] = caption_id_ir
-        
+
         # add to batch_dict
         batch_dict['img_rgb_ori'] = img1_0
         batch_dict['img_rgb_aug'] = img1_1
@@ -299,12 +387,12 @@ class SYSU_Tri_Data(data.Dataset):
         batch_dict['target_ir'] = target2
 
         return batch_dict
-            
+
 
 
     def __len__(self):
         return len(self.train_color_label)
-    
+
 
     def get_bpe_tokens(self, word):
         token = ''.join(self.tokenizer.byte_encoder[b] for b in word.encode('utf-8'))
@@ -396,7 +484,7 @@ class RegDBData(data.Dataset):
 
     def __len__(self):
         return len(self.train_color_label)
-    
+
 
 class RegDB_Tri_Data(data.Dataset):
     def __init__(self, data_dir, trial,transform1=None, \
@@ -456,7 +544,7 @@ class RegDB_Tri_Data(data.Dataset):
             self.train_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in color_img_file]
             if llm_aug:
                 self.llm_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['aug_description'], self.tokenizer) for i_path in color_img_file]
-            
+
             if joint_mode == "ir_crossfusion" or joint_mode == "uni":
                 print("Loading IR Text For Training...")
                 self.text_dir_ir = _resolve_text_dir(
@@ -466,7 +554,7 @@ class RegDB_Tri_Data(data.Dataset):
                 self.train_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in thermal_img_file]
                 if llm_aug:
                     self.llm_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['aug_description'], self.tokenizer) for i_path in thermal_img_file]
-                
+
 
         self.transform1 = transform1
         self.transform2 = transform2
@@ -505,7 +593,7 @@ class RegDB_Tri_Data(data.Dataset):
 
     def __len__(self):
         return len(self.train_color_label)
-    
+
 
 class LLCM_Tri_Data(data.Dataset):
     def __init__(self, data_dir, transform1=None, \
@@ -530,15 +618,15 @@ class LLCM_Tri_Data(data.Dataset):
 
         color_img_file, train_color_label = load_data(train_color_list)
         thermal_img_file, train_thermal_label = load_data(train_thermal_list)
-        
+
         train_color_image = []
         for i in range(len(color_img_file)):
             img = Image.open(data_dir+ color_img_file[i])
             img = img.resize((144, 288), PIL_LANCZOS)
             pix_array = np.array(img)
             train_color_image.append(pix_array)
-        train_color_image = np.array(train_color_image) 
-        
+        train_color_image = np.array(train_color_image)
+
         train_thermal_image = []
         for i in range(len(thermal_img_file)):
             img = Image.open(data_dir+ thermal_img_file[i])
@@ -547,11 +635,11 @@ class LLCM_Tri_Data(data.Dataset):
             train_thermal_image.append(pix_array)
             #print(pix_array.shape)
         train_thermal_image = np.array(train_thermal_image)
-        
+
         # RGB format
-        self.train_color_image = train_color_image  
+        self.train_color_image = train_color_image
         self.train_color_label = train_color_label
-        
+
         # IR format
         self.train_thermal_image = train_thermal_image
         self.train_thermal_label = train_thermal_label
@@ -566,7 +654,7 @@ class LLCM_Tri_Data(data.Dataset):
             self.train_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in color_img_file]
             if llm_aug:
                 self.llm_text_rgb = [tokenize(self.text_rgb_dict[data_dir + i_path]['aug_description'], self.tokenizer) for i_path in color_img_file]
-            
+
             if joint_mode == "ir_crossfusion" or joint_mode == "uni":
                 print("Loading IR Text For Training...")
                 self.text_dir_ir = _resolve_text_dir(data_dir, 'llcm', captioner_name, 'IR', text_data_root)
@@ -574,7 +662,7 @@ class LLCM_Tri_Data(data.Dataset):
                 self.train_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['description'], self.tokenizer) for i_path in thermal_img_file]
                 if llm_aug:
                     self.llm_text_ir = [tokenize(self.text_ir_dict[data_dir + i_path]['aug_description'], self.tokenizer) for i_path in thermal_img_file]
-        
+
         self.transform1 = transform1
         self.transform2 = transform2
         self.transform3 = transform3
@@ -613,7 +701,7 @@ class LLCM_Tri_Data(data.Dataset):
 
     def __len__(self):
         return len(self.train_color_label)
-    
+
 
 
 class TestData(data.Dataset):
@@ -636,7 +724,7 @@ class TestData(data.Dataset):
 
     def __len__(self):
         return len(self.test_image)
-    
+
 class Test_Tri_Data(data.Dataset):
     def __init__(self, test_img_file, test_label, data_path, transform=None, \
                  img_size=(144, 288), captioner_name='GIT', \
@@ -644,7 +732,10 @@ class Test_Tri_Data(data.Dataset):
                             Feat_Filter=False, load_text=True, text_data_root=None,
                             sysu_source_size=None, sysu_sr_data_root=None,
                             sysu_sr_modalities=None, source_modality=None,
-                            sysu_sr_exact_size=False): # include Feat_Filter=False
+                            sysu_sr_exact_size=False, sysu_sr_backend="array",
+                            sysu_sr_view_manifest=None, sysu_sr_views_per_image=1,
+                            sysu_sr_eval_view_index=0,
+                            caption_lookup="identity", caption_manifest=None): # include Feat_Filter=False
         self.tokenizer = SimpleTokenizer() if load_text else None
         self.Feat_Filter = Feat_Filter
         self.load_text = load_text
@@ -661,13 +752,18 @@ class Test_Tri_Data(data.Dataset):
 
         if load_text:
             text_dir_rgb = _resolve_text_dir(data_path, dataset_name, captioner_name, 'RGB', text_data_root)
-            with open(os.path.join(text_dir_rgb, f'id_caption_map_{captioner_name}_RGB.json'),'r') as f:
+            caption_file = {
+                "identity": f'id_caption_map_{captioner_name}_RGB.json',
+                "image": f'caption_dict_{captioner_name}_RGB.json',
+            }[caption_lookup]
+            caption_path = caption_manifest or os.path.join(text_dir_rgb, caption_file)
+            with open(caption_path,'r') as f:
                 text_dict_rgb = json.load(f)
             if Feat_Filter:
                 text_dir_ir = _resolve_text_dir(data_path, dataset_name, captioner_name, 'IR', text_data_root)
                 with open(os.path.join(text_dir_ir, f'caption_dict_{captioner_name}_IR.json'),'r') as f:
                     text_dict_ir = json.load(f)
-        
+
 
         sr_modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
         if source_modality is not None:
@@ -692,6 +788,10 @@ class Test_Tri_Data(data.Dataset):
                     sysu_sr_data_root,
                     sr_modalities,
                     source_modality,
+                    sr_backend=sysu_sr_backend,
+                    sr_view_manifest=sysu_sr_view_manifest,
+                    sr_views_per_image=sysu_sr_views_per_image,
+                    sr_eval_view_index=sysu_sr_eval_view_index,
                 )
             img = Image.open(image_path).convert("RGB")
             using_sr = source_modality in sr_modalities
@@ -709,9 +809,15 @@ class Test_Tri_Data(data.Dataset):
                 img = img.resize((img_size[0], img_size[1]), PIL_BICUBIC)
             pix_array = np.array(img)
             test_image.append(pix_array)
-            
+
             if load_text:
-                test_text_rgb.append(tokenize(np.random.choice(text_dict_rgb[str(test_label[i])]), self.tokenizer))
+                if caption_lookup == "image":
+                    caption = _lookup_text_description(
+                        text_dict_rgb, dataset_name, data_path, test_img_file[i]
+                    )
+                else:
+                    caption = np.random.choice(text_dict_rgb[str(test_label[i])])
+                test_text_rgb.append(tokenize(caption, self.tokenizer))
                 if Feat_Filter:
                     test_text_ir.append(
                         tokenize(
@@ -868,7 +974,7 @@ def process_query_llcm(data_path, mode = 1):
         cameras = ['test_vis/cam1','test_vis/cam2','test_vis/cam3','test_vis/cam4','test_vis/cam5','test_vis/cam6','test_vis/cam7','test_vis/cam8','test_vis/cam9']
     elif mode ==2:
         cameras = ['test_nir/cam1','test_nir/cam2','test_nir/cam4','test_nir/cam5','test_nir/cam6','test_nir/cam7','test_nir/cam8','test_nir/cam9']
-    
+
     file_path = os.path.join(data_path,'idx/test_id.txt')
     files_rgb = []
     files_ir = []
@@ -896,14 +1002,14 @@ def process_query_llcm(data_path, mode = 1):
 
 
 def process_gallery_llcm(data_path, mode = 1, trial = 0):
-    
+
     random.seed(trial)
-    
+
     if mode== 1:
         cameras = ['test_vis/cam1','test_vis/cam2','test_vis/cam3','test_vis/cam4','test_vis/cam5','test_vis/cam6','test_vis/cam7','test_vis/cam8','test_vis/cam9']
     elif mode ==2:
         cameras = ['test_nir/cam1','test_nir/cam2','test_nir/cam4','test_nir/cam5','test_nir/cam6','test_nir/cam7','test_nir/cam8','test_nir/cam9']
-        
+
     file_path = os.path.join(data_path,'idx/test_id.txt')
     files_rgb = []
     with open(file_path, 'r') as file:

@@ -15,6 +15,7 @@ from salt_vi.utils import make_dirs, Logger
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
 from salt_vi.config.validation import validate_runtime_config
+from salt_vi.retrieval import get_retrieval_backend
 from salt_vi.utils.utils import save_train_configs, load_train_configs, time_now
 from torch.utils.tensorboard import SummaryWriter
 from copy import deepcopy
@@ -411,6 +412,12 @@ def _initialize_spatial_backups(model, config):
 
 def main(config):
     validate_runtime_config(config)
+    retrieval_backend = get_retrieval_backend(
+        getattr(config, "retrieval_backend", "legacy")
+    )
+    fusion_result_key = (
+        retrieval_backend.RESULT_KEY if retrieval_backend else "Fusion"
+    )
     if bool(getattr(config, "DataParallel", False)):
         raise RuntimeError(
             "Legacy DataParallel is unsupported by SALT-VI. Use one process per GPU "
@@ -469,7 +476,7 @@ def main(config):
         config.output_path += 'Baseline'
         if config.dataset == 'regdb':
             config.output_path += f'_{config.trial}'
-        config.output_path += '_' + f'train[{config.training_mode}]' 
+        config.output_path += '_' + f'train[{config.training_mode}]'
         if len(config.training_mode.split('_')) == 3:
             config.output_path += '_' + f'joint[{config.joint_mode}]'
         if "Text" in config.training_mode:
@@ -503,7 +510,7 @@ def main(config):
         print(f"Dataset: {config.dataset}, dir: {config.llcm_data_path}")
         config.pid_num = 713
     loaders = Loader(config)
-    
+
 
     print("=================Preparing model=================")
     model = build_model(config)
@@ -544,7 +551,7 @@ def main(config):
             scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
         else:
             scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
-            
+
         start_train_epoch = max(0, int(getattr(config, "metric_boost_resume_epoch", 0)))
         if start_train_epoch:
             print(
@@ -573,9 +580,11 @@ def main(config):
 
         if bool(getattr(config, "eval_before_train", False)) and start_train_epoch == 0:
             result_dict = test(model, loaders, config, device)
-            if "Fusion" not in result_dict:
-                raise RuntimeError("eval_before_train requires Fusion retrieval metrics")
-            mINP_fusion, mAP_fusion, cmc_fusion = result_dict["Fusion"]
+            if fusion_result_key not in result_dict:
+                raise RuntimeError(
+                    f"eval_before_train requires {fusion_result_key} retrieval metrics"
+                )
+            mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
             initial_values = (float(cmc_fusion[0]), float(mAP_fusion), float(mINP_fusion))
             if not all(np.isfinite(value) for value in initial_values):
                 raise FloatingPointError(f"Non-finite warm-start metrics: {initial_values}")
@@ -590,8 +599,8 @@ def main(config):
                 phase="warm_start_before_training",
                 dataset=config.dataset,
                 protocol="all-search-single-shot-10-trial",
-                query="infrared",
-                gallery="visible",
+                query=(retrieval_backend.QUERY_NAME if retrieval_backend else "infrared"),
+                gallery=(retrieval_backend.GALLERY_NAME if retrieval_backend else "visible"),
                 metrics={
                     "Rank-1": initial_values[0],
                     "mAP": initial_values[1],
@@ -621,7 +630,7 @@ def main(config):
             # independent of RNG consumed by warm-start evaluation/DataLoader workers.
             seed_torch(config.seed)
 
-        
+
         for current_epoch in range(start_train_epoch, config.total_train_epoch):
             epoch_started = time.monotonic()
             unfreeze_summary = model.configure_epoch_trainability(current_epoch)
@@ -656,7 +665,7 @@ def main(config):
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
                 result_dict = test(model, loaders, config, device)
-                if 'IR' in config.test_modality:
+                if retrieval_backend is None and 'IR' in config.test_modality:
                     mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
                     is_best_rank_ir = (cmc_ir[0] >= best_rank1_ir)
                     # visual log
@@ -675,8 +684,8 @@ def main(config):
                     logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,"IR_RGB",
                                                                                     mINP_ir, mAP_ir, cmc_ir))
-                if 'Fusion' in config.test_modality:
-                    mINP_fusion, mAP_fusion, cmc_fusion = result_dict['Fusion']
+                if retrieval_backend is not None or 'Fusion' in config.test_modality:
+                    mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
                     save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
                     is_best_rank_fusion = (
                         cmc_fusion[0] > best_rank1_fusion
@@ -685,12 +694,12 @@ def main(config):
                     is_best_map_fusion = save_best_per_metric and (mAP_fusion > best_mAP_fusion)
                     is_best_minp_fusion = save_best_per_metric and (mINP_fusion > best_mINP_fusion)
                     # visual log
-                    performance_writer.add_scalar(f'R1_Fusion', cmc_fusion[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_Fusion', mAP_fusion, current_epoch)
-                    performance_writer.add_scalar(f'mINP_Fusion', mINP_fusion, current_epoch)
+                    performance_writer.add_scalar(f'R1_{fusion_result_key}', cmc_fusion[0], current_epoch)
+                    performance_writer.add_scalar(f'mAP_{fusion_result_key}', mAP_fusion, current_epoch)
+                    performance_writer.add_scalar(f'mINP_{fusion_result_key}', mINP_fusion, current_epoch)
                     # new add
                     if is_best_rank_fusion:
-                        logger(f"New Best Fusion_RGB!!!")
+                        logger(f"New Best {fusion_result_key}!!!")
                         best_rank1_fusion = cmc_fusion[0]
                         if not save_best_per_metric:
                             best_mAP_fusion = mAP_fusion
@@ -699,7 +708,7 @@ def main(config):
                         best_mAP_fusion = mAP_fusion
                     if is_best_minp_fusion:
                         best_mINP_fusion = mINP_fusion
-                    logger(f"Best Fusion_RGB mINP: {best_mINP_fusion}, Best mAP: {best_mAP_fusion}, Best Rank1: {best_rank1_fusion}")
+                    logger(f"Best {fusion_result_key} mINP: {best_mINP_fusion}, Best mAP: {best_mAP_fusion}, Best Rank1: {best_rank1_fusion}")
                     checkpoint_paths = dict(getattr(model, "_metric_checkpoint_paths", {}))
                     new_best_metrics = []
                     if save_best_per_metric:
@@ -721,8 +730,8 @@ def main(config):
                         epoch=current_epoch,
                         dataset=config.dataset,
                         protocol="all-search-single-shot-10-trial",
-                        query="infrared",
-                        gallery="visible",
+                        query=(retrieval_backend.QUERY_NAME if retrieval_backend else "infrared"),
+                        gallery=(retrieval_backend.GALLERY_NAME if retrieval_backend else "visible"),
                         metrics={
                             "Rank-1": float(cmc_fusion[0]),
                             "mAP": float(mAP_fusion),
@@ -738,9 +747,9 @@ def main(config):
                         checkpoint_paths=checkpoint_paths,
                     )
                     logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Fusion_RGB",
+                                                                                    config.dataset,fusion_result_key,
                                                                                     mINP_fusion, mAP_fusion, cmc_fusion))
-                if 'Text' in config.test_modality:
+                if retrieval_backend is None and 'Text' in config.test_modality:
                     mINP_text, mAP_text, cmc_text = result_dict['Text']
                     is_best_rank_text = (cmc_text[0] >= best_rank1_text)
                     # visual log
@@ -781,7 +790,7 @@ def main(config):
 
         performance_writer.close()
         loss_writer.close()
-        
+
     elif config.mode == 'test':
         make_dirs(model.output_path)
         make_dirs(model.save_model_path)
@@ -802,7 +811,7 @@ def main(config):
         model.configure_fixed_visual_data_parallel()
         print('Successfully resume model from {}'.format(config.test_model_path))
         result_dict = test(model, loaders, config, device)
-        if "IR" in config.test_modality:
+        if retrieval_backend is None and "IR" in config.test_modality:
             mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
             if config.LOG4TEST:
                 logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
@@ -812,23 +821,23 @@ def main(config):
                 print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,"IR_RGB",
                                                                                     mINP_ir, mAP_ir, cmc_ir))
-            
-        if "Fusion" in config.test_modality:
-            mINP_fusion, mAP_fusion, cmc_fusion = result_dict['Fusion']
+
+        if retrieval_backend is not None or "Fusion" in config.test_modality:
+            mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
             if config.LOG4TEST:
                 if config.CAT_EVAL:
                     logger('===================Test with CAT FEAT===================')
                 else:
                     logger('===================Test without CAT FEAT===================')
                 logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Fusion_RGB",
+                                                                                    config.dataset,fusion_result_key,
                                                                                     mINP_fusion, mAP_fusion, cmc_fusion))
             else:
                 print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Fusion_RGB",
+                                                                                    config.dataset,fusion_result_key,
                                                                                     mINP_fusion, mAP_fusion, cmc_fusion))
-            
-        if "Text" in config.test_modality:
+
+        if retrieval_backend is None and "Text" in config.test_modality:
             mINP_text, mAP_text, cmc_text = result_dict['Text']
             if config.LOG4TEST:
                 logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
@@ -838,7 +847,7 @@ def main(config):
                 print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,"Text_RGB",
                                                                                     mINP_text, mAP_text, cmc_text))
-            
+
 
 if __name__ == '__main__':
     config = _merge_runtime_config(get_args())

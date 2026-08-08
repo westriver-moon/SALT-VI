@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from salt_vi.utils import eval_regdb, eval_sysu, eval_llcm
+from salt_vi.retrieval import get_retrieval_backend
+from salt_vi.retrieval.evaluator import evaluate_sysu
 import os
 
 
@@ -18,13 +20,19 @@ def _needs_text(test_modality):
     return any(modality in test_modality for modality in ("Fusion", "Text"))
 
 def test(base, loader, config, device):
+    retrieval_backend = get_retrieval_backend(
+        getattr(config, "retrieval_backend", "legacy")
+    )
+    if retrieval_backend:
+        return evaluate_sysu(base, loader, device, retrieval_backend)
+
     embed_dim = base.embed_dim
     base.set_eval()
     print('Extracting Query Feature...')
     ptr = 0
     print('Test Mode: ', config.test_modality)
     result_dict = dict()
-    
+
     if loader.dataset not in ['sysu', 'regdb', 'llcm']:
         raise ValueError(f"Invalid dataset: {loader.dataset}")
     if not any(modality in config.test_modality for modality in ('IR', 'Fusion', 'Text')):
@@ -57,12 +65,12 @@ def test(base, loader, config, device):
 
                     batch_num = input.size(0)
                     input = Variable(input.to(device))
-                    
+
                     if _needs_text(config.test_modality):
                         text = batch_dict['text']
                         text = text.to(device).long()
-                        
-                    # get the feature of the last layer 
+
+                    # get the feature of the last layer
                     if 'IR' in config.test_modality:
                         feat_ir_map = base.encode_image_featmap(input,'ir') # IR mode
                         feat_ir = _eval_image_feature(base, feat_ir_map, mode="IR", use_backup=config.Fix_Visual)
@@ -74,7 +82,7 @@ def test(base, loader, config, device):
                             feat_fusion = base.encode_filtered_fusion(text,text_filter,input)  # Fusion mode  rgbtext + irimage
                         else:
                             feat_fusion = base.encode_fusion(text,input,'ir')  # Fusion mode  rgbtext + irimage
-                            
+
                         feat_fusion = base.classifier(feat_fusion,"Fusion") # [64, 512] -> [64, 512]
                         query_feat_fusion[ptr:ptr + batch_num, :] = feat_fusion.detach().cpu().numpy()
                         if config.CAT_EVAL:
@@ -103,7 +111,7 @@ def test(base, loader, config, device):
                         query_feat_text_f_list.append(query_feat_text_f)
                 if 'Text' in config.test_modality:
                     query_feat_text_list.append(query_feat_text)
-                
+
 
     else:
         if 'IR' in config.test_modality:
@@ -126,12 +134,12 @@ def test(base, loader, config, device):
 
                 batch_num = input.size(0)
                 input = Variable(input.to(device))
-                
+
                 if _needs_text(config.test_modality):
                     text = batch_dict['text']
                     text = text.to(device).long()
-                    
-                # get the feature of the last layer 
+
+                # get the feature of the last layer
                 if 'IR' in config.test_modality:
                     feat_ir_map = base.encode_image_featmap(input,'ir') # IR mode
                     feat_ir = _eval_image_feature(base, feat_ir_map, mode="IR", use_backup=config.Fix_Visual)
@@ -143,7 +151,7 @@ def test(base, loader, config, device):
                         feat_fusion = base.encode_filtered_fusion(text,text_filter,input)  # Fusion mode  rgbtext + irimage
                     else:
                         feat_fusion = base.encode_fusion(text,input,'ir')  # Fusion mode  rgbtext + irimage
-                        
+
                     feat_fusion = base.classifier(feat_fusion,"Fusion") # [64, 512] -> [64, 512]
                     query_feat_fusion[ptr:ptr + batch_num, :] = feat_fusion.detach().cpu().numpy()
                     if config.CAT_EVAL:
@@ -196,7 +204,7 @@ def test(base, loader, config, device):
                     batch_num = input.size(0)
                     input = Variable(input.to(device))
 
-                    # get the feature of the last layer 
+                    # get the feature of the last layer
                     feat_map = base.encode_image_featmap(input,'rgb')
                     if 'IR' in config.test_modality and config.Fix_Visual:
                         feat_for_IR = _eval_image_feature(base, feat_map, mode="RGB", use_backup=True)
@@ -207,7 +215,7 @@ def test(base, loader, config, device):
                     else:
                         raise ValueError('Error: test_modality not found!')
                     ptr = ptr + batch_num
-                    
+
             if 'IR' in config.test_modality:
                 if config.Fix_Visual:
                     distmat_ir = np.matmul(query_feat_ir, np.transpose(gall_feat_for_IR))
@@ -237,7 +245,7 @@ def test(base, loader, config, device):
                 all_cmc_text += cmc_text
                 all_mAP_text += mAP_text
                 all_mINP_text += mINP_text
-        
+
         if 'IR' in config.test_modality:
             all_cmc_ir /= 10.0
             all_mAP_ir /= 10.0
@@ -282,7 +290,7 @@ def test(base, loader, config, device):
                     batch_num = input.size(0)
                     input = Variable(input.to(device))
 
-                    # get the feature of the last layer 
+                    # get the feature of the last layer
                     feat_map = base.encode_image_featmap(input,'rgb')
                     if 'IR' in config.test_modality and config.Fix_Visual:
                         feat_for_IR = _eval_image_feature(base, feat_map, mode="RGB", use_backup=True)
@@ -293,7 +301,7 @@ def test(base, loader, config, device):
                     else:
                         raise ValueError('Error: test_modality not found!')
                     ptr = ptr + batch_num
-            
+
             if 'IR' in config.test_modality:
                 query_feat_ir = query_feat_ir_list[i]
                 if config.regdb_test_mode == 't-v':
@@ -311,7 +319,7 @@ def test(base, loader, config, device):
                 all_cmc_ir += cmc_ir
                 all_mAP_ir += mAP_ir
                 all_mINP_ir += mINP_ir
-            
+
             if 'Fusion' in config.test_modality:
                 query_feat_fusion = query_feat_fusion_list[i]
                 if config.CAT_EVAL:
@@ -334,7 +342,7 @@ def test(base, loader, config, device):
                 all_cmc_fusion += cmc_fusion
                 all_mAP_fusion += mAP_fusion
                 all_mINP_fusion += mINP_fusion
-            
+
             if 'Text' in config.test_modality:
                 query_feat_text = query_feat_text_list[i]
                 if config.regdb_test_mode == 't-v':
@@ -363,7 +371,7 @@ def test(base, loader, config, device):
             all_mAP_text /= num_eval
             all_mINP_text /= num_eval
             result_dict['Text'] = (all_mINP_text, all_mAP_text, all_cmc_text)
-    
+
     elif loader.dataset == 'llcm':
         all_cmc_ir = 0
         all_mAP_ir = 0
@@ -391,7 +399,7 @@ def test(base, loader, config, device):
                     batch_num = input.size(0)
                     input = Variable(input.to(device))
 
-                    # get the feature of the last layer 
+                    # get the feature of the last layer
                     feat_map = base.encode_image_featmap(input,'rgb')
                     if 'IR' in config.test_modality and config.Fix_Visual:
                         feat_for_IR = _eval_image_feature(base, feat_map, mode="RGB", use_backup=True)
@@ -402,7 +410,7 @@ def test(base, loader, config, device):
                     else:
                         raise ValueError('Error: test_modality not found!')
                     ptr = ptr + batch_num
-            
+
             if 'IR' in config.test_modality:
                 if config.Fix_Visual:
                     distmat_ir = np.matmul(query_feat_ir, np.transpose(gall_feat_for_IR))
@@ -413,7 +421,7 @@ def test(base, loader, config, device):
                 all_cmc_ir += cmc_ir
                 all_mAP_ir += mAP_ir
                 all_mINP_ir += mINP_ir
-            
+
             if 'Fusion' in config.test_modality:
                 if config.CAT_EVAL:
                     distmat_ir_f = np.matmul(query_feat_ir_f, np.transpose(gall_feat))

@@ -112,6 +112,16 @@ pmt_dcl_weight: 0.5
 pmt_backbone_lr_factor: 0.5
 pmt_assert_batch_layout: true
 sysu_data_path: datasets/sysu
+sysu_sr_backend: array
+sysu_sr_view_manifest: null
+sysu_sr_views_per_image: 1
+sysu_sr_view_sampling: independent
+sysu_sr_eval_view_index: 0
+retrieval_backend: legacy
+gallery_caption_manifest: null
+gallery_text_dropout: 0.0
+ir_rgb_text_pair_weight: 1.0
+ir_rgb_aux_weight: 0.5
 target_lr: 0.0
 target_lr_factor: null
 temperature: 0.07

@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.nn.parallel import parallel_apply
 from salt_vi.data.loader import validate_rgb_ir_text_batch_dict
 from salt_vi.config.validation import validate_runtime_config
+from salt_vi.retrieval import get_retrieval_backend
 from salt_vi.utils import (
     TripletLoss_WRT,
     kl_align_loss,
@@ -169,7 +170,7 @@ def configure_qbn_running_stats(classifier, current_epoch, freeze_epoch):
         bn.bias.requires_grad_(True)
     return frozen
 
-    
+
 class Normalize(nn.Module):
     def __init__(self, power=2, eps=1e-12):
         super(Normalize, self).__init__()
@@ -344,7 +345,7 @@ class Classifier(nn.Module):
                 fusion_features = self.BN_Fusion(bn_input[3*b:4*b])
                 text_features = self.BN_Text(bn_input[4*b:5*b])
                 bn_features = torch.cat((rgb_features, ir_features, fusion_features, text_features),dim=0)
-                
+
             else:
                 if mode == 'RGB':
                     bn_features = self.BN_RGB(bn_input)
@@ -403,6 +404,9 @@ class CLIP2ReID(nn.Module):
         self.args = args
         validate_runtime_config(args)
         validate_fusion_compatibility(args.training_mode, args.joint_mode, args.fusion_way)
+        self.retrieval_backend = get_retrieval_backend(
+            getattr(args, "retrieval_backend", "legacy")
+        )
         self.max_save_model_num = args.max_save_model_num
         self.output_path = args.output_path
         self.save_model_path = os.path.join(self.output_path, 'models/')
@@ -440,7 +444,7 @@ class CLIP2ReID(nn.Module):
             self.base_model.visual.conv1_.load_state_dict(self.base_model.visual.conv1.state_dict())
             # self.base_model.visual.conv2_.load_state_dict(self.base_model.visual.conv2.state_dict())
             # self.base_model.visual.conv3_.load_state_dict(self.base_model.visual.conv3.state_dict())
-    
+
 
         temperature = float(args.temperature)
         if not np.isfinite(temperature) or temperature <= 0:
@@ -1014,7 +1018,7 @@ class CLIP2ReID(nn.Module):
         ret.update({"acc": (acc_visible + acc_ir) / 2})
         ret.update({"pmt_stage": stage})
         return ret
-    
+
     def save_model(self, save_epoch, is_best, mode='Fusion'): # mode = ['IR', 'Fusion', 'Text'] or their composition
         if mode not in ('Fusion', 'IR', 'Text'):
             raise ValueError("saving mode must be in ['Fusion', 'IR', 'Text']")
@@ -1122,16 +1126,16 @@ class CLIP2ReID(nn.Module):
             v.transpose(0, 1),
             need_weights=False,
         )[0].transpose(0, 1)
-    
+
     def cross_former(self, q, k, v):
         x = self._run_attention(self.cross_attn, q, k, v)
         x = q + x # residual connection (invalid for mcq and mcqmlm, valid for mlm)
         x = self.ln_post(x)
         return x
-    
+
     def global_former_s(self, q, k, v):
         x = self._run_attention(self.global_attn_s, q, k, v)
-        
+
         x = q + x # residual connection (invalid for mcq and mcqmlm, valid for mlm)
         x = self.ln_post(x)
         return x
@@ -1142,7 +1146,7 @@ class CLIP2ReID(nn.Module):
         x = self.ln_post(x)
         return x
 
-    def encode_image_featmap(self, image, mode=None): 
+    def encode_image_featmap(self, image, mode=None):
         if self.args.Fix_Visual and not self._visual_unfrozen:
             x = self._encode_fixed_visual(image, mode)
         else:
@@ -1153,7 +1157,7 @@ class CLIP2ReID(nn.Module):
     def encode_text_featmap(self, text):
         x = self.base_model.encode_text(text)
         return x #[torch.arange(x.shape[0]), text.argmax(dim=-1)].float()
-    
+
     def encode_image_feat(self, image, mode=None): # return [B, 512]
         x = self.base_model.encode_image(image,mode=mode)
         return self._get_visual_embedding(x)
@@ -1161,10 +1165,10 @@ class CLIP2ReID(nn.Module):
     def encode_text_feat(self, text): # return [B, 512]
         x = self.base_model.encode_text(text)
         return extract_text_token_feat(x, text)
-    
+
     def encode_fusion(self, text, ir, mode='ir'):
         # 获取 id 形式的文本原始数据
-        caption_ids = text 
+        caption_ids = text
         # 获取文本Tensor特征
         text = self.encode_text_featmap(text)
         # 获取IR图像Tensor特征
@@ -1172,10 +1176,10 @@ class CLIP2ReID(nn.Module):
         # 获取融合后的特征
         x = self.fusion_layer(text,ir,caption_ids,pa=self.current_pa(), way=self.args.fusion_way)
         return x.float()
-    
+
     def encode_filtered_fusion(self, text, filter, ir):
         # 获取 id 形式的文本原始数据
-        caption_ids = text 
+        caption_ids = text
         filter_caption_ids = filter
         # 获取文本Tensor特征
         text_feat = self.encode_text_feat(text)
@@ -1203,21 +1207,21 @@ class CLIP2ReID(nn.Module):
             text_rgb_feats = text_rgb_map[torch.arange(text_rgb_map.shape[0]), caption_rgb_ids.argmax(dim=-1)]
             text_ir_feats = text_ir_map[torch.arange(text_ir_map.shape[0]), caption_ir_ids.argmax(dim=-1)]
             f_text_feats = text_rgb_feats + text_ir_feats
-        
+
         elif way == 'cross_attention':
             text_rgb_feats = text_rgb_map[torch.arange(text_rgb_map.shape[0]), caption_rgb_ids.argmax(dim=-1)]
             text_ir_feats = text_ir_map[torch.arange(text_ir_map.shape[0]), caption_ir_ids.argmax(dim=-1)]
             f_text_feats = (self.cross_former(text_rgb_feats.unsqueeze(1),text_ir_map,text_ir_map) + self.cross_former(text_ir_feats.unsqueeze(1),text_rgb_map,text_rgb_map))
             f_text_feats = f_text_feats.squeeze(1).contiguous()
-        
+
         elif way == 'attention_rgb_text':
             text_rgb_feats = text_rgb_map[torch.arange(text_rgb_map.shape[0]), caption_rgb_ids.argmax(dim=-1)]
             f_text_feats = self.cross_former(text_rgb_feats.unsqueeze(1),text_ir_map,text_ir_map).squeeze(1).contiguous()
-        
+
         elif way == 'attention_ir_text':
             text_ir_feats = text_ir_map[torch.arange(text_ir_map.shape[0]), caption_ir_ids.argmax(dim=-1)]
             f_text_feats = self.cross_former(text_ir_feats.unsqueeze(1),text_rgb_map,text_rgb_map).squeeze(1).contiguous()
-        
+
         elif way == 'global_attention':
             f_text_feats = (self.global_former_s(text_rgb_map,text_ir_map,text_ir_map)[torch.arange(text_rgb_map.shape[0]), caption_rgb_ids.argmax(dim=-1)] +\
                              self.global_former_t(text_ir_map,text_rgb_map,text_rgb_map)[torch.arange(text_ir_map.shape[0]), caption_ir_ids.argmax(dim=-1)])
@@ -1225,7 +1229,7 @@ class CLIP2ReID(nn.Module):
 
         elif way == 'global_attention_rgb_text':
             f_text_feats = self.global_former_s(text_rgb_map,text_ir_map,text_ir_map)[torch.arange(text_rgb_map.shape[0]), caption_rgb_ids.argmax(dim=-1)].squeeze(1).contiguous()
-        
+
         elif way == 'global_attention_ir_text':
             f_text_feats = self.global_former_t(text_ir_map,text_rgb_map,text_rgb_map)[torch.arange(text_ir_map.shape[0]), caption_ir_ids.argmax(dim=-1)].squeeze(1).contiguous()
 
@@ -1295,7 +1299,12 @@ class CLIP2ReID(nn.Module):
     def forward(self, batch_dict, mode=None, current_epoch=None):
         # get data
         if self.args.training_mode == 'RGB_IR_Text':
-            validate_rgb_ir_text_batch_dict(batch_dict)
+            text_modalities = (
+                self.retrieval_backend.TRAIN_TEXT_MODALITIES
+                if self.retrieval_backend
+                else ("rgb", "ir")
+            )
+            validate_rgb_ir_text_batch_dict(batch_dict, text_modalities)
 
         rgb_imgs0 = batch_dict['img_rgb_ori']
         rgb_imgs1 = batch_dict['img_rgb_aug']
@@ -1327,20 +1336,35 @@ class CLIP2ReID(nn.Module):
         rgb_feats = self._get_visual_embedding(rgb_visual)
         ir_feats = self._get_visual_embedding(ir_visual)
 
-        
+
         logit_scale = self.logit_scale.exp()
         ret.update({'temperature': 1 / logit_scale})
 
-           
+
         loss_list = [loss_name.strip() for loss_name in self.args.loss_names.split(',') if loss_name.strip()]
+
+        if self.retrieval_backend:
+            ret.update(
+                self.retrieval_backend.training_losses(
+                    self,
+                    batch_dict,
+                    rgb_visual,
+                    rgb_feats,
+                    ir_feats,
+                    label_rgb,
+                    label_ir,
+                    loss_list,
+                )
+            )
+            return ret
 
         if self.args.training_mode == 'RGB_IR_Text': # 如果有文本信息辅助
             if self.args.fusion_way in FUSION_WAYS:
-                
+
                 # 获取rgb图像特征
                 ori_vi_feats = rgb_feats[:int(b)]
                 aug_vi_feats = rgb_feats[int(b):]
-                
+
                 if self.args.joint_mode == 'dual_text':
                     text_rgb = batch_dict['text_rgb']
                     text_ir = batch_dict['text_ir']
@@ -1355,19 +1379,19 @@ class CLIP2ReID(nn.Module):
                         ret.update({'id_loss':(self.pid_criterion(img_scores, pids))*self.args.id_loss_weight})
                         img_acc = (img_scores.max(1)[1] == pids).float().mean()
                         ret.update({'acc': img_acc})
-                    
+
                     if 'wrt' in loss_list:
                         ret.update({'wrt_loss':(self.tri_criterion(img_feats, pids))*self.args.wrt_loss_weight})
-                    
+
                     if 'i2t' in loss_list:
                         ret.update({'i2t_loss':L_i2t(ir_feats,t_feats,logit_scale) + \
                                     0.5*(L_i2t(ori_vi_feats,t_feats,logit_scale) + L_i2t(aug_vi_feats,t_feats,logit_scale))})
-                    
+
                     if 't2i' in loss_list:
                         ret.update({'t2i_loss':L_t2i(ir_feats,t_feats,logit_scale,label_ir) + \
                                     0.5*(L_t2i(ori_vi_feats,t_feats,logit_scale,label_rgb) + L_t2i(aug_vi_feats,t_feats,logit_scale,label_rgb))})
-                    
-                   
+
+
                 elif self.args.joint_mode == 'uni':
                     text_rgb = batch_dict['text_rgb']
                     text_rgb_feats_map = self.base_model.encode_text(text_rgb)
@@ -1401,7 +1425,7 @@ class CLIP2ReID(nn.Module):
                         f_feats = f_feats.squeeze()
                         # 获取文本特征
                         t_feats = t_feats.float()
-                    
+
                     # # uni_id
                     # uni_pids = torch.cat([label_rgb,label_rgb,label_ir,label_ir,label_ir], dim=0)
                     # all_feats = torch.cat((ori_vi_feats, aug_vi_feats, ir_feats, f_feats, t_feats), dim=0)
@@ -1415,7 +1439,7 @@ class CLIP2ReID(nn.Module):
                         ret.update({'id_loss':(self.pid_criterion(all_feat_scores, uni_pids))*self.args.id_loss_weight})
                         feat_acc = (all_feat_scores.max(1)[1] == uni_pids).float().mean()
                         ret.update({'acc': feat_acc})
-                    
+
                     uni_woir_pids = torch.cat([label_rgb, label_rgb, label_ir, label_ir], dim=0)
                     uni_woir_feats = torch.cat([rgb_feats, f_feats, t_feats], dim=0)
                     if "id_woir" in loss_list:
@@ -1423,7 +1447,7 @@ class CLIP2ReID(nn.Module):
                         ret.update({'uni_id_woir_loss':(self.pid_criterion(img_scores, uni_woir_pids))*self.args.id_loss_weight})
                         feat_acc = (img_scores.max(1)[1] == uni_woir_pids).float().mean()
                         ret.update({'acc': feat_acc})
-                    
+
                     if "wrt" in loss_list:
                         # uni_wrt
                         ret.update({'wrt_loss':(self.tri_criterion(all_feats, uni_pids))*self.args.wrt_loss_weight})
@@ -1476,7 +1500,7 @@ class CLIP2ReID(nn.Module):
                             'cross_modal_hard_loss': cross_modal_loss
                             * float(getattr(self.args, "cross_modal_hard_weight", 1.0))
                         })
-                    
+
                     if "wrt_woir" in loss_list:
                         # uni_wrt
                         ret.update({'uni_wrt_woir_loss':(self.tri_criterion(uni_woir_feats, uni_woir_pids))*self.args.wrt_loss_weight})
@@ -1484,14 +1508,14 @@ class CLIP2ReID(nn.Module):
                     if "orth" in loss_list:
                         # uni_orth
                         ret.update({'uni_orth_loss':objectives.orthogonal_loss(ir_feats, t_feats, text_filter_feats)})
-                    
+
                     if "orth2" in loss_list:
                         # uni_orth
                         ret.update({'uni_orth2_loss':objectives.orthogonal_loss2(ir_feats, t_feats, text_filter_feats)})
 
                     if "T2I_Regular" in loss_list:
                         ret.update({"T2I_Regular_loss":kl_align_loss(ir_feats,f_feats,t_feats,logit_scale,mode='T2I')})
-                        
+
                     if "I2T_Regular" in loss_list:
                         ret.update({"I2T_Regular_loss":kl_align_loss(ir_feats,f_feats,t_feats,logit_scale,mode='I2T')})
 
@@ -1507,7 +1531,7 @@ class CLIP2ReID(nn.Module):
 
                     else:
                         f_feats = self.fusion_layer(text_rgb_feats_map, ir_visual, text_rgb, pa=self.current_pa(), way=self.args.fusion_way).squeeze()
-                                       
+
                     pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
                     img_feats = torch.cat((ori_vi_feats, aug_vi_feats, f_feats), dim=0)
                     if 'id' in loss_list:
@@ -1525,16 +1549,16 @@ class CLIP2ReID(nn.Module):
 
                     # if "I2T_Regular" in loss_list:
                     #     ret.update({"I2T_Regular_loss":kl_align_loss(ir_feats,f_feats,t_feats,logit_scale,mode='I2T')})
-                    
-                        
+
+
                 elif self.args.joint_mode == 'ir_selffusion':
-                    
+
                     text_rgb_w = batch_dict['text_rgb_w']
                     text_rgb_w_feats_map = self.base_model.encode_text(text_rgb_w)
-                    
+
                     # 获取融合后的特征
                     f_feats = self.fusion_layer(text_rgb_w_feats_map, ir_visual, text_rgb_w, pa=self.current_pa(), way=self.args.fusion_way).squeeze()
-                    
+
                     pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
                     img_feats = torch.cat((rgb_feats, f_feats), dim=0)
                     if 'id' in loss_list:
@@ -1552,16 +1576,16 @@ class CLIP2ReID(nn.Module):
 
                     # if "I2T_Regular" in loss_list:
                     #     ret.update({"I2T_Regular_loss":kl_align_loss(ir_feats,f_feats,t_feats,logit_scale,mode='I2T')})
-                    
+
 
                 elif self.args.joint_mode == 'rgb_selffusion':
-                    
+
                     text_ir = batch_dict['text_ir']
                     text_ir_feats_map = self.base_model.encode_text(text_ir)
-                    
+
                     # 获取融合后的特征
                     f_feats = self.fusion_layer(torch.cat([text_ir_feats_map,text_ir_feats_map],dim=0), rgb_visual, torch.cat([text_ir,text_ir],dim=0), pa=self.current_pa(), way=self.args.fusion_way).squeeze()
-                    
+
                     pids = torch.cat([label_rgb, label_rgb, label_ir], dim=0)
                     img_feats = torch.cat((f_feats, ir_feats), dim=0)
                     if 'id' in loss_list:
@@ -1589,7 +1613,7 @@ class CLIP2ReID(nn.Module):
                     f"Fusion way must be one of {sorted(FUSION_WAYS)}"
                 )
 
-        elif self.args.training_mode == "RGB_IR": 
+        elif self.args.training_mode == "RGB_IR":
             pids = torch.cat([label_rgb,label_rgb,label_ir], dim=0)
             img_feats = torch.cat((rgb_feats, ir_feats), dim=0)
             if 'id' in loss_list:
@@ -1617,7 +1641,7 @@ class CLIP2ReID(nn.Module):
                 ret.update({'wrt_loss':(self.tri_criterion(img_text_feats, pids))*self.args.wrt_loss_weight})
         else:
             raise ValueError("training mode must be in ['RGB_IR_Text', 'RGB_IR', 'RGB_Text']")
- 
+
         return ret
 
 
