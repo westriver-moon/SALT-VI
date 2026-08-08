@@ -57,8 +57,10 @@ class GenerationConfig:
             "init_latent_with_noise": self.init_latent_with_noise,
             "added_noise_level": self.added_noise_level,
             "offset_noise_scale": self.offset_noise_scale,
+            "enable_xformers": self.enable_xformers,
             "target_height": self.target_height,
             "target_width": self.target_width,
+            "png_compress_level": self.png_compress_level,
             "person_detector_model": (
                 str(self.person_detector_model) if self.person_detector_model else None
             ),
