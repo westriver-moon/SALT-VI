@@ -11,7 +11,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterator
 
-from PIL import Image, ImageStat
+from PIL import Image, ImageChops, ImageStat
 
 from .config import GenerationConfig
 from .tasks import GenerationTask, group_tasks_by_source
@@ -97,6 +97,8 @@ def _source_lock(path: Path) -> Iterator[bool]:
 
 
 def _generation_contract(tasks: list[GenerationTask], config: GenerationConfig) -> str:
+    if not config.build_contract_sha256:
+        raise ValueError("generation requires a prepared build contract")
     payload = {
         "generation": config.output_contract(),
         "tasks": [
@@ -119,21 +121,76 @@ def _generation_contract(tasks: list[GenerationTask], config: GenerationConfig) 
     return hashlib.sha256(encoded).hexdigest()
 
 
-def source_is_complete(
+def _matching_source_marker(
     tasks: list[GenerationTask], output_root: Path, config: GenerationConfig
-) -> bool:
+) -> dict | None:
     source_key = tasks[0].source_key or str(tasks[0].image)
     marker_path = _source_metadata_path(output_root, source_key)
     if not marker_path.is_file():
-        return False
+        return None
     try:
         marker = json.loads(marker_path.read_text(encoding="utf-8"))
         if marker.get("generation_contract_sha256") != _generation_contract(tasks, config):
-            return False
-        if len(marker.get("views", [])) != len(tasks):
-            return False
-        return all(_resolved_output(task, output_root).is_file() for task in tasks)
+            return None
+        views = marker.get("views", [])
+        if len(views) != len(tasks):
+            return None
+        for task, view in zip(tasks, views):
+            output = _resolved_output(task, output_root)
+            if int(view.get("view_index", -1)) != task.view_index:
+                return None
+            if Path(view.get("output", "")) != output.relative_to(output_root):
+                return None
+            if not output.is_file() or output.stat().st_size != int(view.get("output_bytes", -1)):
+                return None
+        return marker
     except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def source_is_generated(
+    tasks: list[GenerationTask], output_root: Path, config: GenerationConfig
+) -> bool:
+    return _matching_source_marker(tasks, output_root, config) is not None
+
+
+def validate_source(
+    tasks: list[GenerationTask], output_root: Path, config: GenerationConfig
+) -> dict:
+    marker = _matching_source_marker(tasks, output_root, config)
+    if marker is None:
+        raise ValueError("source is not generated for the current contract")
+    if sha256(tasks[0].image) != marker["input_sha256"]:
+        raise ValueError("input sha256 mismatch")
+    expected_size = (config.target_width, config.target_height)
+    for task, view in zip(tasks, marker["views"]):
+        output = _resolved_output(task, output_root)
+        with Image.open(output) as image:
+            image.load()
+            if image.format != "PNG" or image.mode != "RGB" or image.size != expected_size:
+                raise ValueError(
+                    f"output contract mismatch: {image.format}/{image.mode}/{image.size}"
+                )
+            if max(ImageStat.Stat(image).var) <= 0:
+                raise ValueError("output is constant")
+            if marker["modality"] == "ir":
+                red, green, blue = image.split()
+                if ImageChops.difference(red, green).getbbox() or ImageChops.difference(
+                    green, blue
+                ).getbbox():
+                    raise ValueError("IR output channels differ")
+        if sha256(output) != view["output_sha256"]:
+            raise ValueError("output sha256 mismatch")
+    return marker
+
+
+def source_is_validated(
+    tasks: list[GenerationTask], output_root: Path, config: GenerationConfig
+) -> bool:
+    try:
+        validate_source(tasks, output_root, config)
+        return True
+    except (OSError, KeyError, ValueError, json.JSONDecodeError):
         return False
 
 
@@ -189,11 +246,12 @@ def generate_source_group(
                 "seed": task.seed,
                 "output": str(output_path.relative_to(output_root)),
                 "output_sha256": sha256(output_path),
+                "output_bytes": output_path.stat().st_size,
                 "output_size": list(image.size),
             }
         )
     marker = {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_key": source_key,
         "image": str(tasks[0].image),
         "input_sha256": input_digest,
@@ -250,7 +308,7 @@ def generate_worker(
         for group in group_tasks_by_source(tasks):
             if max_sources is not None and completed >= max_sources:
                 break
-            if source_is_complete(group, output_root, config):
+            if source_is_generated(group, output_root, config):
                 skipped += 1
                 continue
             source_key = group[0].source_key or str(group[0].image)
@@ -258,7 +316,7 @@ def generate_worker(
                 if not acquired:
                     locked += 1
                     continue
-                if source_is_complete(group, output_root, config):
+                if source_is_generated(group, output_root, config):
                     skipped += 1
                     continue
                 marker = generate_source_group(
@@ -288,7 +346,8 @@ def consolidate_manifest(
 ) -> dict:
     output_root = Path(output_root).expanduser().resolve()
     markers = []
-    incomplete_sources = []
+    ungenerated_sources = []
+    invalid_sources = []
     groups = sorted(
         group_tasks_by_source(tasks),
         key=lambda group: group[0].source_key or str(group[0].image),
@@ -299,11 +358,14 @@ def consolidate_manifest(
     with temporary.open("wb") as stream:
         for group in groups:
             source_key = group[0].source_key or str(group[0].image)
-            if not source_is_complete(group, output_root, config):
-                incomplete_sources.append(source_key)
+            if not source_is_generated(group, output_root, config):
+                ungenerated_sources.append(source_key)
                 continue
-            path = _source_metadata_path(output_root, source_key)
-            marker = json.loads(path.read_text(encoding="utf-8"))
+            try:
+                marker = validate_source(group, output_root, config)
+            except (OSError, KeyError, ValueError, json.JSONDecodeError) as error:
+                invalid_sources.append({"source_key": source_key, "error": str(error)})
+                continue
             markers.append(marker)
             for view in marker["views"]:
                 row = {
@@ -320,12 +382,44 @@ def consolidate_manifest(
         os.fsync(stream.fileno())
     os.replace(temporary, manifest_path)
     summary = {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_count": len(markers),
         "view_count": sum(len(marker["views"]) for marker in markers),
         "expected_source_count": len(groups),
-        "incomplete_source_count": len(incomplete_sources),
-        "complete": not incomplete_sources,
+        "generated_source_count": len(groups) - len(ungenerated_sources),
+        "validated_source_count": len(markers),
+        "ungenerated_source_count": len(ungenerated_sources),
+        "invalid_source_count": len(invalid_sources),
+        "generated_complete": not ungenerated_sources,
+        "validated_complete": not ungenerated_sources and not invalid_sources,
+        "complete": not ungenerated_sources and not invalid_sources,
+        "invalid_sources": invalid_sources[:1000],
+        "manifest_jsonl": str(manifest_path),
+        "manifest_jsonl_sha256": digest.hexdigest(),
+    }
+    _atomic_json(output_root / "manifest.json", summary)
+    return summary
+
+
+def consolidate_task_manifest(output_root: str | Path, entries: list[dict]) -> dict:
+    output_root = Path(output_root).expanduser().resolve()
+    manifest_path = output_root / "manifest.jsonl"
+    temporary = manifest_path.with_name(f".{manifest_path.name}.{os.getpid()}.tmp")
+    digest = hashlib.sha256()
+    with temporary.open("wb") as stream:
+        for entry in entries:
+            encoded = (json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
+                "utf-8"
+            )
+            stream.write(encoded)
+            digest.update(encoded)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, manifest_path)
+    summary = {
+        "schema_version": 1,
+        "task_count": len(entries),
+        "complete": True,
         "manifest_jsonl": str(manifest_path),
         "manifest_jsonl_sha256": digest.hexdigest(),
     }
@@ -349,4 +443,5 @@ def generate_batch(config: GenerationConfig, tasks: list[GenerationTask]) -> lis
         return entries
     for task in tasks:
         entries.append(generate_task(generator, task, config.output_root))
+    consolidate_task_manifest(config.output_root, entries)
     return entries

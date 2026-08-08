@@ -57,6 +57,27 @@ def _resolve_text_dir(data_dir, dataset_name, captioner_name, modality, text_dat
     )
 
 
+def _resolve_caption_path(
+    data_dir,
+    dataset_name,
+    captioner_name,
+    modality,
+    caption_lookup,
+    text_data_root=None,
+    caption_manifest=None,
+):
+    if caption_manifest:
+        return caption_manifest
+    text_dir = _resolve_text_dir(
+        data_dir, dataset_name, captioner_name, modality, text_data_root
+    )
+    caption_file = {
+        "identity": f"id_caption_map_{captioner_name}_{modality}.json",
+        "image": f"caption_dict_{captioner_name}_{modality}.json",
+    }[caption_lookup]
+    return os.path.join(text_dir, caption_file)
+
+
 def _infer_dataset_name(data_path):
     normalized = data_path.lower().replace("\\", "/").rstrip("/")
     if "sysu-mm01" in normalized or normalized.endswith("/sysu"):
@@ -765,12 +786,15 @@ class Test_Tri_Data(data.Dataset):
         assert 'query' in gallorquery or 'gall' in gallorquery, "gallorquery must be 'query[i]' or 'gall[i]'"
 
         if load_text:
-            text_dir_rgb = _resolve_text_dir(data_path, dataset_name, captioner_name, 'RGB', text_data_root)
-            caption_file = {
-                "identity": f'id_caption_map_{captioner_name}_RGB.json',
-                "image": f'caption_dict_{captioner_name}_RGB.json',
-            }[caption_lookup]
-            caption_path = caption_manifest or os.path.join(text_dir_rgb, caption_file)
+            caption_path = _resolve_caption_path(
+                data_path,
+                dataset_name,
+                captioner_name,
+                "RGB",
+                caption_lookup,
+                text_data_root=text_data_root,
+                caption_manifest=caption_manifest,
+            )
             with open(caption_path,'r') as f:
                 text_dict_rgb = json.load(f)
             if Feat_Filter:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -38,6 +38,7 @@ class GenerationConfig:
     min_free_memory_gib: float = 22.0
     max_gpu_utilization: int = 5
     worker_chunk_size: int = 100
+    build_contract_sha256: str = field(default="", init=False)
 
     def output_contract(self) -> dict:
         return {
@@ -66,6 +67,7 @@ class GenerationConfig:
             ),
             "person_detector_confidence": self.person_detector_confidence,
             "person_margin": self.person_margin,
+            "build_contract_sha256": self.build_contract_sha256,
         }
 
     @classmethod
@@ -89,6 +91,8 @@ class GenerationConfig:
             raise ValueError("PASD target dimensions must be divisible by 8")
         if not 0 <= int(values.get("png_compress_level", 4)) <= 9:
             raise ValueError("png_compress_level must be in [0, 9]")
+        if int(values.get("worker_chunk_size", 100)) <= 0:
+            raise ValueError("worker_chunk_size must be positive")
         allowlist = tuple(values.get("gpu_allowlist", (1, 2, 3)))
         if not allowlist or 0 in allowlist or any(value not in (1, 2, 3) for value in allowlist):
             raise ValueError("gpu_allowlist must be a non-empty subset of physical GPUs 1, 2, 3")

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from pasd_offline.config import GenerationConfig  # noqa: E402
+from pasd_offline.contracts import prepare_build_contract  # noqa: E402
 from pasd_offline.generate import generate_batch  # noqa: E402
 from pasd_offline.tasks import load_tasks  # noqa: E402
 
@@ -25,6 +26,7 @@ def main() -> None:
     config = GenerationConfig.from_yaml(args.config)
     seed = config.seed if args.seed is None else args.seed
     tasks = load_tasks(args.records, args.caption_mode, seed, args.caption_pool)
+    prepare_build_contract(config, args.records, tasks)
     entries = generate_batch(config, tasks)
     print(f"generated={len(entries)} output_root={config.output_root}")
 

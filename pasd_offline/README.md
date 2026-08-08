@@ -84,6 +84,13 @@ The batch command writes `manifest.json` and `manifest.jsonl` beside the
 generated images. Each entry records the exact caption, seed, input path,
 output path, and SHA-256 hashes.
 
+At batch or scheduler startup, the generator writes `build-contract.json`.
+This contract identifies the model weights, caption records, source images,
+and PASD implementation by content SHA-256. Five-view workers bind each source
+marker to that build contract. Scheduler polling uses the generated state;
+final consolidation verifies image structure and content hashes before setting
+`validated_complete` and `complete`.
+
 ## Build SYSU caption records
 
 Use the existing per-image BLIP captions:
