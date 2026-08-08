@@ -1,10 +1,9 @@
 pretrained_model_path: ../checkpoints/stable-diffusion-v1-5
 pasd_model_path: ../checkpoints/pasd/checkpoint-100000
-output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-adaptive-512x256-5view-v1
+output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1
 
 device: cuda:0
 mixed_precision: fp16
-upscale: 1
 process_size: 512
 num_inference_steps: 20
 guidance_scale: 4.0

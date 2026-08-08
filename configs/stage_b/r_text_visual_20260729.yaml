@@ -74,7 +74,7 @@ momentum: 0.9
 num_pos: 4
 num_workers: 8
 optimizer: AdamW
-output_path: /home/cgv841/ybj/SALT-VI/checkpoints/stage_b/experiments/salt_ablation/r_text_visual_20260729/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,cross_modal_hard_Fix_Visual
+output_root: /home/cgv841/ybj/SALT-VI/checkpoints/stage_b/experiments/salt_ablation/r_text_visual_20260729/model_output
 pa: 0.5
 pa_init: 0.5
 patch_gem_learnable: true

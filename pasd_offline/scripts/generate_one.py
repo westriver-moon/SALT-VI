@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--image", required=True)
     parser.add_argument("--caption", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--modality", required=True, choices=("rgb", "ir"))
     parser.add_argument("--seed", type=int)
     args = parser.parse_args()
 
@@ -29,6 +30,7 @@ def main() -> None:
         caption=args.caption,
         output=Path(args.output),
         seed=config.seed if args.seed is None else args.seed,
+        modality=args.modality,
     )
     entry = generate_task(PASDGenerator(config), task, config.output_root)
     print(entry["output"])

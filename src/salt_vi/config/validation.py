@@ -79,8 +79,8 @@ def validate_runtime_config(config):
         modalities = {
             str(value).lower() for value in (_value(config, "sysu_sr_modalities", []) or [])
         }
-        if modalities != {"rgb", "ir"}:
-            raise ValueError("pasd_multiview requires sysu_sr_modalities=[rgb, ir]")
+        if not modalities or not modalities.issubset({"rgb", "ir"}):
+            raise ValueError("pasd_multiview requires rgb and/or ir SR modalities")
         if not bool(_value(config, "sysu_sr_exact_size", False)):
             raise ValueError("pasd_multiview requires sysu_sr_exact_size=true")
         if int(_value(config, "sysu_sr_views_per_image", 0)) != 5:
@@ -108,8 +108,8 @@ def validate_runtime_config(config):
             raise ValueError("ir_to_rgb_text does not use IR caption filtering")
         if uni_bn:
             raise ValueError("ir_to_rgb_text requires the shared classifier BN")
-        if sr_backend != "array":
-            raise ValueError("ir_to_rgb_text currently consumes the SwinIR array backend")
+        if sr_backend == "pasd_multiview" and modalities != {"rgb"}:
+            raise ValueError("ir_to_rgb_text PASD mode requires RGB-only multiview SR")
         if str(_value(config, "test_modality", "")) != retrieval_backend.RESULT_KEY:
             raise ValueError(
                 f"ir_to_rgb_text requires test_modality={retrieval_backend.RESULT_KEY}"

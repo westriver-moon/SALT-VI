@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import GenerationConfig
-from .generate import consolidate_manifest
+from .generate import consolidate_manifest, source_is_complete
+from .tasks import GenerationTask, group_tasks_by_source, load_tasks
 
 
 @dataclass(frozen=True)
@@ -69,15 +70,17 @@ def has_foreign_compute_process(physical_gpu: int, own_pid: int) -> bool:
     return any(pid != own_pid for pid in compute_pids(physical_gpu))
 
 
-def completed_source_count(output_root: Path) -> int:
-    metadata = output_root / "metadata"
-    return sum(1 for _ in metadata.rglob("*.json")) if metadata.is_dir() else 0
+def completed_source_count(
+    groups: list[list[GenerationTask]],
+    output_root: Path,
+    config: GenerationConfig,
+) -> int:
+    return sum(source_is_complete(group, output_root, config) for group in groups)
 
 
 def run_dynamic_scheduler(
     config_path: str | Path,
     records_path: str | Path,
-    expected_sources: int,
     poll_seconds: int = 60,
     max_workers: int = 3,
     worker_max_sources: int | None = None,
@@ -85,6 +88,15 @@ def run_dynamic_scheduler(
     config_path = Path(config_path).expanduser().resolve()
     records_path = Path(records_path).expanduser().resolve()
     config = GenerationConfig.from_yaml(config_path)
+    tasks = load_tasks(records_path, "all", seed=config.seed)
+    groups = group_tasks_by_source(tasks)
+    if not groups:
+        raise ValueError("records contain no generation tasks")
+    for group in groups:
+        indices = [task.view_index for task in group]
+        if len(group) != 5 or indices != list(range(5)):
+            source_key = group[0].source_key or str(group[0].image)
+            raise ValueError(f"invalid five-view source group {source_key}: {indices}")
     allowed = tuple(index for index in config.gpu_allowlist if index in (1, 2, 3))
     if 0 in allowed or not allowed or max_workers > 3:
         raise ValueError("scheduler may use only physical GPUs 1, 2, 3 and at most three workers")
@@ -92,7 +104,7 @@ def run_dynamic_scheduler(
     logs = config.output_root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
 
-    while completed_source_count(config.output_root) < expected_sources:
+    while completed_source_count(groups, config.output_root, config) < len(groups):
         for gpu, process in list(active.items()):
             return_code = process.poll()
             if return_code is not None:
@@ -142,7 +154,7 @@ def run_dynamic_scheduler(
 
     for process in active.values():
         process.wait()
-    summary = consolidate_manifest(config.output_root, expected_sources=expected_sources)
+    summary = consolidate_manifest(config.output_root, tasks, config)
     (config.output_root / "scheduler-result.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

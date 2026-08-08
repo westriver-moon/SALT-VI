@@ -30,22 +30,20 @@ def test_builds_five_deterministic_protocol_views(tmp_path: Path):
     rgb["datasets/sysu/cam1/0001/0001.jpg"]["paraphrases"][0] = rgb[
         "datasets/sysu/cam1/0001/0001.jpg"
     ]["description"]
-    ir = {"datasets/sysu/cam3/0003/0001.jpg": candidate("0003", 3)}
-    for relative in ("cam1/0001/0001.jpg", "cam3/0003/0001.jpg"):
+    for relative in ("cam1/0001/0001.jpg",):
         path = root / relative
         path.parent.mkdir(parents=True)
         Image.new("RGB", (64, 128), "gray").save(path)
-    rgb_path, ir_path = tmp_path / "rgb.json", tmp_path / "ir.json"
+    rgb_path = tmp_path / "rgb.json"
     rgb_path.write_text(json.dumps(rgb), encoding="utf-8")
-    ir_path.write_text(json.dumps(ir), encoding="utf-8")
     output = tmp_path / "records.jsonl"
     records = build_sysu_multiview_records(
-        root, rgb_path, ir_path, output, seed=17, enforce_official_counts=False
+        root, {"rgb": rgb_path}, output, seed=17, enforce_official_counts=False
     )
-    assert len(records) == 2
+    assert len(records) == 1
     assert all(len(record["views"]) == 5 for record in records)
-    assert len({view["seed"] for record in records for view in record["views"]}) == 10
+    assert len({view["seed"] for record in records for view in record["views"]}) == 5
     tasks = load_tasks(output, "all", 0)
-    assert len(tasks) == 10
-    pilot = select_pilot_records(records, tmp_path / "pilot.jsonl", count=2)
-    assert {record["modality"] for record in pilot} == {"rgb", "ir"}
+    assert len(tasks) == 5
+    pilot = select_pilot_records(records, tmp_path / "pilot.jsonl", count=1)
+    assert {record["modality"] for record in pilot} == {"rgb"}

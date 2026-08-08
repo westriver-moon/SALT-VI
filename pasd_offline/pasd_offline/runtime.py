@@ -153,9 +153,15 @@ class PASDGenerator:
                 results.append(image)
         return results, geometry
 
-    def generate(self, image_path: str | Path, caption: str, seed: int) -> Image.Image:
+    def generate(
+        self,
+        image_path: str | Path,
+        caption: str,
+        seed: int,
+        modality: str,
+    ) -> Image.Image:
         images, _ = self.generate_views(
-            image_path, [caption], [seed], modality="rgb", batch_size=1
+            image_path, [caption], [seed], modality=modality, batch_size=1
         )
         return images[0]
 

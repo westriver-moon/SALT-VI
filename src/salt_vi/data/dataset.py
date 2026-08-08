@@ -181,18 +181,25 @@ class SYSU_Tri_Data(data.Dataset):
         self.sysu_sr_views_per_image = int(sysu_sr_views_per_image)
         self.sysu_sr_view_sampling = normalize_sampling(sysu_sr_view_sampling)
         self.uses_pasd_multiview = self.sysu_sr_backend == "pasd_multiview"
+        self.train_color_label = np.load(data_dir + 'train_rgb_resized_label.npy')
+        self.train_thermal_label = np.load(data_dir + 'train_ir_resized_label.npy')
+        self.multiview_stores = {}
         if self.uses_pasd_multiview:
-            if self.sysu_sr_modalities != frozenset(("rgb", "ir")):
-                raise ValueError("PASD multiview training requires sysu_sr_modalities=[rgb, ir]")
+            if not self.sysu_sr_modalities:
+                raise ValueError("PASD multiview training requires at least one SR modality")
             if not sysu_sr_data_root or not sysu_sr_view_manifest:
                 raise ValueError("PASD multiview training requires data root and view manifest")
+
+        if self.uses_pasd_multiview and "rgb" in self.sysu_sr_modalities:
             self.train_color_image = PASDTrainViewStore(
                 data_dir,
                 sysu_sr_data_root,
                 sysu_sr_view_manifest,
                 "rgb",
+                self.train_color_label,
                 self.sysu_sr_views_per_image,
             )
+            self.multiview_stores["rgb"] = self.train_color_image
         else:
             self.train_color_image = np.load(
                 _sysu_train_image_path(
@@ -200,17 +207,18 @@ class SYSU_Tri_Data(data.Dataset):
                 ),
                 mmap_mode="r",
             )
-        self.train_color_label = np.load(data_dir + 'train_rgb_resized_label.npy')
 
         # Load IR data
-        if self.uses_pasd_multiview:
+        if self.uses_pasd_multiview and "ir" in self.sysu_sr_modalities:
             self.train_thermal_image = PASDTrainViewStore(
                 data_dir,
                 sysu_sr_data_root,
                 sysu_sr_view_manifest,
                 "ir",
+                self.train_thermal_label,
                 self.sysu_sr_views_per_image,
             )
+            self.multiview_stores["ir"] = self.train_thermal_image
         else:
             self.train_thermal_image = np.load(
                 _sysu_train_image_path(
@@ -218,11 +226,10 @@ class SYSU_Tri_Data(data.Dataset):
                 ),
                 mmap_mode="r",
             )
-        self.train_thermal_label = np.load(data_dir + 'train_ir_resized_label.npy')
         if len(self.train_color_image) != len(self.train_color_label):
-            raise ValueError("PASD RGB source order/count does not match SYSU train labels")
+            raise ValueError("SYSU RGB image count does not match train labels")
         if len(self.train_thermal_image) != len(self.train_thermal_label):
-            raise ValueError("PASD IR source order/count does not match SYSU train labels")
+            raise ValueError("SYSU IR image count does not match train labels")
 
 
         # Load text data
@@ -233,8 +240,8 @@ class SYSU_Tri_Data(data.Dataset):
         self.llm_aug_prob = llm_aug_prob
         self.text_modalities = frozenset(text_modalities)
 
-        if (joint_mode == "ir_crossfusion" or joint_mode == "uni") and not self.uses_pasd_multiview:
-            if "rgb" in self.text_modalities:
+        if joint_mode == "ir_crossfusion" or joint_mode == "uni":
+            if "rgb" in self.text_modalities and "rgb" not in self.multiview_stores:
                 print("Loading RGB Text For Training...")
                 self.text_dir_rgb = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'RGB', text_data_root)
                 self.train_text_rgb = np.load(self.text_dir_rgb + f'train_text_{captioner_name}_RGB.npy')
@@ -244,7 +251,7 @@ class SYSU_Tri_Data(data.Dataset):
                     self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
                     self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
 
-            if "ir" in self.text_modalities:
+            if "ir" in self.text_modalities and "ir" not in self.multiview_stores:
                 print("Loading IR Text For Training...")
                 self.text_dir_ir = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'IR', text_data_root)
                 self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
@@ -314,18 +321,25 @@ class SYSU_Tri_Data(data.Dataset):
         thermal_index = int(self.tIndex[index])
         target1 = self.train_color_label[color_index]
         target2 = self.train_thermal_label[thermal_index]
-        if self.uses_pasd_multiview:
+        rgb_store = self.multiview_stores.get("rgb")
+        ir_store = self.multiview_stores.get("ir")
+        if rgb_store is not None:
             visual_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            visual_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
             if self.sysu_sr_view_sampling == "paired":
-                text_rgb_view, text_ir_view = visual_rgb_view, visual_ir_view
+                text_rgb_view = visual_rgb_view
             else:
                 text_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-                text_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            img1 = self.train_color_image.image(color_index, visual_rgb_view)
-            img2 = self.train_thermal_image.image(thermal_index, visual_ir_view)
+            img1 = rgb_store.image(color_index, visual_rgb_view)
         else:
             img1 = self.train_color_image[color_index]
+        if ir_store is not None:
+            visual_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+            if self.sysu_sr_view_sampling == "paired":
+                text_ir_view = visual_ir_view
+            else:
+                text_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
+            img2 = ir_store.image(thermal_index, visual_ir_view)
+        else:
             img2 = self.train_thermal_image[thermal_index]
 
         # apply img transforms
@@ -336,9 +350,9 @@ class SYSU_Tri_Data(data.Dataset):
         # apply text transforms
         if self.joint_mode == "ir_crossfusion" or self.joint_mode == "uni":
             if "rgb" in self.text_modalities:
-                if self.uses_pasd_multiview:
+                if rgb_store is not None:
                     caption_id_rgb = tokenize(
-                        self.train_color_image.caption(color_index, text_rgb_view), self.tokenizer
+                        rgb_store.caption(color_index, text_rgb_view), self.tokenizer
                     )
                 else:
                     caption_id_rgb = self.train_text_rgb[color_index]
@@ -347,9 +361,9 @@ class SYSU_Tri_Data(data.Dataset):
                 batch_dict['text_rgb'] = caption_id_rgb
 
             if "ir" in self.text_modalities:
-                if self.uses_pasd_multiview:
+                if ir_store is not None:
                     caption_id_ir = tokenize(
-                        self.train_thermal_image.caption(thermal_index, text_ir_view), self.tokenizer
+                        ir_store.caption(thermal_index, text_ir_view), self.tokenizer
                     )
                 else:
                     caption_id_ir = self.train_text_ir[thermal_index]

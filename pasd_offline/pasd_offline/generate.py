@@ -9,13 +9,15 @@ import tempfile
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import TYPE_CHECKING, Callable, Iterator
 
 from PIL import Image, ImageStat
 
 from .config import GenerationConfig
-from .runtime import PASDGenerator
 from .tasks import GenerationTask, group_tasks_by_source
+
+if TYPE_CHECKING:
+    from .runtime import PASDGenerator
 
 
 def sha256(path: Path) -> str:
@@ -94,29 +96,39 @@ def _source_lock(path: Path) -> Iterator[bool]:
         stream.close()
 
 
-def _task_contract(tasks: list[GenerationTask]) -> str:
-    payload = [
-        {
-            "source_key": task.source_key,
-            "view_index": task.view_index,
-            "caption": task.caption,
-            "seed": task.seed,
-            "output": str(task.output),
-        }
-        for task in tasks
-    ]
+def _generation_contract(tasks: list[GenerationTask], config: GenerationConfig) -> str:
+    payload = {
+        "generation": config.output_contract(),
+        "tasks": [
+            {
+                "image": str(task.image),
+                "source_key": task.source_key,
+                "view_index": task.view_index,
+                "caption": task.caption,
+                "seed": task.seed,
+                "output": str(task.output),
+                "modality": task.modality,
+                "identity": task.identity,
+                "camera": task.camera,
+                "split": task.split,
+            }
+            for task in tasks
+        ],
+    }
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
-def source_is_complete(tasks: list[GenerationTask], output_root: Path) -> bool:
+def source_is_complete(
+    tasks: list[GenerationTask], output_root: Path, config: GenerationConfig
+) -> bool:
     source_key = tasks[0].source_key or str(tasks[0].image)
     marker_path = _source_metadata_path(output_root, source_key)
     if not marker_path.is_file():
         return False
     try:
         marker = json.loads(marker_path.read_text(encoding="utf-8"))
-        if marker.get("task_contract_sha256") != _task_contract(tasks):
+        if marker.get("generation_contract_sha256") != _generation_contract(tasks, config):
             return False
         if len(marker.get("views", [])) != len(tasks):
             return False
@@ -125,9 +137,9 @@ def source_is_complete(tasks: list[GenerationTask], output_root: Path) -> bool:
         return False
 
 
-def generate_task(generator: PASDGenerator, task: GenerationTask, output_root: Path) -> dict:
+def generate_task(generator: "PASDGenerator", task: GenerationTask, output_root: Path) -> dict:
     output_path = _resolved_output(task, output_root)
-    image = generator.generate(task.image, task.caption, task.seed)
+    image = generator.generate(task.image, task.caption, task.seed, task.modality)
     compress_level = int(getattr(getattr(generator, "config", None), "png_compress_level", 4))
     _atomic_png(output_path, image.convert("RGB"), compress_level)
     return {
@@ -140,7 +152,7 @@ def generate_task(generator: PASDGenerator, task: GenerationTask, output_root: P
 
 
 def generate_source_group(
-    generator: PASDGenerator,
+    generator: "PASDGenerator",
     tasks: list[GenerationTask],
     output_root: Path,
     batch_size: int,
@@ -181,7 +193,7 @@ def generate_source_group(
             }
         )
     marker = {
-        "schema_version": 2,
+        "schema_version": 3,
         "source_key": source_key,
         "image": str(tasks[0].image),
         "input_sha256": input_digest,
@@ -193,7 +205,7 @@ def generate_source_group(
         "batch_size": int(batch_size),
         "num_inference_steps": generator.config.num_inference_steps,
         "geometry": geometry,
-        "task_contract_sha256": _task_contract(tasks),
+        "generation_contract_sha256": _generation_contract(tasks, generator.config),
         "views": views,
         "completed_at_unix": time.time(),
     }
@@ -218,6 +230,8 @@ def generate_worker(
         )
     output_root = config.output_root
     output_root.mkdir(parents=True, exist_ok=True)
+    from .runtime import PASDGenerator
+
     generator = PASDGenerator(config)
     if batch_size <= 0:
         first = tasks[0]
@@ -236,7 +250,7 @@ def generate_worker(
         for group in group_tasks_by_source(tasks):
             if max_sources is not None and completed >= max_sources:
                 break
-            if source_is_complete(group, output_root):
+            if source_is_complete(group, output_root, config):
                 skipped += 1
                 continue
             source_key = group[0].source_key or str(group[0].image)
@@ -244,7 +258,7 @@ def generate_worker(
                 if not acquired:
                     locked += 1
                     continue
-                if source_is_complete(group, output_root):
+                if source_is_complete(group, output_root, config):
                     skipped += 1
                     continue
                 marker = generate_source_group(
@@ -267,14 +281,28 @@ def generate_worker(
     return {"status": "complete_scan", "completed": completed, "skipped": skipped, "locked": locked}
 
 
-def consolidate_manifest(output_root: str | Path, expected_sources: int | None = None) -> dict:
+def consolidate_manifest(
+    output_root: str | Path,
+    tasks: list[GenerationTask],
+    config: GenerationConfig,
+) -> dict:
     output_root = Path(output_root).expanduser().resolve()
     markers = []
+    incomplete_sources = []
+    groups = sorted(
+        group_tasks_by_source(tasks),
+        key=lambda group: group[0].source_key or str(group[0].image),
+    )
     manifest_path = output_root / "manifest.jsonl"
     temporary = manifest_path.with_name(f".{manifest_path.name}.{os.getpid()}.tmp")
     digest = hashlib.sha256()
     with temporary.open("wb") as stream:
-        for path in sorted((output_root / "metadata").rglob("*.json")):
+        for group in groups:
+            source_key = group[0].source_key or str(group[0].image)
+            if not source_is_complete(group, output_root, config):
+                incomplete_sources.append(source_key)
+                continue
+            path = _source_metadata_path(output_root, source_key)
             marker = json.loads(path.read_text(encoding="utf-8"))
             markers.append(marker)
             for view in marker["views"]:
@@ -292,11 +320,12 @@ def consolidate_manifest(output_root: str | Path, expected_sources: int | None =
         os.fsync(stream.fileno())
     os.replace(temporary, manifest_path)
     summary = {
-        "schema_version": 2,
+        "schema_version": 3,
         "source_count": len(markers),
         "view_count": sum(len(marker["views"]) for marker in markers),
-        "expected_source_count": expected_sources,
-        "complete": expected_sources is None or len(markers) == expected_sources,
+        "expected_source_count": len(groups),
+        "incomplete_source_count": len(incomplete_sources),
+        "complete": not incomplete_sources,
         "manifest_jsonl": str(manifest_path),
         "manifest_jsonl_sha256": digest.hexdigest(),
     }
@@ -308,13 +337,15 @@ def generate_batch(config: GenerationConfig, tasks: list[GenerationTask]) -> lis
     """Compatibility sequential entry point used by the small CLI."""
 
     config.output_root.mkdir(parents=True, exist_ok=True)
+    from .runtime import PASDGenerator
+
     generator = PASDGenerator(config)
     entries = []
     groups = group_tasks_by_source(tasks)
     if all(len(group) == 5 for group in groups):
         for group in groups:
             entries.append(generate_source_group(generator, group, config.output_root, 1))
-        consolidate_manifest(config.output_root, expected_sources=len(groups))
+        consolidate_manifest(config.output_root, tasks, config)
         return entries
     for task in tasks:
         entries.append(generate_task(generator, task, config.output_root))

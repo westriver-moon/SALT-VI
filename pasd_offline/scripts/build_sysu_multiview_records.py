@@ -16,7 +16,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build official SYSU five-view PASD records")
     parser.add_argument("--dataset-root", required=True)
     parser.add_argument("--rgb-candidates", required=True)
-    parser.add_argument("--ir-candidates", required=True)
+    parser.add_argument("--ir-candidates")
     parser.add_argument("--output", required=True)
     parser.add_argument("--pilot-output")
     parser.add_argument("--pilot-size", type=int, default=100)
@@ -24,8 +24,11 @@ def main() -> None:
     args = parser.parse_args()
     records = build_sysu_multiview_records(
         args.dataset_root,
-        args.rgb_candidates,
-        args.ir_candidates,
+        {
+            modality: path
+            for modality, path in (("rgb", args.rgb_candidates), ("ir", args.ir_candidates))
+            if path
+        },
         args.output,
         seed=args.seed,
     )

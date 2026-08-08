@@ -21,7 +21,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -e ".[test]" build
       - name: Run runtime contracts
-        run: python -m pytest src/salt_vi/tests
+        run: |
+          python -m pytest src/salt_vi/tests
+          PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
       - name: Check CLI help
         run: python scripts/train.py --help
       - name: Build and inspect wheel resources

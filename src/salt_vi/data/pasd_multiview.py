@@ -10,9 +10,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from .sysu_sources import load_train_source_records
 
-RGB_CAMERAS = ("cam1", "cam2", "cam4", "cam5")
-IR_CAMERAS = ("cam3", "cam6")
 SUPPORTED_BACKENDS = ("array", "pasd_multiview")
 SUPPORTED_SAMPLING = ("independent", "paired")
 
@@ -33,27 +32,8 @@ def normalize_sampling(value):
     return sampling
 
 
-def _read_train_identities(data_root: Path) -> list[str]:
-    identities = []
-    for name in ("train_id.txt", "val_id.txt"):
-        values = (data_root / "exp" / name).read_text(encoding="utf-8")
-        identities.extend(token.strip().zfill(4) for token in values.replace("\n", ",").split(",") if token.strip())
-    return sorted(identities)
-
-
 def collect_train_sources(data_root: str | Path, modality: str) -> list[str]:
-    data_root = Path(data_root).expanduser().resolve()
-    cameras = RGB_CAMERAS if modality == "rgb" else IR_CAMERAS
-    sources = []
-    for identity in _read_train_identities(data_root):
-        for camera in cameras:
-            directory = data_root / camera / identity
-            if directory.is_dir():
-                sources.extend(
-                    str(path.relative_to(data_root)).replace(os.sep, "/")
-                    for path in sorted(path for path in directory.iterdir() if path.is_file())
-                )
-    return sources
+    return [record.source_key for record in load_train_source_records(data_root, modality)]
 
 
 class PASDMultiviewIndex:
@@ -119,6 +99,7 @@ class PASDTrainViewStore:
         output_root: str | Path,
         manifest_path: str | Path,
         modality: str,
+        labels: np.ndarray,
         views: int = 5,
     ):
         self.modality = str(modality).lower()
@@ -130,7 +111,22 @@ class PASDTrainViewStore:
             str(Path(output_root).expanduser().resolve()),
             int(views),
         )
-        self.sources = collect_train_sources(data_root, self.modality)
+        source_records = load_train_source_records(data_root, self.modality)
+        self.sources = [record.source_key for record in source_records]
+        if len(source_records) != len(labels):
+            raise ValueError(
+                f"SYSU {self.modality} source count {len(source_records)} "
+                f"does not match label count {len(labels)}"
+            )
+        mismatches = [
+            (record.index, record.source_key, record.label, int(labels[record.index]))
+            for record in source_records
+            if record.label != int(labels[record.index])
+        ]
+        if mismatches:
+            raise ValueError(
+                f"SYSU {self.modality} source/label order mismatch: {mismatches[:3]}"
+            )
         missing = [source for source in self.sources if source not in self.index.records]
         if missing:
             raise KeyError(f"PASD manifest misses {len(missing)} {self.modality} train sources: {missing[:3]}")

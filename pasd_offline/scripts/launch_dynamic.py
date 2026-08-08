@@ -16,7 +16,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Dynamically use only idle physical GPUs 1-3")
     parser.add_argument("--config", required=True)
     parser.add_argument("--records", required=True)
-    parser.add_argument("--expected-sources", required=True, type=int)
     parser.add_argument("--poll-seconds", type=int, default=60)
     parser.add_argument("--max-workers", type=int, default=3, choices=(1, 2, 3))
     parser.add_argument("--worker-max-sources", type=int)
@@ -24,7 +23,6 @@ def main() -> None:
     result = run_dynamic_scheduler(
         args.config,
         args.records,
-        expected_sources=args.expected_sources,
         poll_seconds=args.poll_seconds,
         max_workers=args.max_workers,
         worker_max_sources=args.worker_max_sources,

@@ -22,4 +22,10 @@ Stage-B 正式默认方案为 `stage_b/r_text_visual_20260729.yaml`，实验标�
 python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.yaml
 ```
 
+非对称检索与 RGB PASD 五视图配置：
+
+```bash
+python scripts/train.py --config_select configs/stage_b/ir_to_rgb_text_pasd_rgb_multiview_20260808.yaml
+```
+
 历史配置已按实验语义迁入各类 reproduction 子目录，不作为默认运行入口。checkpoint/pretrained 路径按迁移边界保持不动。

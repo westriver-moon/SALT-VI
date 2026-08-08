@@ -83,8 +83,7 @@ def _record_output_paths(relative: str) -> list[str]:
 
 def build_sysu_multiview_records(
     dataset_root: str | Path,
-    rgb_caption_candidates: str | Path,
-    ir_caption_candidates: str | Path,
+    caption_candidates: Mapping[str, str | Path],
     output_path: str | Path,
     seed: int = 20_260_808,
     enforce_official_counts: bool = True,
@@ -96,8 +95,12 @@ def build_sysu_multiview_records(
     identity_to_split = {
         identity: split for split, identities in splits.items() for identity in identities
     }
+    candidates = {str(key).lower(): value for key, value in caption_candidates.items()}
+    if not candidates or not set(candidates).issubset({"rgb", "ir"}):
+        raise ValueError("caption_candidates must contain rgb and/or ir entries")
     caption_entries: dict[str, Mapping] = {}
-    for path in (rgb_caption_candidates, ir_caption_candidates):
+    source_modalities: dict[str, str] = {}
+    for requested_modality, path in candidates.items():
         values = json.loads(Path(path).read_text(encoding="utf-8"))
         if not isinstance(values, dict):
             raise ValueError(f"caption candidate file is not a JSON object: {path}")
@@ -105,6 +108,7 @@ def build_sysu_multiview_records(
         if overlap:
             raise ValueError(f"duplicate caption keys across modalities: {sorted(overlap)[:3]}")
         caption_entries.update(values)
+        source_modalities.update({key: requested_modality for key in values})
 
     records: list[dict] = []
     for source_key, metadata in sorted(caption_entries.items()):
@@ -117,6 +121,11 @@ def build_sysu_multiview_records(
         modality = "ir" if camera in IR_CAMERAS else "rgb"
         if camera not in RGB_CAMERAS | IR_CAMERAS:
             raise ValueError(f"unsupported SYSU camera {camera} for {source_key}")
+        if modality != source_modalities[source_key]:
+            raise ValueError(
+                f"caption modality mismatch for {source_key}: "
+                f"declared={source_modalities[source_key]} camera={camera}"
+            )
         source_path = (dataset_root / relative).resolve()
         if not source_path.is_file():
             raise FileNotFoundError(f"caption source image is missing: {source_path}")
@@ -135,7 +144,7 @@ def build_sysu_multiview_records(
         ]
         records.append(
             {
-                "schema_version": 2,
+                "schema_version": 3,
                 "source_key": relative,
                 "image": str(source_path),
                 "identity": identity,
@@ -152,20 +161,21 @@ def build_sysu_multiview_records(
         modality: sum(record["modality"] == modality for record in records)
         for modality in ("rgb", "ir")
     }
+    expected_total = sum(OFFICIAL_COUNTS[modality] for modality in candidates)
     if enforce_official_counts and (
-        len(records) != OFFICIAL_COUNTS["total"]
-        or modality_counts["rgb"] != OFFICIAL_COUNTS["rgb"]
-        or modality_counts["ir"] != OFFICIAL_COUNTS["ir"]
+        len(records) != expected_total
+        or any(modality_counts[modality] != OFFICIAL_COUNTS[modality] for modality in candidates)
+        or any(modality_counts[modality] for modality in {"rgb", "ir"}.difference(candidates))
     ):
         raise ValueError(
             "SYSU protocol coverage mismatch: "
             f"total={len(records)} rgb={modality_counts['rgb']} ir={modality_counts['ir']} "
-            f"expected={OFFICIAL_COUNTS}"
+            f"enabled={sorted(candidates)} expected={OFFICIAL_COUNTS}"
         )
     output_path = Path(output_path).expanduser().resolve()
     _atomic_jsonl(output_path, records)
     summary = {
-        "schema_version": 2,
+        "schema_version": 3,
         "dataset_root": str(dataset_root),
         "records": len(records),
         "views": len(records) * 5,

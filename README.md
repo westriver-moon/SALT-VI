@@ -26,6 +26,7 @@ evidence, and validation boundary are recorded in
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest src/salt_vi/tests
+PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
 ```
 
 The repository does not distribute datasets or model weights. Configure public dataset roots, pretrained initialization, canonical checkpoints, and output paths before training. The experiment registry records checkpoint identities and SHA-256 values for retained runs.

@@ -18,7 +18,8 @@ RGB gallery + per-image RGB caption → RGB-Text fusion encoder
 - 查询数据加载器不产生文本字段。
 - 图库 caption 来自 `gallery_caption_manifest`，按原始图片路径查找。
 - 禁止通过测试身份标签从 identity caption pool 选择图库文本。
-- RGB 与 IR 均使用配置指定的 SwinIR array 数据。
+- 基线配置的 RGB 与 IR 使用 SwinIR array 数据。
+- PASD 配置仅替换 RGB 为五视图输入；IR 使用原始 SYSU 图像。
 
 ## 训练目标
 
@@ -37,4 +38,5 @@ SYSU all-search single-shot 的查询特征由 IR 编码器生成，十次图库
 
 ```text
 configs/stage_b/ir_to_rgb_text_20260808.yaml
+configs/stage_b/ir_to_rgb_text_pasd_rgb_multiview_20260808.yaml
 ```

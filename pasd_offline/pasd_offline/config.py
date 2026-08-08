@@ -13,7 +13,6 @@ class GenerationConfig:
     output_root: Path
     device: str = "cuda:0"
     mixed_precision: str = "fp16"
-    upscale: int = 2
     process_size: int = 512
     num_inference_steps: int = 20
     guidance_scale: float = 9.0
@@ -39,6 +38,33 @@ class GenerationConfig:
     min_free_memory_gib: float = 22.0
     max_gpu_utilization: int = 5
     worker_chunk_size: int = 100
+
+    def output_contract(self) -> dict:
+        return {
+            "pretrained_model_path": str(self.pretrained_model_path),
+            "pasd_model_path": str(self.pasd_model_path),
+            "mixed_precision": self.mixed_precision,
+            "process_size": self.process_size,
+            "num_inference_steps": self.num_inference_steps,
+            "guidance_scale": self.guidance_scale,
+            "conditioning_scale": self.conditioning_scale,
+            "added_prompt": self.added_prompt,
+            "negative_prompt": self.negative_prompt,
+            "decoder_tiled_size": self.decoder_tiled_size,
+            "encoder_tiled_size": self.encoder_tiled_size,
+            "latent_tiled_size": self.latent_tiled_size,
+            "latent_tiled_overlap": self.latent_tiled_overlap,
+            "init_latent_with_noise": self.init_latent_with_noise,
+            "added_noise_level": self.added_noise_level,
+            "offset_noise_scale": self.offset_noise_scale,
+            "target_height": self.target_height,
+            "target_width": self.target_width,
+            "person_detector_model": (
+                str(self.person_detector_model) if self.person_detector_model else None
+            ),
+            "person_detector_confidence": self.person_detector_confidence,
+            "person_margin": self.person_margin,
+        }
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "GenerationConfig":

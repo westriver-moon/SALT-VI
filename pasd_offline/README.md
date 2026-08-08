@@ -41,7 +41,7 @@ Generated datasets belong under the public data root, not in this repository.
 The adaptive five-view output is:
 
 ```text
-/home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-adaptive-512x256-5view-v1/
+/home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/
 ```
 
 ## Caption input
@@ -54,6 +54,7 @@ Single-image generation accepts a caption verbatim:
   --config configs/generate_sysu.yaml \
   --image /path/to/input.png \
   --caption "a person wearing a red shirt and black trousers" \
+  --modality rgb \
   --output previews/red-shirt.png
 ```
 
@@ -62,7 +63,7 @@ Batch generation reads JSONL. A row may contain either `caption` or
 
 ```json
 {"image":"/path/to/0001.png","caption":"a person in a red shirt","output":"rgb/0001.png","modality":"rgb"}
-{"image":"/path/to/0002.png","captions":["a person in black","a pedestrian carrying a bag"],"output":"ir/0002.png","modality":"ir"}
+{"image":"/path/to/0002.png","captions":["a person in black","a pedestrian carrying a bag"],"output":"rgb/0002.png","modality":"rgb"}
 ```
 
 Caption modes:
@@ -136,11 +137,18 @@ Official archive identity:
 
 ## Adaptive SYSU five-view build
 
-IR caption augmentation is intentionally excluded from the active workflow.
-The original IR images and BLIP captions remain in the source dataset, while
-the existing RGB caption plus four Qwen paraphrases remain available for a
-future RGB-only generation contract. Do not launch a dataset build until that
-RGB-only record contract has been finalized.
+The active contract contains the official `29,033` RGB images. Each RGB source
+uses its original caption plus four Qwen paraphrases and produces five PASD
+views. IR remains on the original SYSU image path and has no caption
+augmentation.
+
+```bash
+python scripts/build_sysu_multiview_records.py \
+  --dataset-root /home/cgv841/datasets/SYSU-MM01 \
+  --rgb-candidates /home/lab929/ybj/datasets/text_candidates/SYSU-MM01/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json \
+  --output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/source-records.jsonl \
+  --pilot-output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/pilot-records.jsonl
+```
 
 The dynamic launcher uses only physical GPUs 1, 2, and 3.  GPU0 is rejected by
 both the scheduler and every worker.  Idle workers claim one source at a time
@@ -152,9 +160,8 @@ only after all five views pass local validation.
   scripts/launch_dynamic.py \
   --config configs/generate_sysu.yaml \
   --records /path/to/pilot-records.jsonl \
-  --expected-sources 100 \
   --max-workers 3
 ```
 
-Do not launch the full 44,745-source records until the 100-source contact
-sheets and validation report have been reviewed.
+The scheduler derives the source count and completion state from the supplied
+records. The full RGB build contains `145,165` PNG views.

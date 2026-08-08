@@ -15,6 +15,7 @@ from salt_vi.utils import make_dirs, Logger
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
 from salt_vi.config.validation import validate_runtime_config
+from salt_vi.entrypoints.output_paths import resolve_run_directory
 from salt_vi.retrieval import get_retrieval_backend
 from salt_vi.utils.utils import save_train_configs, load_train_configs, time_now
 from torch.utils.tensorboard import SummaryWriter
@@ -438,64 +439,14 @@ def main(config):
     _reset_best_metrics()
 
     print("=================Constructing output dir=================")
+    config.output_path = resolve_run_directory(config)
     if config.DEBUG:
-        config.output_path = config.DEBUG_DIR
         print(f"Debug [{config.mode}] mode, dir: {config.output_path}")
     elif (config.auto_resume_training_from_lastest_step or config.resume_train_epoch>=0) and config.mode == 'train':
         print(f"Resume training from the latest step, dir: {config.output_path}")
     elif config.mode == 'test':
         print(f"Start testing with trained model, dir: {config.output_path}")
     else:
-        config.output_path += f'{config.dataset}/'
-        FV = config.Fix_Visual
-        FF = config.Feat_Filter
-        QBN = config.uni_BN
-        if not FV and not FF and not QBN:
-            config.output_path += 'Base/'
-
-        if QBN and not FV and not FF:
-            config.output_path += 'QBN/'
-
-        if FV and not FF and not QBN:
-            config.output_path += 'FV/'
-        if FF and not FV and not QBN:
-            config.output_path += 'Filter/'
-        if FV and FF and not QBN:
-            config.output_path += 'FV_Filter/'
-
-        if FV and QBN and not FF:
-            config.output_path += 'FV_QBN/'
-        if FF and QBN and not FV:
-            config.output_path += 'Filter_QBN/'
-        if FV and FF and QBN:
-            config.output_path += 'FV_Filter_QBN/'
-
-
-
-
-        config.output_path += 'Baseline'
-        if config.dataset == 'regdb':
-            config.output_path += f'_{config.trial}'
-        config.output_path += '_' + f'train[{config.training_mode}]'
-        if len(config.training_mode.split('_')) == 3:
-            config.output_path += '_' + f'joint[{config.joint_mode}]'
-        if "Text" in config.training_mode:
-            config.output_path += '_' + config.captioner_name
-            if "IR" in config.training_mode:
-                config.output_path += '_' + config.fusion_way
-            if config.llm_aug:
-                config.output_path += '_' + 'LLM' + '_' + str(config.llm_aug_prob)
-        if config.loss_names:
-            config.output_path += '_' + config.loss_names
-        if config.Return_B4_BN:
-            config.output_path += '_' + 'Return_B4_BN'
-        if config.uni_BN:
-            config.output_path += '_' + 'uni_BN'
-        if config.Fix_Visual:
-            config.output_path += '_' + 'Fix_Visual'
-        if config.Feat_Filter:
-            config.output_path += '_' + 'Filtered'
-        # config.output_path += '_' + time_now()
         print(f"start training from zero, dir {config.output_path}, training mode: {config.training_mode}")
 
 
