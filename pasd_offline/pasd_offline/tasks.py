@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
@@ -22,7 +22,7 @@ class GenerationTask:
     task_kind: str = "generic"
 
 
-def normalize_source_key(value: str) -> str:
+def _relative_path(value: str | Path, field: str) -> Path:
     normalized = str(value).replace("\\", "/")
     path = Path(normalized)
     if (
@@ -31,8 +31,23 @@ def normalize_source_key(value: str) -> str:
         or re.match(r"^[A-Za-z]:/", normalized)
         or any(part == ".." for part in path.parts)
     ):
-        raise ValueError(f"source_key must be a relative path without '..': {value!r}")
-    return path.as_posix()
+        raise ValueError(f"{field} must be a relative path without '..': {value!r}")
+    return path
+
+
+def normalize_source_key(value: str) -> str:
+    return _relative_path(value, "source_key").as_posix()
+
+
+def normalize_output_path(value: str | Path) -> Path:
+    return _relative_path(value, "output")
+
+
+def task_payload(task: GenerationTask) -> dict:
+    return {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in asdict(task).items()
+    }
 
 
 def _caption_output(path: Path, caption_index: int) -> Path:
@@ -70,7 +85,7 @@ def load_tasks(
                     GenerationTask(
                         image=Path(record["image"]).expanduser().resolve(),
                         caption=str(view["caption"]),
-                        output=Path(view["output"]),
+                        output=normalize_output_path(view["output"]),
                         seed=int(view["seed"]),
                         modality=str(record.get("modality", "")),
                         identity=str(record.get("identity", "")),
@@ -88,7 +103,9 @@ def load_tasks(
             captions = [record["caption"]]
         else:
             captions = caption_pool[record["caption_pool_key"]]
-        output = Path(record.get("output") or f"{Path(record['image']).stem}.png")
+        output = normalize_output_path(
+            record.get("output") or f"{Path(record['image']).stem}.png"
+        )
         if mode == "first":
             selected = [(0, captions[0])]
         elif mode == "random":

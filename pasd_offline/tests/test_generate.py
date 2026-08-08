@@ -9,6 +9,7 @@ from PIL import Image
 
 from pasd_offline.config import GenerationConfig
 from pasd_offline.contracts import (
+    dataset_scope_payload,
     prepare_contracts,
     prepare_dataset_scope,
     prepare_generation_identity,
@@ -334,3 +335,16 @@ def test_generic_five_caption_batch_uses_task_manifest(tmp_path: Path, monkeypat
     assert summary["task_count"] == 5
     assert not (config.output_root / "metadata").exists()
     assert not (config.output_root / ".locks").exists()
+
+
+def test_dataset_scope_binds_the_resolved_task_plan(tmp_path: Path):
+    source = tmp_path / "source.png"
+    Image.new("RGB", (16, 32), "gray").save(source)
+    records = tmp_path / "records.jsonl"
+    records.write_text(
+        json.dumps({"image": str(source), "captions": ["zero", "one"]}),
+        encoding="utf-8",
+    )
+    first = dataset_scope_payload(records, load_tasks(records, "random", 1))
+    second = dataset_scope_payload(records, load_tasks(records, "random", 999))
+    assert first["task_plan"]["sha256"] != second["task_plan"]["sha256"]

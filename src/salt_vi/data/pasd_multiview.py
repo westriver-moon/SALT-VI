@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from functools import lru_cache
@@ -36,6 +37,24 @@ def collect_train_sources(data_root: str | Path, modality: str) -> list[str]:
     return [record.source_key for record in load_train_source_records(data_root, modality)]
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+@lru_cache(maxsize=None)
+def _validated_view(path: str, expected_sha256: str) -> Path:
+    output = Path(path)
+    if not output.is_file():
+        raise FileNotFoundError(f"missing PASD view: {output}")
+    if _sha256(output) != expected_sha256:
+        raise ValueError(f"PASD view checksum mismatch: {output}")
+    return output
+
+
 class PASDMultiviewIndex:
     def __init__(self, manifest_path: str | Path, data_root: str | Path, output_root: str | Path, views: int):
         self.manifest_path = Path(manifest_path).expanduser().resolve()
@@ -44,21 +63,44 @@ class PASDMultiviewIndex:
         self.views = int(views)
         if self.views != 5:
             raise ValueError(f"SYSU PASD contract requires five views, got {self.views}")
+        summary = json.loads(
+            self.manifest_path.with_suffix(".json").read_text(encoding="utf-8")
+        )
+        if not summary.get("complete"):
+            raise ValueError("PASD dataset manifest is not complete")
+        if _sha256(self.manifest_path) != summary["manifest_jsonl_sha256"]:
+            raise ValueError("PASD dataset manifest checksum mismatch")
+        for filename, field in (
+            ("generation-identity.json", "generation_identity_sha256"),
+            ("dataset-scope.json", "dataset_scope_sha256"),
+        ):
+            identity = json.loads(
+                (self.output_root / filename).read_text(encoding="utf-8")
+            )
+            if identity[field] != summary[field]:
+                raise ValueError(f"PASD {field} does not match the final manifest")
+
         records = {}
         with self.manifest_path.open("r", encoding="utf-8") as stream:
             for line in stream:
                 if not line.strip():
                     continue
-                record = json.loads(line)
-                key = str(record["source_key"]).replace("\\", "/").lstrip("/")
-                if key in records:
-                    raise ValueError(f"duplicate PASD source key: {key}")
-                if len(record.get("views", [])) != self.views:
-                    raise ValueError(f"PASD source {key} does not have {self.views} views")
-                indices = [int(view["view_index"]) for view in record["views"]]
-                if indices != list(range(self.views)):
-                    raise ValueError(f"PASD source {key} has invalid view indices {indices}")
-                records[key] = record
+                view = json.loads(line)
+                key = str(view["source_key"]).replace("\\", "/").lstrip("/")
+                records.setdefault(key, {"views": []})["views"].append(view)
+        for key, record in records.items():
+            record["views"].sort(key=lambda view: int(view["view_index"]))
+            indices = [int(view["view_index"]) for view in record["views"]]
+            if len(indices) != self.views:
+                raise ValueError(f"PASD source {key} does not have {self.views} views")
+            if indices != list(range(self.views)):
+                raise ValueError(f"PASD source {key} has invalid view indices {indices}")
+        if len(records) != int(summary["source_count"]):
+            raise ValueError("PASD final manifest source count mismatch")
+        if sum(len(record["views"]) for record in records.values()) != int(
+            summary["view_count"]
+        ):
+            raise ValueError("PASD final manifest view count mismatch")
         self.records = records
 
     def key_for_path(self, image_path: str | Path) -> str:
@@ -78,10 +120,9 @@ class PASDMultiviewIndex:
     def image_path(self, source_key: str, view_index: int) -> Path:
         record = self.record(source_key)
         view = record["views"][int(view_index)]
-        path = self.output_root / view["output"]
-        if not path.is_file():
-            raise FileNotFoundError(f"missing PASD view: {path}")
-        return path
+        path = (self.output_root / view["output"]).resolve()
+        path.relative_to(self.output_root)
+        return _validated_view(str(path), view["output_sha256"])
 
     def caption(self, source_key: str, view_index: int) -> str:
         return str(self.record(source_key)["views"][int(view_index)]["caption"])
@@ -137,9 +178,8 @@ class PASDTrainViewStore:
     def image(self, index: int, view_index: int) -> np.ndarray:
         path = self.index.image_path(self.sources[int(index)], int(view_index))
         with Image.open(path) as image:
-            image = image.convert("RGB")
-            if image.size != (256, 512):
-                raise ValueError(f"PASD view has size {image.size}, expected (256, 512): {path}")
+            if image.format != "PNG" or image.mode != "RGB" or image.size != (256, 512):
+                raise ValueError(f"PASD view contract mismatch: {path}")
             return np.asarray(image).copy()
 
     def caption(self, index: int, view_index: int) -> str:

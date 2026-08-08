@@ -74,12 +74,17 @@ class GenerationConfig:
     def from_yaml(cls, path: str | Path) -> "GenerationConfig":
         path = Path(path).resolve()
         values = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for key in ("pretrained_model_path", "pasd_model_path"):
+            if not values.get(key):
+                raise ValueError(f"{key} is required")
         for key in ("pretrained_model_path", "pasd_model_path", "person_detector_model"):
             if values.get(key) in (None, ""):
                 values[key] = None
                 continue
             value = Path(values[key]).expanduser()
             values[key] = value if value.is_absolute() else (path.parent / value).resolve()
+            if not values[key].exists():
+                raise FileNotFoundError(values[key])
         values["output_root"] = Path(values["output_root"]).expanduser().resolve()
         if "gpu_allowlist" in values:
             values["gpu_allowlist"] = tuple(int(value) for value in values["gpu_allowlist"])

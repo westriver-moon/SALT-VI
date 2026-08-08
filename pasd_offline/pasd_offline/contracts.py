@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .config import GenerationConfig
-from .tasks import GenerationTask
+from .tasks import GenerationTask, task_payload
 
 
 GENERATION_IDENTITY_NAME = "generation-identity.json"
@@ -29,6 +29,8 @@ def file_sha256(path: Path) -> str:
 
 def content_identity(path: Path) -> dict:
     path = path.expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(path)
     if path.is_file():
         return {"path": str(path), "file_count": 1, "sha256": file_sha256(path)}
     files = sorted(value for value in path.rglob("*") if value.is_file())
@@ -66,6 +68,15 @@ def input_identity(tasks: Iterable[GenerationTask]) -> dict:
         digest.update(b"\0")
         digest.update(bytes.fromhex(file_sha256(path)))
     return {"source_count": len(sources), "sha256": digest.hexdigest()}
+
+
+def task_plan_identity(tasks: Iterable[GenerationTask]) -> dict:
+    plan = [task_payload(task) for task in tasks]
+    encoded = json.dumps(plan, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    return {
+        "task_count": len(plan),
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+    }
 
 
 def runtime_environment_identity(config: GenerationConfig, root: Path | None = None) -> dict:
@@ -154,9 +165,10 @@ def generation_identity_payload(
 
 def dataset_scope_payload(records_path: str | Path, tasks: list[GenerationTask]) -> dict:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "records": content_identity(Path(records_path)),
         "inputs": input_identity(tasks),
+        "task_plan": task_plan_identity(tasks),
     }
 
 

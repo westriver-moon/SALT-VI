@@ -90,6 +90,8 @@ def run_dynamic_scheduler(
     max_workers: int = 3,
     worker_max_sources: int | None = None,
 ) -> dict:
+    if worker_max_sources is not None and worker_max_sources <= 0:
+        raise ValueError("worker_max_sources must be positive")
     config_path = Path(config_path).expanduser().resolve()
     records_path = Path(records_path).expanduser().resolve()
     config = GenerationConfig.from_yaml(config_path)

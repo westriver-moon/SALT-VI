@@ -81,3 +81,28 @@ def test_views_schema_creates_explicit_five_view_tasks(tmp_path: Path):
     )
     tasks = load_tasks(records, "all", 7)
     assert all(task.task_kind == "five_view" for task in tasks)
+
+
+@pytest.mark.parametrize("output", ["/tmp/view.png", "../view.png", "C:/view.png"])
+def test_five_view_output_must_be_safe_relative_path(tmp_path: Path, output: str):
+    records = tmp_path / "records.jsonl"
+    records.write_text(
+        json.dumps(
+            {
+                "image": str(tmp_path / "person.jpg"),
+                "source_key": "cam1/0001/person.jpg",
+                "views": [
+                    {
+                        "view_index": index,
+                        "caption": f"caption {index}",
+                        "seed": index,
+                        "output": output if index == 0 else f"images/view_{index}.png",
+                    }
+                    for index in range(5)
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="output must be a relative path"):
+        load_tasks(records, "all", 7)

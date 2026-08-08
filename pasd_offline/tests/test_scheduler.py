@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 
 from pasd_offline.config import GenerationConfig
-from pasd_offline.scheduler import GPUStatus, gpu_is_eligible
+from pasd_offline.scheduler import GPUStatus, gpu_is_eligible, run_dynamic_scheduler
 
 
 def config(tmp_path: Path):
@@ -22,6 +22,8 @@ def test_gpu_zero_is_never_eligible(tmp_path: Path):
 
 
 def test_worker_chunk_size_must_be_positive(tmp_path: Path):
+    (tmp_path / "sd").mkdir()
+    (tmp_path / "pasd").mkdir()
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         "\n".join(
@@ -35,4 +37,16 @@ def test_worker_chunk_size_must_be_positive(tmp_path: Path):
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="worker_chunk_size must be positive"):
+        GenerationConfig.from_yaml(config_path)
+
+
+def test_worker_max_sources_must_be_positive(tmp_path: Path):
+    with pytest.raises(ValueError, match="worker_max_sources must be positive"):
+        run_dynamic_scheduler(tmp_path / "missing.yaml", tmp_path / "missing.jsonl", worker_max_sources=0)
+
+
+def test_model_paths_are_required(tmp_path: Path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(f"output_root: {tmp_path / 'output'}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="pretrained_model_path is required"):
         GenerationConfig.from_yaml(config_path)

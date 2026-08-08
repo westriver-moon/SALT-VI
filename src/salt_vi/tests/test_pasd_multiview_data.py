@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,17 @@ def write_record(root: Path, output_root: Path, relative: str, modality: str, ca
         path = output_root / output
         path.parent.mkdir(parents=True, exist_ok=True)
         Image.new("RGB", (256, 512), (index, index, index)).save(path)
-        views.append({"view_index": index, "caption": f"caption {index}", "seed": index, "output": str(output)})
+        views.append(
+            {
+                "view_index": index,
+                "caption": f"caption {index}",
+                "seed": index,
+                "output": str(output),
+                "output_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "output_bytes": path.stat().st_size,
+                "output_size": [256, 512],
+            }
+        )
     return {
         "source_key": relative,
         "image": str(source),
@@ -33,6 +44,47 @@ def write_record(root: Path, output_root: Path, relative: str, modality: str, ca
         "split": "train",
         "views": views,
     }
+
+
+def write_manifest(output_root: Path, records, complete: bool = True):
+    rows = [
+        {
+            **{
+                key: record[key]
+                for key in ("source_key", "identity", "camera", "modality", "split")
+            },
+            **view,
+        }
+        for record in records
+        for view in record["views"]
+    ]
+    manifest = output_root / "manifest.jsonl"
+    manifest.write_text(
+        "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    generation = "generation-test"
+    scope = "scope-test"
+    (output_root / "generation-identity.json").write_text(
+        json.dumps({"generation_identity_sha256": generation}), encoding="utf-8"
+    )
+    (output_root / "dataset-scope.json").write_text(
+        json.dumps({"dataset_scope_sha256": scope}), encoding="utf-8"
+    )
+    (output_root / "manifest.json").write_text(
+        json.dumps(
+            {
+                "complete": complete,
+                "source_count": len(records),
+                "view_count": len(rows),
+                "generation_identity_sha256": generation,
+                "dataset_scope_sha256": scope,
+                "manifest_jsonl_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def test_manifest_backed_train_and_eval_views(tmp_path: Path):
@@ -45,13 +97,38 @@ def test_manifest_backed_train_and_eval_views(tmp_path: Path):
         write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1),
         write_record(root, output_root, "cam3/0001/0001.jpg", "ir", 3),
     ]
-    manifest = output_root / "source-records.jsonl"
-    manifest.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+    manifest = write_manifest(output_root, records)
     rgb = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), 5)
     ir = PASDTrainViewStore(root, output_root, manifest, "ir", np.asarray([0]), 5)
     assert rgb.image(0, 4).shape == (512, 256, 3)
     assert ir.caption(0, 2) == "caption 2"
     assert eval_view_path(root / "cam1/0001/0001.jpg", root, output_root, manifest, 0, 5).endswith("view_00.png")
+
+
+def test_train_store_requires_complete_validated_manifest(tmp_path: Path):
+    root = tmp_path / "SYSU-MM01"
+    (root / "exp").mkdir(parents=True)
+    (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
+    (root / "exp" / "val_id.txt").write_text("", encoding="utf-8")
+    output_root = tmp_path / "derived"
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1)
+    manifest = write_manifest(output_root, [record], complete=False)
+    with pytest.raises(ValueError, match="manifest is not complete"):
+        PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), 5)
+
+
+def test_train_store_checks_view_checksum_on_first_use(tmp_path: Path):
+    root = tmp_path / "SYSU-MM01"
+    (root / "exp").mkdir(parents=True)
+    (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
+    (root / "exp" / "val_id.txt").write_text("", encoding="utf-8")
+    output_root = tmp_path / "derived"
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1)
+    manifest = write_manifest(output_root, [record])
+    store = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), 5)
+    (output_root / record["views"][0]["output"]).write_bytes(b"changed")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        store.image(0, 0)
 
 
 def test_multiview_store_uses_canonical_source_label_order(tmp_path: Path):
@@ -65,8 +142,7 @@ def test_multiview_store_uses_canonical_source_label_order(tmp_path: Path):
         write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1),
     ]
     records[0]["identity"] = "0002"
-    manifest = output_root / "source-records.jsonl"
-    manifest.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+    manifest = write_manifest(output_root, records)
 
     store = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0, 1]), 5)
     assert store.sources == ["cam1/0001/0001.jpg", "cam1/0002/0002.jpg"]
@@ -84,8 +160,7 @@ def test_rgb_only_multiview_keeps_ir_array_input(tmp_path: Path):
     np.save(root / "train_ir_resized_img.npy", np.zeros((1, 64, 32, 3), dtype=np.uint8))
     output_root = tmp_path / "derived"
     record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1)
-    manifest = output_root / "source-records.jsonl"
-    manifest.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    manifest = write_manifest(output_root, [record])
     transform = lambda image: np.asarray(image)
     dataset = SYSU_Tri_Data(
         str(root) + os.sep,
@@ -122,7 +197,7 @@ def test_multiview_config_contract():
         sysu_sr_modalities=["rgb"],
         sysu_sr_exact_size=True,
         sysu_sr_views_per_image=5,
-        sysu_sr_view_manifest="records.jsonl",
+        sysu_sr_view_manifest="manifest.jsonl",
         sysu_sr_view_sampling="independent",
         sysu_sr_eval_view_index=0,
         img_h=512,
@@ -181,35 +256,13 @@ def test_train_loader_builds_pasd_gallery_from_explicit_blip_manifest(
         Image.new("RGB", (64, 128), "gray").save(source)
 
     output_root = tmp_path / "derived"
-    views = []
-    for index in range(5):
-        relative = Path("images/cam1/0001/0001") / f"view_{index:02d}.png"
-        output = output_root / relative
-        output.parent.mkdir(parents=True, exist_ok=True)
-        Image.new("RGB", (256, 512), (index + 1, index + 1, index + 1)).save(output)
-        views.append(
-            {
-                "view_index": index,
-                "caption": f"PASD train caption {index}",
-                "seed": index,
-                "output": str(relative),
-            }
-        )
-    multiview_manifest = output_root / "source-records.jsonl"
-    multiview_manifest.write_text(
-        json.dumps(
-            {
-                "source_key": "cam1/0001/0001.jpg",
-                "image": str(rgb_source),
-                "identity": "0001",
-                "camera": 1,
-                "modality": "rgb",
-                "split": "test",
-                "views": views,
-            }
-        )
-        + "\n",
-        encoding="utf-8",
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1)
+    record["split"] = "test"
+    for index, view in enumerate(record["views"]):
+        view["caption"] = f"PASD train caption {index}"
+    multiview_manifest = write_manifest(
+        output_root,
+        [record],
     )
     gallery_manifest = tmp_path / "caption_dict_Blip_RGB.json"
     gallery_manifest.write_text(

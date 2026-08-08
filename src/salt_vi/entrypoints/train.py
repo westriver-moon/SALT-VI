@@ -287,7 +287,6 @@ def _materialize_warm_start_checkpoint(model, config):
 def seed_torch(seed):
     seed = int(seed)
     random.seed(seed)
-    os.environ['PYTHONASHSEED'] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)

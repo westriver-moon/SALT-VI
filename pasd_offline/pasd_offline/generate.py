@@ -7,7 +7,6 @@ import json
 import os
 import tempfile
 import time
-from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Iterator
 
@@ -15,7 +14,13 @@ from PIL import Image, ImageChops, ImageStat
 
 from .config import GenerationConfig
 from .contracts import verify_dataset_scope, verify_generation_identity
-from .tasks import GenerationTask, group_tasks_by_source, normalize_source_key
+from .tasks import (
+    GenerationTask,
+    group_tasks_by_source,
+    normalize_output_path,
+    normalize_source_key,
+    task_payload,
+)
 
 if TYPE_CHECKING:
     from .runtime import PASDGenerator
@@ -62,7 +67,10 @@ def _atomic_png(path: Path, image: Image.Image, compress_level: int) -> None:
 
 
 def _resolved_output(task: GenerationTask, output_root: Path) -> Path:
-    return task.output if task.output.is_absolute() else output_root / task.output
+    root = output_root.expanduser().resolve()
+    output = (root / normalize_output_path(task.output)).resolve()
+    output.relative_to(root)
+    return output
 
 
 def _source_metadata_path(output_root: Path, source_key: str) -> Path:
@@ -105,22 +113,7 @@ def _source_contract(
     payload = {
         "generation_identity_sha256": config.generation_identity_sha256,
         "input_sha256": input_sha256,
-        "tasks": [
-            {
-                "image": str(task.image),
-                "source_key": task.source_key,
-                "view_index": task.view_index,
-                "caption": task.caption,
-                "seed": task.seed,
-                "output": str(task.output),
-                "modality": task.modality,
-                "identity": task.identity,
-                "camera": task.camera,
-                "split": task.split,
-                "task_kind": task.task_kind,
-            }
-            for task in tasks
-        ],
+        "tasks": [task_payload(task) for task in tasks],
     }
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -215,7 +208,7 @@ def generate_task(generator: "PASDGenerator", task: GenerationTask, output_root:
     compress_level = int(getattr(getattr(generator, "config", None), "png_compress_level", 4))
     _atomic_png(output_path, image.convert("RGB"), compress_level)
     return {
-        **{key: str(value) if isinstance(value, Path) else value for key, value in asdict(task).items()},
+        **task_payload(task),
         "output": str(output_path),
         "input_sha256": sha256(task.image),
         "output_sha256": sha256(output_path),

@@ -174,3 +174,8 @@ only after all five views pass local validation.
 
 The scheduler derives the source count and completion state from the supplied
 records. The full RGB build contains `145,165` PNG views.
+
+`source-records.jsonl` is generation input only. Stage-B must point
+`sysu_sr_view_manifest` to the published `manifest.jsonl`; its sibling
+`manifest.json`, generation identity, dataset scope, and view checksums form
+the training input contract.
