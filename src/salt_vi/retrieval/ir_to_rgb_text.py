@@ -1,13 +1,61 @@
 import torch
+from collections.abc import Mapping
 
 
 NAME = "ir_to_rgb_text"
 RESULT_KEY = "IR-RGBText"
+IS_LEGACY = False
 TRAIN_TEXT_MODALITIES = ("rgb",)
 QUERY_CAPTION_LOOKUP = None
 GALLERY_CAPTION_LOOKUP = "image"
 QUERY_NAME = "infrared-image"
 GALLERY_NAME = "visible-image-plus-image-caption"
+
+
+def _value(config, name, default=None):
+    if isinstance(config, Mapping):
+        return config.get(name, default)
+    return getattr(config, name, default)
+
+
+def train_text_modalities(config):
+    return TRAIN_TEXT_MODALITIES
+
+
+def query_caption_lookup(config):
+    return QUERY_CAPTION_LOOKUP
+
+
+def gallery_caption_lookup(config):
+    return GALLERY_CAPTION_LOOKUP
+
+
+def training_recipe(config):
+    return NAME
+
+
+def validate(config, sr_backend=None, sr_modalities=None):
+    if str(_value(config, "dataset", "")).lower() != "sysu":
+        raise ValueError("ir_to_rgb_text is supported only for SYSU-MM01")
+    if (
+        str(_value(config, "training_mode", "")) != "RGB_IR_Text"
+        or str(_value(config, "joint_mode", "")) != "uni"
+    ):
+        raise ValueError("ir_to_rgb_text requires training_mode=RGB_IR_Text and joint_mode=uni")
+    if bool(_value(config, "Feat_Filter", False)):
+        raise ValueError("ir_to_rgb_text does not use IR caption filtering")
+    if bool(_value(config, "uni_BN", False)):
+        raise ValueError("ir_to_rgb_text requires the shared classifier BN")
+    if sr_backend == "pasd_multiview" and sr_modalities != {"rgb"}:
+        raise ValueError("ir_to_rgb_text PASD mode requires RGB-only multiview SR")
+    if str(_value(config, "test_modality", "")) != RESULT_KEY:
+        raise ValueError(f"ir_to_rgb_text requires test_modality={RESULT_KEY}")
+    if not _value(config, "gallery_caption_manifest"):
+        raise ValueError("ir_to_rgb_text requires gallery_caption_manifest")
+    text_dropout = float(_value(config, "gallery_text_dropout", 0.0))
+    if not 0.0 <= text_dropout < 1.0:
+        raise ValueError("gallery_text_dropout must be in [0, 1)")
+    return config
 
 
 def training_losses(
@@ -71,3 +119,10 @@ def encode_gallery(model, batch_dict, device):
     image = batch_dict["img"].to(device)
     text = batch_dict["text"].to(device).long()
     return model.classifier(model.encode_fusion(text, image, mode="rgb"), "Fusion")
+
+
+def evaluate(model, loader, config, device):
+    from .evaluator import evaluate_sysu
+    from . import ir_to_rgb_text
+
+    return evaluate_sysu(model, loader, device, ir_to_rgb_text)

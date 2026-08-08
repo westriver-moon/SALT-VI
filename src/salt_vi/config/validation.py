@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from salt_vi.retrieval import get_retrieval_backend
+from salt_vi.retrieval import get_retrieval_protocol
 
 
 # The loader materializes these two text-batch contracts.  The other historic
@@ -96,27 +96,12 @@ def validate_runtime_config(config):
         if (int(_value(config, "img_h", 0)), int(_value(config, "img_w", 0))) != (512, 256):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
 
-    retrieval_backend = get_retrieval_backend(
+    retrieval_protocol = get_retrieval_protocol(
         _value(config, "retrieval_backend", "legacy")
     )
-    if retrieval_backend:
-        if str(_value(config, "dataset", "")).lower() != "sysu":
-            raise ValueError("ir_to_rgb_text is supported only for SYSU-MM01")
-        if training_mode != "RGB_IR_Text" or joint_mode != "uni":
-            raise ValueError("ir_to_rgb_text requires training_mode=RGB_IR_Text and joint_mode=uni")
-        if bool(_value(config, "Feat_Filter", False)):
-            raise ValueError("ir_to_rgb_text does not use IR caption filtering")
-        if uni_bn:
-            raise ValueError("ir_to_rgb_text requires the shared classifier BN")
-        if sr_backend == "pasd_multiview" and modalities != {"rgb"}:
-            raise ValueError("ir_to_rgb_text PASD mode requires RGB-only multiview SR")
-        if str(_value(config, "test_modality", "")) != retrieval_backend.RESULT_KEY:
-            raise ValueError(
-                f"ir_to_rgb_text requires test_modality={retrieval_backend.RESULT_KEY}"
-            )
-        if not _value(config, "gallery_caption_manifest"):
-            raise ValueError("ir_to_rgb_text requires gallery_caption_manifest")
-        text_dropout = float(_value(config, "gallery_text_dropout", 0.0))
-        if not 0.0 <= text_dropout < 1.0:
-            raise ValueError("gallery_text_dropout must be in [0, 1)")
+    retrieval_protocol.validate(
+        config,
+        sr_backend=sr_backend,
+        sr_modalities=modalities if sr_backend == "pasd_multiview" else set(),
+    )
     return config

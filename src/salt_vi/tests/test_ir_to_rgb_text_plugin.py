@@ -5,8 +5,9 @@ import torch
 
 from salt_vi.config.validation import validate_runtime_config
 from salt_vi.data.dataset import _lookup_text_description
-from salt_vi.retrieval import get_retrieval_backend
+from salt_vi.retrieval import get_retrieval_backend, get_retrieval_protocol
 from salt_vi.retrieval import evaluator
+from salt_vi.training import build_training_recipe
 
 
 def _config(**overrides):
@@ -36,6 +37,24 @@ def test_backend_contract_and_runtime_config():
     assert backend.QUERY_CAPTION_LOOKUP is None
     assert backend.GALLERY_CAPTION_LOOKUP == "image"
     assert validate_runtime_config(_config()).retrieval_backend == "ir_to_rgb_text"
+
+
+def test_legacy_is_an_explicit_protocol():
+    protocol = get_retrieval_protocol("legacy")
+    config = SimpleNamespace(test_modality="IR,Fusion,Text")
+    assert protocol.IS_LEGACY
+    assert protocol.RESULT_KEY == "Fusion"
+    assert protocol.train_text_modalities(config) == ("rgb", "ir")
+    assert protocol.query_caption_lookup(config) == "identity"
+
+
+def test_training_recipe_dispatch_is_owned_by_protocol():
+    config = SimpleNamespace(pmt_recipe=False, training_mode="RGB_IR_Text")
+    protocol = get_retrieval_protocol("ir_to_rgb_text")
+    assert build_training_recipe(config, protocol).name == "ir_to_rgb_text"
+    assert build_training_recipe(config, get_retrieval_protocol("legacy")).name == (
+        "legacy_rgb_ir_text"
+    )
 
 
 def test_gallery_caption_lookup_uses_image_path():

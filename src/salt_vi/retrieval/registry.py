@@ -1,16 +1,15 @@
-from . import ir_to_rgb_text
+from . import ir_to_rgb_text, legacy
 
 
 _BACKENDS = {
+    legacy.NAME: legacy,
     ir_to_rgb_text.NAME: ir_to_rgb_text,
 }
-SUPPORTED_RETRIEVAL_BACKENDS = ("legacy", *_BACKENDS)
+SUPPORTED_RETRIEVAL_BACKENDS = tuple(_BACKENDS)
 
 
-def get_retrieval_backend(name):
+def get_retrieval_protocol(name):
     normalized = str(name or "legacy").lower()
-    if normalized == "legacy":
-        return None
     try:
         return _BACKENDS[normalized]
     except KeyError as exc:
@@ -18,3 +17,6 @@ def get_retrieval_backend(name):
             f"Unsupported retrieval_backend {normalized!r}; "
             f"expected one of {list(SUPPORTED_RETRIEVAL_BACKENDS)}"
         ) from exc
+
+
+get_retrieval_backend = get_retrieval_protocol

@@ -16,7 +16,7 @@ from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
 from salt_vi.config.validation import validate_runtime_config
 from salt_vi.entrypoints.output_paths import resolve_run_directory
-from salt_vi.retrieval import get_retrieval_backend
+from salt_vi.retrieval import get_retrieval_protocol
 from salt_vi.utils.utils import save_train_configs, load_train_configs, time_now
 from torch.utils.tensorboard import SummaryWriter
 from copy import deepcopy
@@ -413,12 +413,10 @@ def _initialize_spatial_backups(model, config):
 
 def main(config):
     validate_runtime_config(config)
-    retrieval_backend = get_retrieval_backend(
+    retrieval_protocol = get_retrieval_protocol(
         getattr(config, "retrieval_backend", "legacy")
     )
-    fusion_result_key = (
-        retrieval_backend.RESULT_KEY if retrieval_backend else "Fusion"
-    )
+    fusion_result_key = retrieval_protocol.RESULT_KEY
     if bool(getattr(config, "DataParallel", False)):
         raise RuntimeError(
             "Legacy DataParallel is unsupported by SALT-VI. Use one process per GPU "
@@ -550,8 +548,8 @@ def main(config):
                 phase="warm_start_before_training",
                 dataset=config.dataset,
                 protocol="all-search-single-shot-10-trial",
-                query=(retrieval_backend.QUERY_NAME if retrieval_backend else "infrared"),
-                gallery=(retrieval_backend.GALLERY_NAME if retrieval_backend else "visible"),
+                query=retrieval_protocol.QUERY_NAME,
+                gallery=retrieval_protocol.GALLERY_NAME,
                 metrics={
                     "Rank-1": initial_values[0],
                     "mAP": initial_values[1],
@@ -616,7 +614,7 @@ def main(config):
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
                 result_dict = test(model, loaders, config, device)
-                if retrieval_backend is None and 'IR' in config.test_modality:
+                if retrieval_protocol.IS_LEGACY and 'IR' in config.test_modality:
                     mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
                     is_best_rank_ir = (cmc_ir[0] >= best_rank1_ir)
                     # visual log
@@ -635,7 +633,7 @@ def main(config):
                     logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,"IR_RGB",
                                                                                     mINP_ir, mAP_ir, cmc_ir))
-                if retrieval_backend is not None or 'Fusion' in config.test_modality:
+                if not retrieval_protocol.IS_LEGACY or 'Fusion' in config.test_modality:
                     mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
                     save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
                     is_best_rank_fusion = (
@@ -681,8 +679,8 @@ def main(config):
                         epoch=current_epoch,
                         dataset=config.dataset,
                         protocol="all-search-single-shot-10-trial",
-                        query=(retrieval_backend.QUERY_NAME if retrieval_backend else "infrared"),
-                        gallery=(retrieval_backend.GALLERY_NAME if retrieval_backend else "visible"),
+                        query=retrieval_protocol.QUERY_NAME,
+                        gallery=retrieval_protocol.GALLERY_NAME,
                         metrics={
                             "Rank-1": float(cmc_fusion[0]),
                             "mAP": float(mAP_fusion),
@@ -700,7 +698,7 @@ def main(config):
                     logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,fusion_result_key,
                                                                                     mINP_fusion, mAP_fusion, cmc_fusion))
-                if retrieval_backend is None and 'Text' in config.test_modality:
+                if retrieval_protocol.IS_LEGACY and 'Text' in config.test_modality:
                     mINP_text, mAP_text, cmc_text = result_dict['Text']
                     is_best_rank_text = (cmc_text[0] >= best_rank1_text)
                     # visual log
@@ -762,7 +760,7 @@ def main(config):
         model.configure_fixed_visual_data_parallel()
         print('Successfully resume model from {}'.format(config.test_model_path))
         result_dict = test(model, loaders, config, device)
-        if retrieval_backend is None and "IR" in config.test_modality:
+        if retrieval_protocol.IS_LEGACY and "IR" in config.test_modality:
             mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
             if config.LOG4TEST:
                 logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
@@ -773,7 +771,7 @@ def main(config):
                                                                                     config.dataset,"IR_RGB",
                                                                                     mINP_ir, mAP_ir, cmc_ir))
 
-        if retrieval_backend is not None or "Fusion" in config.test_modality:
+        if not retrieval_protocol.IS_LEGACY or "Fusion" in config.test_modality:
             mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
             if config.LOG4TEST:
                 if config.CAT_EVAL:
@@ -788,7 +786,7 @@ def main(config):
                                                                                     config.dataset,fusion_result_key,
                                                                                     mINP_fusion, mAP_fusion, cmc_fusion))
 
-        if retrieval_backend is None and "Text" in config.test_modality:
+        if retrieval_protocol.IS_LEGACY and "Text" in config.test_modality:
             mINP_text, mAP_text, cmc_text = result_dict['Text']
             if config.LOG4TEST:
                 logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),

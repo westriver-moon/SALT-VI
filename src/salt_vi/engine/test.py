@@ -3,8 +3,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from salt_vi.utils import eval_regdb, eval_sysu, eval_llcm
-from salt_vi.retrieval import get_retrieval_backend
-from salt_vi.retrieval.evaluator import evaluate_sysu
+from salt_vi.retrieval import get_retrieval_protocol
 import os
 
 
@@ -20,12 +19,13 @@ def _needs_text(test_modality):
     return any(modality in test_modality for modality in ("Fusion", "Text"))
 
 def test(base, loader, config, device):
-    retrieval_backend = get_retrieval_backend(
+    retrieval_protocol = get_retrieval_protocol(
         getattr(config, "retrieval_backend", "legacy")
     )
-    if retrieval_backend:
-        return evaluate_sysu(base, loader, device, retrieval_backend)
+    return retrieval_protocol.evaluate(base, loader, config, device)
 
+
+def evaluate_legacy(base, loader, config, device):
     embed_dim = base.embed_dim
     base.set_eval()
     print('Extracting Query Feature...')

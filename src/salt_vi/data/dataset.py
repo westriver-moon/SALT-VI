@@ -13,7 +13,13 @@ from .pasd_multiview import (
     normalize_backend,
     normalize_sampling,
 )
-from tqdm import tqdm
+from .sources import (
+    ArrayCaptionSource,
+    ArrayVisualSource,
+    MultiviewCaptionSource,
+    MultiviewVisualSource,
+    NoCaptionSource,
+)
 
 
 PIL_BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
@@ -180,261 +186,207 @@ def _sysu_eval_image_path(
         raise FileNotFoundError(f"Missing SYSU {modality} super-resolution evaluation image: {path}")
     return path
 
-# SYSU dataset with text discription
+def _build_sysu_visual_source(
+    data_dir,
+    sr_data_root,
+    sr_modalities,
+    sr_backend,
+    sr_manifest,
+    views,
+    modality,
+    labels,
+):
+    if sr_backend == "pasd_multiview" and modality in sr_modalities:
+        store = PASDTrainViewStore(
+            data_dir,
+            sr_data_root,
+            sr_manifest,
+            modality,
+            labels,
+            views,
+        )
+        return MultiviewVisualSource(store, views)
+    path = _sysu_train_image_path(data_dir, sr_data_root, sr_modalities, modality)
+    return ArrayVisualSource(path)
+
+
+def _build_sysu_caption_source(
+    data_dir,
+    modality,
+    visual_source,
+    text_modalities,
+    captioner_name,
+    text_data_root,
+    tokenizer,
+    llm_aug,
+    llm_aug_prob,
+    views,
+    sampling,
+):
+    if modality not in text_modalities:
+        return NoCaptionSource()
+    if isinstance(visual_source, MultiviewVisualSource):
+        return MultiviewCaptionSource(
+            visual_source.store,
+            views,
+            sampling,
+            lambda caption: tokenize(caption, tokenizer),
+        )
+    modality_name = modality.upper()
+    text_dir = _resolve_text_dir(
+        data_dir, "sysu", captioner_name, modality_name, text_data_root
+    )
+    captions = [
+        tokenize(caption, tokenizer)
+        for caption in np.load(
+            text_dir + f"train_text_{captioner_name}_{modality_name}.npy"
+        )
+    ]
+    augmented = None
+    if llm_aug:
+        augmented = [
+            tokenize(caption, tokenizer)
+            for caption in np.load(
+                text_dir + f"train_llm_text_{captioner_name}_{modality_name}.npy"
+            )
+        ]
+    return ArrayCaptionSource(captions, augmented, llm_aug_prob)
+
+
 class SYSU_Tri_Data(data.Dataset):
-    def __init__(self, data_dir, transform1=None, \
-                 transform2=None, transform3=None, \
-                    colorIndex=None, thermalIndex=None, \
-                            text_length=77, llm_aug_prob=0.6,\
-                                    llm_aug=False, captioner_name='GIT', joint_mode="ir_crossfusion", \
-                                        Feat_Filter=False, text_data_root=None,
-                                        sysu_sr_data_root=None, sysu_sr_modalities=None,
-                                        sysu_sr_backend="array", sysu_sr_view_manifest=None,
-                                        sysu_sr_views_per_image=1,
-                                        sysu_sr_view_sampling="independent",
-                                        text_modalities=("rgb", "ir")): # include: Feat_Filter=False
-        # initialize text tokenizer
+    def __init__(
+        self,
+        data_dir,
+        transform1=None,
+        transform2=None,
+        transform3=None,
+        colorIndex=None,
+        thermalIndex=None,
+        text_length=77,
+        llm_aug_prob=0.6,
+        llm_aug=False,
+        captioner_name="GIT",
+        joint_mode="ir_crossfusion",
+        Feat_Filter=False,
+        text_data_root=None,
+        sysu_sr_data_root=None,
+        sysu_sr_modalities=None,
+        sysu_sr_backend="array",
+        sysu_sr_view_manifest=None,
+        sysu_sr_views_per_image=1,
+        sysu_sr_view_sampling="independent",
+        text_modalities=("rgb", "ir"),
+    ):
         self.tokenizer = SimpleTokenizer()
-
-        # Load RGB data
-        self.sysu_sr_modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
-        self.sysu_sr_backend = normalize_backend(sysu_sr_backend)
-        self.sysu_sr_views_per_image = int(sysu_sr_views_per_image)
-        self.sysu_sr_view_sampling = normalize_sampling(sysu_sr_view_sampling)
-        self.uses_pasd_multiview = self.sysu_sr_backend == "pasd_multiview"
-        self.train_color_label = np.load(data_dir + 'train_rgb_resized_label.npy')
-        self.train_thermal_label = np.load(data_dir + 'train_ir_resized_label.npy')
-        self.multiview_stores = {}
-        if self.uses_pasd_multiview:
-            if not self.sysu_sr_modalities:
-                raise ValueError("PASD multiview training requires at least one SR modality")
-            if not sysu_sr_data_root or not sysu_sr_view_manifest:
-                raise ValueError("PASD multiview training requires data root and view manifest")
-
-        if self.uses_pasd_multiview and "rgb" in self.sysu_sr_modalities:
-            self.train_color_image = PASDTrainViewStore(
-                data_dir,
-                sysu_sr_data_root,
-                sysu_sr_view_manifest,
-                "rgb",
-                self.train_color_label,
-                self.sysu_sr_views_per_image,
-            )
-            self.multiview_stores["rgb"] = self.train_color_image
-        else:
-            self.train_color_image = np.load(
-                _sysu_train_image_path(
-                    data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "rgb"
-                ),
-                mmap_mode="r",
-            )
-
-        # Load IR data
-        if self.uses_pasd_multiview and "ir" in self.sysu_sr_modalities:
-            self.train_thermal_image = PASDTrainViewStore(
-                data_dir,
-                sysu_sr_data_root,
-                sysu_sr_view_manifest,
-                "ir",
-                self.train_thermal_label,
-                self.sysu_sr_views_per_image,
-            )
-            self.multiview_stores["ir"] = self.train_thermal_image
-        else:
-            self.train_thermal_image = np.load(
-                _sysu_train_image_path(
-                    data_dir, sysu_sr_data_root, self.sysu_sr_modalities, "ir"
-                ),
-                mmap_mode="r",
-            )
-        if len(self.train_color_image) != len(self.train_color_label):
-            raise ValueError("SYSU RGB image count does not match train labels")
-        if len(self.train_thermal_image) != len(self.train_thermal_label):
-            raise ValueError("SYSU IR image count does not match train labels")
-
-
-        # Load text data
-        self.Feat_Filter = Feat_Filter
         self.joint_mode = joint_mode
+        self.Feat_Filter = Feat_Filter
         self.text_length = text_length
-        self.llm_aug = llm_aug
-        self.llm_aug_prob = llm_aug_prob
-        self.text_modalities = frozenset(text_modalities)
-
-        if joint_mode == "ir_crossfusion" or joint_mode == "uni":
-            if "rgb" in self.text_modalities and "rgb" not in self.multiview_stores:
-                print("Loading RGB Text For Training...")
-                self.text_dir_rgb = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'RGB', text_data_root)
-                self.train_text_rgb = np.load(self.text_dir_rgb + f'train_text_{captioner_name}_RGB.npy')
-                self.train_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.train_text_rgb]
-                self.train_text_label_rgb = np.load(self.text_dir_rgb + f'train_text_label_{captioner_name}_RGB.npy')
-                if llm_aug:
-                    self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
-                    self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
-
-            if "ir" in self.text_modalities and "ir" not in self.multiview_stores:
-                print("Loading IR Text For Training...")
-                self.text_dir_ir = _resolve_text_dir(data_dir, 'sysu', captioner_name, 'IR', text_data_root)
-                self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
-                self.train_text_ir = [tokenize(caption, self.tokenizer) for caption in self.train_text_ir]
-                self.train_text_label_ir = np.load(self.text_dir_ir + f'train_text_label_{captioner_name}_IR.npy')
-                if llm_aug:
-                    self.llm_text_ir = np.load(self.text_dir_ir + f'train_llm_text_{captioner_name}_IR.npy')
-                    self.llm_text_ir = [tokenize(caption, self.tokenizer) for caption in self.llm_text_ir]
-
-
-        # if joint_mode == "rgb_selffusion":
-        #     print("Loading IR Text For Training...")
-        #     self.text_dir_ir = data_dir + f'Text/{captioner_name}_IR/'
-        #     self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
-        #     self.train_text_ir = [tokenize(caption, self.tokenizer) for caption in self.train_text_ir]
-        #     self.train_text_label_ir = np.load(self.text_dir_ir + f'train_text_label_{captioner_name}_IR.npy')
-        #     if llm_aug:
-        #         self.llm_text_ir = np.load(self.text_dir_ir + f'train_llm_text_{captioner_name}_IR.npy')
-        #         self.llm_text_ir = [tokenize(caption, self.tokenizer) for caption in self.llm_text_ir]
-
-        # if joint_mode == "ir_selffusion":
-        #     print("Loading RGB_wo_color Text For Training...")
-        #     self.text_dir_rgb_w = data_dir + f'Text/{captioner_name}_RGB-Color/'
-        #     self.train_text_rgb_w = np.load(self.text_dir_rgb_w + f'train_text_{captioner_name}_RGB-Color.npy')
-        #     self.train_text_rgb_w = [tokenize(caption, self.tokenizer) for caption in self.train_text_rgb_w]
-        #     self.train_text_label_rgb_w = np.load(self.text_dir_rgb_w + f'train_text_label_{captioner_name}_RGB-Color.npy')
-        #     if llm_aug:
-        #         self.llm_text_rgb_w = np.load(self.text_dir_rgb_w + f'train_llm_text_{captioner_name}_RGB-Color.npy')
-        #         self.llm_text_rgb_w = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb_w]
-
-        # if joint_mode == "dual_text":
-        #     print("Loading RGB Text For Training...")
-        #     self.text_dir_rgb = data_dir + f'Text/{captioner_name}_RGB/'
-        #     self.train_text_rgb = np.load(self.text_dir_rgb + f'train_text_{captioner_name}_RGB.npy')
-        #     self.train_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.train_text_rgb]
-        #     self.train_text_label_rgb = np.load(self.text_dir_rgb + f'train_text_label_{captioner_name}_RGB.npy')
-        #     if llm_aug:
-        #         self.llm_text_rgb = np.load(self.text_dir_rgb + f'train_llm_text_{captioner_name}_RGB.npy')
-        #         self.llm_text_rgb = [tokenize(caption, self.tokenizer) for caption in self.llm_text_rgb]
-
-        #     print("Loading IR Text For Training...")
-        #     self.text_dir_ir = data_dir + f'Text/{captioner_name}_IR/'
-        #     self.train_text_ir = np.load(self.text_dir_ir + f'train_text_{captioner_name}_IR.npy')
-        #     self.train_text_ir = [tokenize(caption, self.tokenizer) for caption in self.train_text_ir]
-        #     self.train_text_label_ir = np.load(self.text_dir_ir + f'train_text_label_{captioner_name}_IR.npy')
-        #     if llm_aug:
-        #         self.llm_text_ir = np.load(self.text_dir_ir + f'train_llm_text_{captioner_name}_IR.npy')
-        #         self.llm_text_ir = [tokenize(caption, self.tokenizer) for caption in self.llm_text_ir]
-
-        # get transforms
+        self.cIndex = colorIndex
+        self.tIndex = thermalIndex
         self.transform1 = transform1
         self.transform2 = transform2
         self.transform3 = transform3
 
-        # initialize position indices (for simplers)
-        self.cIndex = colorIndex
-        self.tIndex = thermalIndex
+        modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
+        backend = normalize_backend(sysu_sr_backend)
+        sampling = normalize_sampling(sysu_sr_view_sampling)
+        views = int(sysu_sr_views_per_image)
+        if backend == "pasd_multiview" and (
+            not modalities or not sysu_sr_data_root or not sysu_sr_view_manifest
+        ):
+            raise ValueError("PASD multiview training requires modalities, data root, and manifest")
 
+        self.train_color_label = np.load(data_dir + "train_rgb_resized_label.npy")
+        self.train_thermal_label = np.load(data_dir + "train_ir_resized_label.npy")
+        self.rgb_visual_source = _build_sysu_visual_source(
+            data_dir,
+            sysu_sr_data_root,
+            modalities,
+            backend,
+            sysu_sr_view_manifest,
+            views,
+            "rgb",
+            self.train_color_label,
+        )
+        self.ir_visual_source = _build_sysu_visual_source(
+            data_dir,
+            sysu_sr_data_root,
+            modalities,
+            backend,
+            sysu_sr_view_manifest,
+            views,
+            "ir",
+            self.train_thermal_label,
+        )
+        if len(self.rgb_visual_source) != len(self.train_color_label):
+            raise ValueError("SYSU RGB image count does not match train labels")
+        if len(self.ir_visual_source) != len(self.train_thermal_label):
+            raise ValueError("SYSU IR image count does not match train labels")
 
+        text_modalities = (
+            frozenset(text_modalities)
+            if joint_mode in ("ir_crossfusion", "uni")
+            else frozenset()
+        )
+        self.rgb_caption_source = _build_sysu_caption_source(
+            data_dir,
+            "rgb",
+            self.rgb_visual_source,
+            text_modalities,
+            captioner_name,
+            text_data_root,
+            self.tokenizer,
+            llm_aug,
+            llm_aug_prob,
+            views,
+            sampling,
+        )
+        self.ir_caption_source = _build_sysu_caption_source(
+            data_dir,
+            "ir",
+            self.ir_visual_source,
+            text_modalities,
+            captioner_name,
+            text_data_root,
+            self.tokenizer,
+            llm_aug,
+            llm_aug_prob,
+            views,
+            sampling,
+        )
 
     def __getitem__(self, index):
-        # define batch_dict
-        batch_dict = {}
-
-        # get image and label
         color_index = int(self.cIndex[index])
         thermal_index = int(self.tIndex[index])
-        target1 = self.train_color_label[color_index]
-        target2 = self.train_thermal_label[thermal_index]
-        rgb_store = self.multiview_stores.get("rgb")
-        ir_store = self.multiview_stores.get("ir")
-        if rgb_store is not None:
-            visual_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            if self.sysu_sr_view_sampling == "paired":
-                text_rgb_view = visual_rgb_view
-            else:
-                text_rgb_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            img1 = rgb_store.image(color_index, visual_rgb_view)
-        else:
-            img1 = self.train_color_image[color_index]
-        if ir_store is not None:
-            visual_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            if self.sysu_sr_view_sampling == "paired":
-                text_ir_view = visual_ir_view
-            else:
-                text_ir_view = int(torch.randint(self.sysu_sr_views_per_image, (1,)).item())
-            img2 = ir_store.image(thermal_index, visual_ir_view)
-        else:
-            img2 = self.train_thermal_image[thermal_index]
-
-        # apply img transforms
-        img1_0 = self.transform1(img1) # color image
-        img1_1 = self.transform2(img1) # color image with augmentation
-        img2 = self.transform3(img2)  # thermal image
-
-        # apply text transforms
-        if self.joint_mode == "ir_crossfusion" or self.joint_mode == "uni":
-            if "rgb" in self.text_modalities:
-                if rgb_store is not None:
-                    caption_id_rgb = tokenize(
-                        rgb_store.caption(color_index, text_rgb_view), self.tokenizer
-                    )
-                else:
-                    caption_id_rgb = self.train_text_rgb[color_index]
-                    if self.llm_aug and random.random() < self.llm_aug_prob:
-                        caption_id_rgb = self.llm_text_rgb[color_index]
-                batch_dict['text_rgb'] = caption_id_rgb
-
-            if "ir" in self.text_modalities:
-                if ir_store is not None:
-                    caption_id_ir = tokenize(
-                        ir_store.caption(thermal_index, text_ir_view), self.tokenizer
-                    )
-                else:
-                    caption_id_ir = self.train_text_ir[thermal_index]
-                    if self.llm_aug and random.random() < self.llm_aug_prob:
-                        caption_id_ir = self.llm_text_ir[thermal_index]
-                batch_dict['text_ir'] = caption_id_ir
-
-        # if self.joint_mode == "rgb_selffusion":
-        #     caption_id_ir = self.train_text_ir[self.tIndex[index]]
-        #     if self.llm_aug and random.random() < self.llm_aug_prob:
-        #             caption_id_ir = self.llm_text_ir[self.tIndex[index]]
-        #     batch_dict['text_ir'] = caption_id_ir
-
-        # if self.joint_mode == "ir_selffusion":
-        #     caption_id_rgb_w = self.train_text_rgb_w[self.cIndex[index]]
-        #     if self.llm_aug and random.random() < self.llm_aug_prob:
-        #             caption_id_rgb_w = self.llm_text_rgb_w[self.cIndex[index]]
-        #     batch_dict['text_rgb_w'] = caption_id_rgb_w
-
-        # if self.joint_mode == "dual_text":
-        #     caption_id_rgb = self.train_text_rgb[self.cIndex[index]]
-        #     caption_id_ir = self.train_text_ir[self.tIndex[index]]
-        #     if self.llm_aug and random.random() < self.llm_aug_prob:
-        #             caption_id_rgb = self.llm_text_rgb[self.cIndex[index]]
-        #     if self.llm_aug and random.random() < self.llm_aug_prob:
-        #             caption_id_ir = self.llm_text_ir[self.tIndex[index]]
-        #     batch_dict['text_rgb'] = caption_id_rgb
-        #     batch_dict['text_ir'] = caption_id_ir
-
-        # add to batch_dict
-        batch_dict['img_rgb_ori'] = img1_0
-        batch_dict['img_rgb_aug'] = img1_1
-        batch_dict['img_ir'] = img2
-        batch_dict['target_rgb'] = target1
-        batch_dict['target_ir'] = target2
-
-        return batch_dict
-
-
+        rgb_image, rgb_view = self.rgb_visual_source.sample(color_index)
+        ir_image, ir_view = self.ir_visual_source.sample(thermal_index)
+        batch = {
+            "img_rgb_ori": self.transform1(rgb_image),
+            "img_rgb_aug": self.transform2(rgb_image),
+            "img_ir": self.transform3(ir_image),
+            "target_rgb": self.train_color_label[color_index],
+            "target_ir": self.train_thermal_label[thermal_index],
+        }
+        if self.joint_mode in ("ir_crossfusion", "uni"):
+            rgb_caption = self.rgb_caption_source.sample(color_index, rgb_view)
+            ir_caption = self.ir_caption_source.sample(thermal_index, ir_view)
+            if rgb_caption is not None:
+                batch["text_rgb"] = rgb_caption
+            if ir_caption is not None:
+                batch["text_ir"] = ir_caption
+        return batch
 
     def __len__(self):
         return len(self.train_color_label)
 
-
     def get_bpe_tokens(self, word):
-        token = ''.join(self.tokenizer.byte_encoder[b] for b in word.encode('utf-8'))
-        bpe_tokens = [self.tokenizer.encoder[bpe_token] for bpe_token in self.tokenizer.bpe(token).split(' ')]
-        return bpe_tokens
-
-
+        token = "".join(
+            self.tokenizer.byte_encoder[value] for value in word.encode("utf-8")
+        )
+        return [
+            self.tokenizer.encoder[value]
+            for value in self.tokenizer.bpe(token).split(" ")
+        ]
 
 class SYSUData(data.Dataset):
     def __init__(self, data_dir, transform1=None, transform2=None, transform3=None, colorIndex=None, thermalIndex=None):

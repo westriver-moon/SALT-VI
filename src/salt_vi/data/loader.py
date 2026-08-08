@@ -11,7 +11,7 @@ from salt_vi.data.sampler import (
     AutoReplaceIdentitySampler,
     validate_identity_batch_config,
 )
-from salt_vi.retrieval import get_retrieval_backend
+from salt_vi.retrieval import get_retrieval_protocol
 import torch.utils.data as data
 
 
@@ -37,10 +37,6 @@ class ExactSize:
 
 def _with_sep(path):
     return path if path.endswith(os.sep) else path + os.sep
-
-
-def _needs_eval_text(test_modality):
-    return any(modality in test_modality for modality in ("Fusion", "Text"))
 
 
 REQUIRED_RGB_IR_TEXT_BATCH_KEYS = (
@@ -234,20 +230,13 @@ class Loader:
         self.num_workers = config.num_workers
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
-        self.retrieval_backend = get_retrieval_backend(
+        self.retrieval_protocol = get_retrieval_protocol(
             getattr(config, "retrieval_backend", "legacy")
         )
         self.use_train_text = "Text" in self.training_mode
-        if self.retrieval_backend:
-            self.train_text_modalities = self.retrieval_backend.TRAIN_TEXT_MODALITIES
-            self.query_caption_lookup = self.retrieval_backend.QUERY_CAPTION_LOOKUP
-            self.gallery_caption_lookup = self.retrieval_backend.GALLERY_CAPTION_LOOKUP
-        else:
-            self.train_text_modalities = ("rgb", "ir")
-            self.query_caption_lookup = (
-                "identity" if _needs_eval_text(self.test_modality) else None
-            )
-            self.gallery_caption_lookup = None
+        self.train_text_modalities = self.retrieval_protocol.train_text_modalities(config)
+        self.query_caption_lookup = self.retrieval_protocol.query_caption_lookup(config)
+        self.gallery_caption_lookup = self.retrieval_protocol.gallery_caption_lookup(config)
         self.use_eval_text = bool(
             self.query_caption_lookup or self.gallery_caption_lookup
         )
