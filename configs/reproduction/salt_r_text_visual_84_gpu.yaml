@@ -1,0 +1,6 @@
+extends: configs/stage_b/r_text_visual_20260729.yaml
+
+# Runtime-owned output paths and the selected physical GPU are injected by
+# scripts/reproduction/run_salt_r_text_visual_repro.py.
+metric_experiment_id: SALTVI-R-TEXT-VISUAL-84-REPRO
+
