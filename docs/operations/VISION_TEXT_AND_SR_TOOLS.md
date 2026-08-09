@@ -9,7 +9,7 @@ This document consolidates related legacy material. All configuration, code, dat
 
 > Source document ID: `source_core:tools/text_consistency/README.md`  
 > Original SHA-256: `643ff97e4b88b27e7adb4af66b1e29eef9cb0d25c3425a18f759c507d7678e18`  
-> Canonical runtime: `/home/cgv841/ybj/SALT-VI/src/salt_vi/` and `/home/cgv841/ybj/SALT-VI/scripts/`  
+> Canonical runtime: `/home/lab929/ybj/SALT-VI/src/salt_vi/` and `/home/lab929/ybj/SALT-VI/scripts/`
 > This section is rewritten for the SALT-VI layout; it is not an active compatibility layer.
 
 # SYSU-MM01 identity-conflict text corrector
@@ -49,7 +49,7 @@ retains the original `Blip_RGB`, `Blip_IR`, and `GIT_RGB` layout.
 
 > Source document ID: `source_core:tools/super_resolution/README.md`  
 > Original SHA-256: `3909065f1ab00d84954f84a8f30b6c9eaa83ef949611ff994e97e385840ddfbd`  
-> Canonical runtime: `/home/cgv841/ybj/SALT-VI/src/salt_vi/` and `/home/cgv841/ybj/SALT-VI/scripts/`  
+> Canonical runtime: `/home/lab929/ybj/SALT-VI/src/salt_vi/` and `/home/lab929/ybj/SALT-VI/scripts/`
 > This section is rewritten for the SALT-VI layout; it is not an active compatibility layer.
 
 # SYSU-MM01 SwinIR x2 assets
@@ -65,18 +65,11 @@ SwinIR runs explicitly in FP32, checks finite output before uint8 conversion, an
 a real-checkpoint smoke forward before allocating full arrays. IR is converted to
 luminance before inference and forced back to equal three-channel grayscale afterward.
 
-```bash
-python src/salt_vi/utils/super_resolution/build_sysu_swinir_x2.py \
-  --source-root /home/cgv841/datasets/SYSU-MM01 \
-  --output-root /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-v2 \
-  --swinir-root /home/cgv841/third_party/SwinIR-official-6545850-v2 \
-  --model-path /home/cgv841/weights/001_classicalSR_DF2K_s64w8_SwinIR-M_x2.pth \
-  --modalities rgb ir
-
-python src/salt_vi/utils/super_resolution/validate_sysu_swinir_x2.py \
-  --source-root /home/cgv841/datasets/SYSU-MM01 \
-  --output-root /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-v2
-```
+The retired `SYSU-MM01-swinir-x2-v2` example is intentionally not runnable.
+Use the current, fully pinned build and validation commands in
+[`SYSU_SWINIR_PMT256_DATASET_BUILD_CONFIG.md`](../protocols/super_resolution/SYSU_SWINIR_PMT256_DATASET_BUILD_CONFIG.md).
+That document records the exact source size, resampling policy, checkpoint,
+implementation revision, output identity, and rebuild path.
 
 Pinned identity:
 

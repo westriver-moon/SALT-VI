@@ -94,7 +94,7 @@ python scripts/build_sysu_records.py \
   --caption-dict /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json \
   --caption-dict /home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json \
   --caption-scope image \
-  --output /home/lab929/datasets/derived/SYSU-MM01-pasd-x2-v1/source-records.jsonl
+  --output /home/lab929/datasets/derived/SYSU-MM01-pasd-x2-v1/source-records-image.jsonl
 ```
 
 For identity-level candidate sampling, add the two `id_caption_map` files and
