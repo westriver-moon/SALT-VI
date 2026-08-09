@@ -9,7 +9,7 @@ This document consolidates related legacy material. All configuration, code, dat
 
 > Source document ID: `source_core:README.md`  
 > Original SHA-256: `e4ca4b0ecced784be1036afcefbac3030d36cebbfdcd05e740e59a4eca05e05a`  
-> Canonical runtime: `/home/cgv841/ybj/SALT-VI/src/salt_vi/` and `/home/cgv841/ybj/SALT-VI/scripts/`  
+> Canonical runtime: `/home/lab929/ybj/SALT-VI/src/salt_vi/` and `/home/lab929/ybj/SALT-VI/scripts/`
 > This section is rewritten for the SALT-VI layout; it is not an active compatibility layer.
 
 ![GitHub](https://img.shields.io/badge/license-MIT-green)
@@ -20,8 +20,7 @@ This document consolidates related legacy material. All configuration, code, dat
 
 The *official* repository for [Empowering Visible-Infrared Person Re-Identification with Large Foundation Models](https://openreview.net/pdf?id=qQlmONeI5k). SALT-VI greatly mitigates the color information absence in the infrared modality by enriching the infrared representaitons with VLM generated texts, which is a **cross-modality retrieval task bolstered by heterogeneous text descriptions**.
 
-**The overall framework**
-![framework](figs/framework.png)
+The framework components and current defaults are indexed in [`docs/README.md`](../README.md).
 
 # Highlight
 
@@ -62,7 +61,11 @@ data_root
 ```
 
 
-* then run `src/salt_vi/data/pre_data_processing.py` to process SYSU-MM01 dataset.
+* From the repository root, build the legacy resized SYSU arrays explicitly:
+  ```bash
+  PYTHONPATH=src python -m salt_vi.data.pre_data_processing \
+    --data-path /home/cgv841/datasets/SYSU-MM01
+  ```
 * There **have been** generated texts and LLM augmented texts for each image in the corresponding dataset directory `datasets/sysu/Text`, `datasets/regdb/Text` and `datasets/llcm/Text`.
 
 
@@ -222,7 +225,7 @@ pytest -q
 
 > Source document ID: `source_baseline:README.md`  
 > Original SHA-256: `b2841b517cf8e6895c30cd62078416f537bce67bb9bbe63b0653d5fdca074339`  
-> Canonical runtime: `/home/cgv841/ybj/SALT-VI/src/salt_vi/` and `/home/cgv841/ybj/SALT-VI/scripts/`  
+> Canonical runtime: `/home/lab929/ybj/SALT-VI/src/salt_vi/` and `/home/lab929/ybj/SALT-VI/scripts/`
 > This section is rewritten for the SALT-VI layout; it is not an active compatibility layer.
 
 # Independent PMT SYSU-MM01 Baseline

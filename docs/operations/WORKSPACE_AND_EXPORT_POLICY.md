@@ -5,9 +5,10 @@ workspace-level upload manifest.
 
 ## Canonical roots
 
-- Project: /home/cgv841/ybj/SALT-VI
-- Workspace Git root: /home/cgv841/ybj
-- Public datasets: /home/cgv841/datasets
+- Project Git root: /home/lab929/ybj/SALT-VI
+- Workspace index (not a Git repository): /home/lab929/ybj
+- Shared source datasets: /home/cgv841/datasets
+- ybj-managed derived datasets: /home/lab929/datasets
 - Project code: SALT-VI/src/salt_vi/ and SALT-VI/scripts/
 - Configs: SALT-VI/configs/
 - Experiment records: SALT-VI/experiments/
@@ -22,8 +23,8 @@ arrays, or temporary runtime state.
 
 Before a commit, inspect:
 
-    git -C /home/cgv841/ybj status --short
-    git -C /home/cgv841/ybj diff --check
+    git -C /home/lab929/ybj/SALT-VI status --short
+    git -C /home/lab929/ybj/SALT-VI diff --check
 
 ## Experiment policy
 
@@ -35,5 +36,5 @@ SALT-VI/src/salt_vi/ and SALT-VI/scripts/, not retired source trees.
 ## Safety
 
 Do not delete or relocate data, checkpoints, or files outside
-/home/cgv841/ybj without explicit authorization. Preserve historical evidence
+/home/lab929/ybj without explicit authorization. Preserve historical evidence
 under SALT-VI/docs/archive/ or SALT-VI/reports/evidence/.
