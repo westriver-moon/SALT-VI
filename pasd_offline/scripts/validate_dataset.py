@@ -8,8 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from pasd_offline.contracts import load_dataset_scope, load_generation_identity  # noqa: E402
-from pasd_offline.generate import consolidate_manifest, validate_source  # noqa: E402
+from pasd_offline.generate import consolidate_manifest, load_build, validate_source  # noqa: E402
 from pasd_offline.config import GenerationConfig  # noqa: E402
 from pasd_offline.tasks import group_tasks_by_source, load_tasks  # noqa: E402
 
@@ -55,10 +54,9 @@ def main() -> None:
     parser.add_argument("--records", required=True)
     args = parser.parse_args()
     config = GenerationConfig.from_yaml(args.config)
-    load_generation_identity(config)
-    load_dataset_scope(config)
+    load_build(config)
     output_root = config.output_root
-    tasks = load_tasks(args.records, "all", seed=0)
+    tasks = load_tasks(args.records)
     groups = group_tasks_by_source(tasks)
     errors = []
     view_count = 0

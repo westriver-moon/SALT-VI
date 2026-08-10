@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Callable, Iterator
 from PIL import Image, ImageChops, ImageStat
 
 from .config import GenerationConfig
-from .contracts import verify_dataset_scope, verify_generation_identity
 from .tasks import (
     GenerationTask,
     group_tasks_by_source,
@@ -24,6 +23,9 @@ from .tasks import (
 
 if TYPE_CHECKING:
     from .runtime import PASDGenerator
+
+
+BUILD_NAME = "build.json"
 
 
 def sha256(path: Path) -> str:
@@ -47,6 +49,62 @@ def _atomic_json(path: Path, payload: dict) -> None:
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _document_sha256(payload: dict) -> str:
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def build_payload(
+    config: GenerationConfig,
+    records_path: str | Path,
+    tasks: list[GenerationTask],
+) -> dict:
+    return {
+        "schema_version": 1,
+        "config": config.output_contract(),
+        "records_sha256": sha256(Path(records_path).expanduser().resolve()),
+        "source_count": len(group_tasks_by_source(tasks)),
+        "view_count": len(tasks),
+    }
+
+
+def prepare_build(
+    config: GenerationConfig,
+    records_path: str | Path,
+    tasks: list[GenerationTask],
+) -> dict:
+    payload = build_payload(config, records_path, tasks)
+    document = {**payload, "build_sha256": _document_sha256(payload)}
+    path = config.output_root / BUILD_NAME
+    if path.is_file() and json.loads(path.read_text(encoding="utf-8")) != document:
+        raise ValueError(f"PASD output belongs to a different build: {path}")
+    _atomic_json(path, document)
+    config.build_sha256 = document["build_sha256"]
+    return document
+
+
+def load_build(config: GenerationConfig) -> dict:
+    path = config.output_root / BUILD_NAME
+    document = json.loads(path.read_text(encoding="utf-8"))
+    digest = document.pop("build_sha256")
+    if _document_sha256(document) != digest:
+        raise ValueError(f"PASD build fingerprint is invalid: {path}")
+    document["build_sha256"] = digest
+    config.build_sha256 = digest
+    return document
+
+
+def verify_build(
+    config: GenerationConfig,
+    records_path: str | Path,
+    tasks: list[GenerationTask],
+) -> None:
+    expected = load_build(config)["build_sha256"]
+    actual = _document_sha256(build_payload(config, records_path, tasks))
+    if actual != expected:
+        raise ValueError("PASD config or records changed after generation started")
 
 
 def _atomic_png(path: Path, image: Image.Image, compress_level: int) -> None:
@@ -108,10 +166,10 @@ def _source_lock(path: Path) -> Iterator[bool]:
 def _source_contract(
     tasks: list[GenerationTask], config: GenerationConfig, input_sha256: str
 ) -> str:
-    if not config.generation_identity_sha256:
-        raise ValueError("generation requires a prepared generation identity")
+    if not config.build_sha256:
+        raise ValueError("generation requires a prepared build")
     payload = {
-        "generation_identity_sha256": config.generation_identity_sha256,
+        "build_sha256": config.build_sha256,
         "input_sha256": input_sha256,
         "tasks": [task_payload(task) for task in tasks],
     }
@@ -202,20 +260,6 @@ def invalidate_invalid_sources(output_root: str | Path, summary: dict) -> list[s
     return source_keys
 
 
-def generate_task(generator: "PASDGenerator", task: GenerationTask, output_root: Path) -> dict:
-    output_path = _resolved_output(task, output_root)
-    image = generator.generate(task.image, task.caption, task.seed, task.modality)
-    compress_level = int(getattr(getattr(generator, "config", None), "png_compress_level", 4))
-    _atomic_png(output_path, image.convert("RGB"), compress_level)
-    return {
-        **task_payload(task),
-        "output": str(output_path),
-        "input_sha256": sha256(task.image),
-        "output_sha256": sha256(output_path),
-        "output_size": list(image.size),
-    }
-
-
 def generate_source_group(
     generator: "PASDGenerator",
     tasks: list[GenerationTask],
@@ -272,7 +316,7 @@ def generate_source_group(
         "batch_size": int(batch_size),
         "num_inference_steps": generator.config.num_inference_steps,
         "geometry": geometry,
-        "generation_identity_sha256": generator.config.generation_identity_sha256,
+        "build_sha256": generator.config.build_sha256,
         "source_contract_sha256": _source_contract(
             tasks, generator.config, input_digest
         ),
@@ -356,9 +400,6 @@ def consolidate_manifest(
     tasks: list[GenerationTask],
     config: GenerationConfig,
     records_path: str | Path,
-    *,
-    implementation_root: Path | None = None,
-    environment: dict | None = None,
 ) -> dict:
     output_root = Path(output_root).expanduser().resolve()
     markers = []
@@ -399,13 +440,13 @@ def consolidate_manifest(
     validated_complete = not ungenerated_sources and not invalid_sources
     try:
         if validated_complete:
-            verify_generation_identity(config, implementation_root, environment)
-            verify_dataset_scope(config, records_path, tasks)
+            verify_build(config, records_path, tasks)
         os.replace(temporary, manifest_path)
     finally:
         temporary.unlink(missing_ok=True)
     summary = {
         "schema_version": 5,
+        "views_per_source": config.views_per_source,
         "source_count": len(markers),
         "view_count": sum(len(marker["views"]) for marker in markers),
         "expected_source_count": len(groups),
@@ -417,38 +458,7 @@ def consolidate_manifest(
         "validated_complete": validated_complete,
         "complete": validated_complete,
         "invalid_sources": invalid_sources[:1000],
-        "generation_identity_sha256": config.generation_identity_sha256,
-        "dataset_scope_sha256": config.dataset_scope_sha256,
-        "manifest_jsonl": str(manifest_path),
-        "manifest_jsonl_sha256": digest.hexdigest(),
-    }
-    _atomic_json(output_root / "manifest.json", summary)
-    return summary
-
-
-def consolidate_task_manifest(
-    output_root: str | Path, entries: list[dict], config: GenerationConfig
-) -> dict:
-    output_root = Path(output_root).expanduser().resolve()
-    manifest_path = output_root / "manifest.jsonl"
-    temporary = manifest_path.with_name(f".{manifest_path.name}.{os.getpid()}.tmp")
-    digest = hashlib.sha256()
-    with temporary.open("wb") as stream:
-        for entry in entries:
-            encoded = (json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
-                "utf-8"
-            )
-            stream.write(encoded)
-            digest.update(encoded)
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temporary, manifest_path)
-    summary = {
-        "schema_version": 1,
-        "task_count": len(entries),
-        "complete": True,
-        "generation_identity_sha256": config.generation_identity_sha256,
-        "dataset_scope_sha256": config.dataset_scope_sha256,
+        "build_sha256": config.build_sha256,
         "manifest_jsonl": str(manifest_path),
         "manifest_jsonl_sha256": digest.hexdigest(),
     }
@@ -460,9 +470,6 @@ def generate_batch(
     config: GenerationConfig,
     tasks: list[GenerationTask],
     records_path: str | Path,
-    *,
-    implementation_root: Path | None = None,
-    environment: dict | None = None,
 ) -> list[dict]:
     """Compatibility sequential entry point used by the small CLI."""
 
@@ -478,7 +485,5 @@ def generate_batch(
         tasks,
         config,
         records_path,
-        implementation_root=implementation_root,
-        environment=environment,
     )
     return entries

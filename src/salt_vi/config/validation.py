@@ -83,16 +83,17 @@ def validate_runtime_config(config):
             raise ValueError("pasd_multiview requires rgb and/or ir SR modalities")
         if not bool(_value(config, "sysu_sr_exact_size", False)):
             raise ValueError("pasd_multiview requires sysu_sr_exact_size=true")
-        if int(_value(config, "sysu_sr_views_per_image", 0)) != 5:
-            raise ValueError("pasd_multiview requires exactly five views per image")
+        views = int(_value(config, "sysu_sr_views_per_image", 0))
+        if views not in (1, 5):
+            raise ValueError("pasd_multiview requires one or five views per image")
         if not _value(config, "sysu_sr_view_manifest"):
             raise ValueError("pasd_multiview requires sysu_sr_view_manifest")
         sampling = str(_value(config, "sysu_sr_view_sampling", "independent")).lower()
         if sampling not in ("independent", "paired"):
             raise ValueError("sysu_sr_view_sampling must be independent or paired")
         eval_index = int(_value(config, "sysu_sr_eval_view_index", 0))
-        if not 0 <= eval_index < 5:
-            raise ValueError("sysu_sr_eval_view_index must be in [0, 4]")
+        if not 0 <= eval_index < views:
+            raise ValueError(f"sysu_sr_eval_view_index must be in [0, {views - 1}]")
         if (int(_value(config, "img_h", 0)), int(_value(config, "img_w", 0))) != (512, 256):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
 

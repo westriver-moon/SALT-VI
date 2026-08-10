@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import GenerationConfig
-from .contracts import prepare_contracts
 from .generate import (
     consolidate_manifest,
     invalidate_invalid_sources,
+    prepare_build,
     source_is_generated,
 )
 from .tasks import GenerationTask, group_tasks_by_source, load_tasks
@@ -95,7 +95,7 @@ def run_dynamic_scheduler(
     config_path = Path(config_path).expanduser().resolve()
     records_path = Path(records_path).expanduser().resolve()
     config = GenerationConfig.from_yaml(config_path)
-    tasks = load_tasks(records_path, "all", seed=config.seed)
+    tasks = load_tasks(records_path)
     groups = group_tasks_by_source(tasks)
     if not groups:
         raise ValueError("records contain no generation tasks")
@@ -104,7 +104,7 @@ def run_dynamic_scheduler(
         if len(group) != config.views_per_source or indices != list(range(config.views_per_source)):
             source_key = group[0].source_key or str(group[0].image)
             raise ValueError(f"invalid source view group {source_key}: {indices}")
-    prepare_contracts(config, records_path, tasks)
+    prepare_build(config, records_path, tasks)
     allowed = tuple(index for index in config.gpu_allowlist if index in (1, 2, 3))
     if 0 in allowed or not allowed or max_workers > 3:
         raise ValueError("scheduler may use only physical GPUs 1, 2, 3 and at most three workers")
@@ -144,8 +144,8 @@ def run_dynamic_scheduler(
                     str(records_path),
                     "--physical-gpu",
                     str(gpu),
-                "--batch-size",
-                "1" if config.views_per_source == 1 else "0",
+                    "--batch-size",
+                    "1" if config.views_per_source == 1 else "0",
                 ]
                 if worker_max_sources is not None:
                     command.extend(["--max-sources", str(worker_max_sources)])

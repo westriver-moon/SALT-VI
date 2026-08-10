@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from pasd_offline.sysu import build_sysu_multiview_records, select_pilot_records
+from pasd_offline.sysu import build_sysu_records, select_pilot_records
 from pasd_offline.tasks import load_tasks
 
 
@@ -17,7 +17,7 @@ def candidate(identity: str, camera: int):
     }
 
 
-def test_builds_five_deterministic_protocol_views(tmp_path: Path):
+def test_builds_one_or_five_deterministic_protocol_views(tmp_path: Path):
     root = tmp_path / "SYSU-MM01"
     (root / "exp").mkdir(parents=True)
     (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
@@ -37,13 +37,18 @@ def test_builds_five_deterministic_protocol_views(tmp_path: Path):
     rgb_path = tmp_path / "rgb.json"
     rgb_path.write_text(json.dumps(rgb), encoding="utf-8")
     output = tmp_path / "records.jsonl"
-    records = build_sysu_multiview_records(
-        root, {"rgb": rgb_path}, output, seed=17, enforce_official_counts=False
-    )
-    assert len(records) == 1
-    assert all(len(record["views"]) == 5 for record in records)
-    assert len({view["seed"] for record in records for view in record["views"]}) == 5
-    tasks = load_tasks(output, "all", 0)
-    assert len(tasks) == 5
-    pilot = select_pilot_records(records, tmp_path / "pilot.jsonl", count=1)
-    assert {record["modality"] for record in pilot} == {"rgb"}
+    for views in (1, 5):
+        records = build_sysu_records(
+            root,
+            {"rgb": rgb_path},
+            output,
+            seed=17,
+            views_per_source=views,
+            enforce_official_counts=False,
+        )
+        assert len(records) == 1
+        assert len(records[0]["views"]) == views
+        assert len({view["seed"] for view in records[0]["views"]}) == views
+        assert len(load_tasks(output)) == views
+        pilot = select_pilot_records(records, tmp_path / "pilot.jsonl", count=1)
+        assert {record["modality"] for record in pilot} == {"rgb"}

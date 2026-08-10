@@ -61,8 +61,8 @@ class PASDMultiviewIndex:
         self.data_root = Path(data_root).expanduser().resolve()
         self.output_root = Path(output_root).expanduser().resolve()
         self.views = int(views)
-        if self.views != 5:
-            raise ValueError(f"SYSU PASD contract requires five views, got {self.views}")
+        if self.views not in (1, 5):
+            raise ValueError(f"SYSU PASD contract requires one or five views, got {self.views}")
         summary = json.loads(
             self.manifest_path.with_suffix(".json").read_text(encoding="utf-8")
         )
@@ -70,15 +70,8 @@ class PASDMultiviewIndex:
             raise ValueError("PASD dataset manifest is not complete")
         if _sha256(self.manifest_path) != summary["manifest_jsonl_sha256"]:
             raise ValueError("PASD dataset manifest checksum mismatch")
-        for filename, field in (
-            ("generation-identity.json", "generation_identity_sha256"),
-            ("dataset-scope.json", "dataset_scope_sha256"),
-        ):
-            identity = json.loads(
-                (self.output_root / filename).read_text(encoding="utf-8")
-            )
-            if identity[field] != summary[field]:
-                raise ValueError(f"PASD {field} does not match the final manifest")
+        if int(summary["views_per_source"]) != self.views:
+            raise ValueError("PASD manifest view count does not match the training config")
 
         records = {}
         with self.manifest_path.open("r", encoding="utf-8") as stream:

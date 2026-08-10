@@ -87,7 +87,7 @@ def _record_output_paths(relative: str, views_per_source: int) -> list[str]:
     return [str(directory / f"view_{index:02d}.png") for index in range(5)]
 
 
-def build_sysu_multiview_records(
+def build_sysu_records(
     dataset_root: str | Path,
     caption_candidates: Mapping[str, str | Path],
     output_path: str | Path,
@@ -246,58 +246,3 @@ def select_pilot_records(
             break
     _atomic_jsonl(Path(output_path).expanduser().resolve(), selected)
     return selected
-
-
-def build_sysu_records(
-    dataset_root: str | Path,
-    caption_dicts: list[str | Path],
-    output_path: str | Path,
-    identity_caption_maps: list[str | Path] | None = None,
-    caption_scope: str = "image",
-) -> int:
-    """Legacy one-caption record builder retained for compatibility."""
-
-    dataset_root = Path(dataset_root).resolve()
-    image_entries: dict[str, dict] = {}
-    for path in caption_dicts:
-        image_entries.update(json.loads(Path(path).read_text(encoding="utf-8")))
-
-    identity_captions: dict[str, list[str]] = {}
-    for path in identity_caption_maps or []:
-        values = json.loads(Path(path).read_text(encoding="utf-8"))
-        for identity, captions in values.items():
-            identity_captions.setdefault(str(int(identity)), []).extend(captions)
-
-    if caption_scope == "identity":
-        for metadata in image_entries.values():
-            identity = str(int(metadata["id"]))
-            if identity not in identity_captions:
-                identity_captions.setdefault(identity, [])
-                description = metadata["description"]
-                if description not in identity_captions[identity]:
-                    identity_captions[identity].append(description)
-
-    rows = []
-    for source_key, metadata in sorted(image_entries.items()):
-        relative = _relative_source_key(source_key)
-        camera = int(metadata["cam"])
-        modality = "ir" if camera in IR_CAMERAS else "rgb"
-        identity = str(int(metadata["id"]))
-        record = {
-            "image": str(dataset_root / relative),
-            "output": str(Path("images") / modality / Path(relative).with_suffix(".png")),
-            "modality": modality,
-            "identity": identity,
-        }
-        if caption_scope == "identity":
-            record["caption_pool_key"] = identity
-        else:
-            record["caption"] = metadata["description"]
-        rows.append(record)
-    output_path = Path(output_path)
-    _atomic_jsonl(output_path, rows)
-    if caption_scope == "identity":
-        output_path.with_suffix(".caption-pool.json").write_text(
-            json.dumps(identity_captions, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-    return len(rows)

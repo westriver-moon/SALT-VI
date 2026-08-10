@@ -14,12 +14,19 @@ from salt_vi.data.pasd_multiview import PASDTrainViewStore, eval_view_path
 from salt_vi.data import loader as loader_module
 
 
-def write_record(root: Path, output_root: Path, relative: str, modality: str, camera: int):
+def write_record(
+    root: Path,
+    output_root: Path,
+    relative: str,
+    modality: str,
+    camera: int,
+    views_per_source: int = 5,
+):
     source = root / relative
     source.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (64, 128), "gray").save(source)
     views = []
-    for index in range(5):
+    for index in range(views_per_source):
         output = Path("images") / Path(relative).parent / Path(relative).stem / f"view_{index:02d}.png"
         path = output_root / output
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,22 +70,15 @@ def write_manifest(output_root: Path, records, complete: bool = True):
         "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
         encoding="utf-8",
     )
-    generation = "generation-test"
-    scope = "scope-test"
-    (output_root / "generation-identity.json").write_text(
-        json.dumps({"generation_identity_sha256": generation}), encoding="utf-8"
-    )
-    (output_root / "dataset-scope.json").write_text(
-        json.dumps({"dataset_scope_sha256": scope}), encoding="utf-8"
-    )
+    views_per_source = len(records[0]["views"])
     (output_root / "manifest.json").write_text(
         json.dumps(
             {
                 "complete": complete,
                 "source_count": len(records),
                 "view_count": len(rows),
-                "generation_identity_sha256": generation,
-                "dataset_scope_sha256": scope,
+                "views_per_source": views_per_source,
+                "build_sha256": "build-test",
                 "manifest_jsonl_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
             }
         ),
@@ -87,22 +87,25 @@ def write_manifest(output_root: Path, records, complete: bool = True):
     return manifest
 
 
-def test_manifest_backed_train_and_eval_views(tmp_path: Path):
+@pytest.mark.parametrize("views", [1, 5])
+def test_manifest_backed_train_and_eval_views(tmp_path: Path, views: int):
     root = tmp_path / "SYSU-MM01"
     (root / "exp").mkdir(parents=True)
     (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
     (root / "exp" / "val_id.txt").write_text("", encoding="utf-8")
     output_root = tmp_path / "derived"
     records = [
-        write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1),
-        write_record(root, output_root, "cam3/0001/0001.jpg", "ir", 3),
+        write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1, views),
+        write_record(root, output_root, "cam3/0001/0001.jpg", "ir", 3, views),
     ]
     manifest = write_manifest(output_root, records)
-    rgb = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), 5)
-    ir = PASDTrainViewStore(root, output_root, manifest, "ir", np.asarray([0]), 5)
-    assert rgb.image(0, 4).shape == (512, 256, 3)
-    assert ir.caption(0, 2) == "caption 2"
-    assert eval_view_path(root / "cam1/0001/0001.jpg", root, output_root, manifest, 0, 5).endswith("view_00.png")
+    rgb = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), views)
+    ir = PASDTrainViewStore(root, output_root, manifest, "ir", np.asarray([0]), views)
+    assert rgb.image(0, views - 1).shape == (512, 256, 3)
+    assert ir.caption(0, views - 1) == f"caption {views - 1}"
+    assert eval_view_path(
+        root / "cam1/0001/0001.jpg", root, output_root, manifest, 0, views
+    ).endswith("view_00.png")
 
 
 def test_train_store_requires_complete_validated_manifest(tmp_path: Path):

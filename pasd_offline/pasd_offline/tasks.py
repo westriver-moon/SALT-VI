@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import random
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,7 +18,6 @@ class GenerationTask:
     view_index: int = 0
     camera: int = -1
     split: str = ""
-    task_kind: str = "generic"
 
 
 def _relative_path(value: str | Path, field: str) -> Path:
@@ -50,87 +48,32 @@ def task_payload(task: GenerationTask) -> dict:
     }
 
 
-def _caption_output(path: Path, caption_index: int) -> Path:
-    return path.with_name(f"{path.stem}__caption{caption_index:02d}{path.suffix or '.png'}")
+def load_tasks(records_path: str | Path) -> list[GenerationTask]:
+    """Load the canonical one-row-per-source record format."""
 
-
-def load_tasks(
-    records_path: str | Path,
-    mode: str,
-    seed: int,
-    caption_pool_path: str | Path | None = None,
-) -> list[GenerationTask]:
-    records_path = Path(records_path).resolve()
-    caption_pool = (
-        json.loads(Path(caption_pool_path).read_text(encoding="utf-8"))
-        if caption_pool_path
-        else {}
-    )
+    records_path = Path(records_path).expanduser().resolve()
     tasks: list[GenerationTask] = []
-    for line_index, line in enumerate(records_path.read_text(encoding="utf-8").splitlines()):
+    for line in records_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         record = json.loads(line)
-        if "views" in record:
-            source_key = normalize_source_key(record.get("source_key", ""))
-            views = list(record["views"])
-            if mode == "first":
-                views = views[:1]
-            elif mode == "random":
-                views = [random.Random(seed + line_index).choice(views)]
-            elif mode != "all":
-                raise ValueError(f"unknown caption mode: {mode}")
-            for view in views:
-                tasks.append(
-                    GenerationTask(
-                        image=Path(record["image"]).expanduser().resolve(),
-                        caption=str(view["caption"]),
-                        output=normalize_output_path(view["output"]),
-                        seed=int(view["seed"]),
-                        modality=str(record.get("modality", "")),
-                        identity=str(record.get("identity", "")),
-                        source_key=source_key,
-                        view_index=int(view["view_index"]),
-                        camera=int(record.get("camera", -1)),
-                        split=str(record.get("split", "")),
-                        task_kind="five_view",
-                    )
-                )
-            continue
-        if "captions" in record:
-            captions = record["captions"]
-        elif "caption" in record:
-            captions = [record["caption"]]
-        else:
-            captions = caption_pool[record["caption_pool_key"]]
-        output = normalize_output_path(
-            record.get("output") or f"{Path(record['image']).stem}.png"
-        )
-        if mode == "first":
-            selected = [(0, captions[0])]
-        elif mode == "random":
-            index = random.Random(seed + line_index).randrange(len(captions))
-            selected = [(index, captions[index])]
-        elif mode == "all":
-            selected = list(enumerate(captions))
-        else:
-            raise ValueError(f"unknown caption mode: {mode}")
-
-        for caption_index, caption in selected:
-            task_output = _caption_output(output, caption_index) if mode == "all" and len(captions) > 1 else output
+        source_key = normalize_source_key(record["source_key"])
+        views = list(record.get("views", ()))
+        if len(views) not in (1, 5):
+            raise ValueError(f"{source_key} must contain one or five views")
+        for view in views:
             tasks.append(
                 GenerationTask(
                     image=Path(record["image"]).expanduser().resolve(),
-                    caption=caption,
-                    output=task_output,
-                    seed=int(record.get("seed", seed + line_index * 1000 + caption_index)),
+                    caption=str(view["caption"]),
+                    output=normalize_output_path(view["output"]),
+                    seed=int(view["seed"]),
                     modality=str(record.get("modality", "")),
                     identity=str(record.get("identity", "")),
-                    source_key=str(record.get("source_key", "")),
-                    view_index=int(caption_index),
+                    source_key=source_key,
+                    view_index=int(view["view_index"]),
                     camera=int(record.get("camera", -1)),
                     split=str(record.get("split", "")),
-                    task_kind="generic",
                 )
             )
     return tasks

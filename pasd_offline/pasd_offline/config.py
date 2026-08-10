@@ -43,8 +43,7 @@ class GenerationConfig:
     min_free_memory_gib: float = 22.0
     max_gpu_utilization: int = 5
     worker_chunk_size: int = 100
-    generation_identity_sha256: str = field(default="", init=False)
-    dataset_scope_sha256: str = field(default="", init=False)
+    build_sha256: str = field(default="", init=False)
 
     def output_contract(self) -> dict:
         return {
