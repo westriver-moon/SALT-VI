@@ -1,0 +1,61 @@
+schema_version: 1
+run_id: replace_with_descriptive_run_id
+output_root: feature_analysis/artifacts
+overwrite: false
+
+runtime:
+  cuda_visible_devices: "3"
+  device: cuda:0
+  seed: 0
+  batch_size: 16
+  num_workers: 4
+  amp: true
+
+models:
+  - id: checkpoint_a
+    config: configs/stage_b/ir_to_rgb_text_20260808.yaml
+    checkpoint: /absolute/path/to/model_Fusion_epoch_N.pth
+    overrides: {}
+
+splits:
+  query: true
+  gallery:
+    trials: all
+  train_rgb:
+    views: [0]
+  train_ir:
+    views: [0]
+
+representations:
+  - name: protocol_query
+    encoder: protocol_query
+    splits: [query]
+  - name: ir_image
+    encoder: image
+    modality: ir
+    stage: post_bn
+    splits: [query, train_ir]
+  - name: protocol_gallery
+    encoder: protocol_gallery
+    splits: [gallery]
+  - name: rgb_image
+    encoder: image
+    modality: rgb
+    stage: post_bn
+    splits: [gallery, train_rgb]
+  - name: rgb_text_fusion
+    encoder: fusion
+    modality: rgb
+    stage: post_bn
+    splits: [gallery, train_rgb]
+
+analysis:
+  max_pair_samples: 20000
+  max_svd_samples: 5000
+  max_plot_samples: 4000
+  auto_checkpoint_comparisons: true
+  make_figures: true
+
+# Explicit comparisons are optional. Add them after the model IDs are known.
+comparisons: []
+

@@ -1,0 +1,56 @@
+extends: configs/stage_b/r_text_visual_20260729.yaml
+
+# Retained best checkpoint from the original 30-epoch configuration.
+training_weight_init: /home/cgv841/ybj/SALT-VI/checkpoints/stage_b/experiments/salt_ablation/r_text_visual_20260729/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,cross_modal_hard_Fix_Visual/models/model_Fusion_epoch_23.pth
+continuation_checkpoint_sha256: f92ea24e0808fa37234cba04e796dbfe8695185b13a1ac6f4ac099b848a50106
+continuation_source_epoch: 23
+continuation_source_completed_epochs: 24
+
+metric_experiment_id: SALTVI-R-TEXT-VISUAL-EXTENDED-LR-100
+total_train_epoch: 76
+
+# Fresh low-LR optimizer: approximately the tail-LR regime of the original run.
+optimizer: AdamW
+lr_visual: 5.0e-5
+lr_txt: 1.0e-6
+warmup_epochs: 1
+warmup_factor: 0.01
+warmup_method: linear
+lrscheduler: cosine
+target_lr_factor: 0.01
+
+# Preserve the original objective exactly.
+loss_names: id,cross_modal_hard
+id_loss_weight: 1.0
+cross_modal_hard_weight: 1.25
+cross_modal_pair_weights:
+  Fusion-Text: 0.0
+  IR-Fusion: 0.0
+  IR-Text: 1.0
+  RGB-Fusion: 0.0
+  RGB-IR: 1.0
+  RGB-Text: 1.0
+
+label_smoothing: 0.0
+gradient_clip_norm: 0.0
+fusion_way: parameter_add
+pa: 0.5
+learnable_pa: false
+
+Fix_Visual: true
+visual_unfreeze_last_n_blocks: 0
+llm_aug: false
+uni_BN: false
+qbn_freeze_running_stats_epoch: -1
+
+eval_before_train: true
+eval_start_epoch: 0
+eval_epoch: 1
+checkpoint_epoch: 10
+save_best_per_metric: true
+max_save_model_num: 3
+
+test_flip_tta: false
+rerank: false
+ensemble_mode: none
+

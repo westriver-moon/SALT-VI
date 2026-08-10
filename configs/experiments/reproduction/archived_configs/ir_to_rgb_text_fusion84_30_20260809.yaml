@@ -1,0 +1,62 @@
+extends: configs/stage_b/ir_to_rgb_text_20260808.yaml
+
+# Single-variable protocol experiment:
+# keep the historical 84 Stage-B ID + three-pair hard-triplet objective and
+# replace only Fusion(IR, Text) with Fusion(RGB, Text). Evaluation is IR->RGBText.
+CUDA_VISIBLE_DEVICES: '3'
+gpu_id: '0'
+metric_experiment_id: SALTVI-IR-TO-RGBTEXT-FUSION84-30-20260809
+metric_events_path: /home/lab929/ybj/SALT-VI/logs/raw/experiments/ir_to_rgb_text_fusion84_30_20260809/events.jsonl
+output_root: /home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/ir_to_rgb_text_fusion84_30_20260809/model_output
+
+retrieval_backend: ir_to_rgb_text_legacy_triangle
+training_mode: RGB_IR_Text
+joint_mode: uni
+test_modality: IR-RGBText
+
+sysu_sr_backend: array
+sysu_sr_data_root: /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1
+sysu_sr_modalities:
+  - rgb
+  - ir
+sysu_sr_exact_size: true
+
+Fix_Visual: true
+visual_unfreeze_last_n_blocks: 0
+training_weight_init: /home/lab929/ybj/SALT-VI/checkpoints/stage_a/a3_epoch24_tvilfm_full.pth
+stage_a_checkpoint_sha256: dd10bced01e1f250e153d606a974232916ad57e935d4f1de9017c3e8253395c8
+a3_e4_checkpoint_sha256: dd10bced01e1f250e153d606a974232916ad57e935d4f1de9017c3e8253395c8
+
+optimizer: AdamW
+lr_visual: 0.0003
+lr_txt: 7.5e-06
+warmup_epochs: 3
+warmup_factor: 0.01
+warmup_method: linear
+lrscheduler: cosine
+target_lr_factor: 0.01
+total_train_epoch: 30
+
+fusion_way: parameter_add
+pa: 0.5
+learnable_pa: false
+gallery_text_dropout: 0.0
+loss_names: id,cross_modal_hard
+id_loss_weight: 1.0
+cross_modal_hard_weight: 1.25
+cross_modal_pair_weights:
+  RGB-IR: 1.0
+  RGB-Fusion: 0.0
+  RGB-Text: 1.0
+  IR-Fusion: 0.0
+  IR-Text: 1.0
+  Fusion-Text: 0.0
+
+eval_before_train: true
+eval_start_epoch: 1
+eval_epoch: 1
+gallery_trials: 10
+test_mode: all
+gall_mode: single
+save_best_per_metric: true
+max_save_model_num: 3

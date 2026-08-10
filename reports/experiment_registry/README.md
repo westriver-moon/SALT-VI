@@ -6,6 +6,11 @@ source_tables/ 是总表所依赖的原始结果表集合，按 source_core、so
 
 数据集和模型权重不复制到这里；总表只记录它们的路径、哈希和状态。
 
+2026-08-10 完成的近期协议实验集中记录在
+`source_tables/experiments/completed_20260810.csv`，人类可读摘要位于
+`reports/evidence/RECENT_COMPLETED_EXPERIMENTS_20260810.md`。该批次统一采用
+“最高 Rank-1 轮次及其同轮 mAP/mINP”作为权重保留规则。
+
 ## 当前正式默认方案
 
 自 2026-08-08 起，`SALT_R_TEXT_VISUAL` 被提升为 SALT-VI 正式 Stage-B

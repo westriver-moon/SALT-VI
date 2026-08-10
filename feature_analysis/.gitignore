@@ -1,0 +1,14 @@
+artifacts/features/*
+artifacts/tables/*
+artifacts/figures/*
+artifacts/reports/*
+artifacts/manifests/*
+!artifacts/features/.gitkeep
+!artifacts/tables/.gitkeep
+!artifacts/figures/.gitkeep
+!artifacts/reports/.gitkeep
+!artifacts/manifests/.gitkeep
+__pycache__/
+*.py[cod]
+.pytest_cache/
+

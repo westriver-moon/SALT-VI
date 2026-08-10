@@ -1,0 +1,69 @@
+schema_version: 1
+run_id: replace_with_protocol_comparison_id
+output_root: feature_analysis/artifacts
+overwrite: false
+
+runtime:
+  cuda_visible_devices: "3"
+  device: cuda:0
+  seed: 0
+  batch_size: 16
+  num_workers: 4
+  amp: true
+
+# Replace paths before use. A checkpoint may be listed more than once with
+# different overrides to separate weight changes from protocol changes.
+models:
+  - id: old_weight_old_protocol
+    config: configs/stage_b/r_text_visual_20260729.yaml
+    checkpoint: /absolute/path/to/old_checkpoint.pth
+    overrides: {}
+  - id: new_weight_new_protocol
+    config: configs/stage_b/ir_to_rgb_text_20260808.yaml
+    checkpoint: /absolute/path/to/new_checkpoint.pth
+    overrides: {}
+
+splits:
+  query: true
+  gallery:
+    trials: [0]
+
+representations:
+  - name: protocol_query
+    encoder: protocol_query
+    splits: [query]
+  - name: ir_image
+    encoder: image
+    modality: ir
+    stage: post_bn
+    splits: [query]
+  - name: protocol_gallery
+    encoder: protocol_gallery
+    splits: [gallery]
+  - name: rgb_image
+    encoder: image
+    modality: rgb
+    stage: post_bn
+    splits: [gallery]
+
+analysis:
+  max_pair_samples: 20000
+  max_svd_samples: 5000
+  max_plot_samples: 4000
+  auto_checkpoint_comparisons: true
+  make_figures: true
+
+comparisons:
+  - id: query_protocol_weight_and_protocol_change
+    left: old_weight_old_protocol::query::protocol_query
+    right: new_weight_new_protocol::query::protocol_query
+  - id: query_image_weight_change_only
+    left: old_weight_old_protocol::query::ir_image
+    right: new_weight_new_protocol::query::ir_image
+  - id: gallery_protocol_weight_and_protocol_change
+    left: old_weight_old_protocol::gallery_trial_00::protocol_gallery
+    right: new_weight_new_protocol::gallery_trial_00::protocol_gallery
+  - id: gallery_image_weight_change_only
+    left: old_weight_old_protocol::gallery_trial_00::rgb_image
+    right: new_weight_new_protocol::gallery_trial_00::rgb_image
+

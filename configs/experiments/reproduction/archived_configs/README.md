@@ -11,3 +11,11 @@ Ten historical 288x144 Stage-B configurations. Their original image-only Stage-A
 A legacy 288x144 source-core super-resolution configuration. Its Stage-B warm-start file was pruned, so this file is evidence only.
 
 Other files at this level are prior historical YAML snapshots. A configuration may be promoted back to an active tree only after its exact initialization checkpoint and data contract are restored and a GPU smoke run succeeds.
+
+## Recent completed runs (2026-08-10)
+
+The `*_20260809.yaml` files are immutable provenance snapshots for the completed
+original-config reproduction, low-learning-rate continuation, and IR-to-RGB+Text
+Fusion-84 experiments. Their resolved configurations, source snapshots, logs,
+metrics, and retained best-Rank-1 checkpoints are indexed by
+`reports/experiment_registry/experiment_registry.csv`.

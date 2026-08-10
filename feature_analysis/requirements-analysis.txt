@@ -1,0 +1,3 @@
+# Optional: numeric extraction/statistics use the main SALT-VI dependencies.
+matplotlib>=3.5
+
