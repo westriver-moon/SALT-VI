@@ -101,13 +101,9 @@ def run_dynamic_scheduler(
         raise ValueError("records contain no generation tasks")
     for group in groups:
         indices = [task.view_index for task in group]
-        if (
-            any(task.task_kind != "five_view" for task in group)
-            or len(group) != 5
-            or indices != list(range(5))
-        ):
+        if len(group) != config.views_per_source or indices != list(range(config.views_per_source)):
             source_key = group[0].source_key or str(group[0].image)
-            raise ValueError(f"invalid five-view source group {source_key}: {indices}")
+            raise ValueError(f"invalid source view group {source_key}: {indices}")
     prepare_contracts(config, records_path, tasks)
     allowed = tuple(index for index in config.gpu_allowlist if index in (1, 2, 3))
     if 0 in allowed or not allowed or max_workers > 3:

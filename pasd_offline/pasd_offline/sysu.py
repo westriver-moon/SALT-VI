@@ -62,10 +62,14 @@ def _stable_seed(base_seed: int, source_key: str, view_index: int) -> int:
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") % (2**31 - 1)
 
 
-def _caption_variants(metadata: Mapping) -> list[str]:
+def _caption_variants(metadata: Mapping, views_per_source: int) -> list[str]:
     description = str(metadata.get("description", "")).strip()
+    if not description:
+        raise ValueError("each caption record must have a non-empty description")
+    if views_per_source == 1:
+        return [description]
     paraphrases = metadata.get("paraphrases")
-    if not description or not isinstance(paraphrases, list) or len(paraphrases) != 4:
+    if not isinstance(paraphrases, list) or len(paraphrases) != 4:
         raise ValueError("each multiview caption record must have one description and four paraphrases")
     captions = [description, *(str(value).strip() for value in paraphrases)]
     if any(not value for value in captions):
@@ -75,8 +79,10 @@ def _caption_variants(metadata: Mapping) -> list[str]:
     return captions
 
 
-def _record_output_paths(relative: str) -> list[str]:
+def _record_output_paths(relative: str, views_per_source: int) -> list[str]:
     relative_path = Path(relative)
+    if views_per_source == 1:
+        return [str((Path("images") / relative_path).with_suffix(".png"))]
     directory = Path("images") / relative_path.parent / relative_path.stem
     return [str(directory / f"view_{index:02d}.png") for index in range(5)]
 
@@ -86,11 +92,14 @@ def build_sysu_multiview_records(
     caption_candidates: Mapping[str, str | Path],
     output_path: str | Path,
     seed: int = 20_260_808,
+    views_per_source: int = 5,
     enforce_official_counts: bool = True,
 ) -> list[dict]:
-    """Build the canonical one-row-per-source five-view generation contract."""
+    """Build the canonical one-row-per-source PASD generation contract."""
 
     dataset_root = Path(dataset_root).expanduser().resolve()
+    if views_per_source not in (1, 5):
+        raise ValueError("views_per_source must be 1 or 5")
     splits = read_protocol_splits(dataset_root)
     identity_to_split = {
         identity: split for split, identities in splits.items() for identity in identities
@@ -129,10 +138,10 @@ def build_sysu_multiview_records(
         source_path = (dataset_root / relative).resolve()
         if not source_path.is_file():
             raise FileNotFoundError(f"caption source image is missing: {source_path}")
-        captions = _caption_variants(metadata)
+        captions = _caption_variants(metadata, views_per_source)
         with Image.open(source_path) as image:
             source_width, source_height = image.size
-        outputs = _record_output_paths(relative)
+        outputs = _record_output_paths(relative, views_per_source)
         views = [
             {
                 "view_index": index,
@@ -144,7 +153,7 @@ def build_sysu_multiview_records(
         ]
         records.append(
             {
-                "schema_version": 3,
+                "schema_version": 4,
                 "source_key": relative,
                 "image": str(source_path),
                 "identity": identity,
@@ -175,10 +184,19 @@ def build_sysu_multiview_records(
     output_path = Path(output_path).expanduser().resolve()
     _atomic_jsonl(output_path, records)
     summary = {
-        "schema_version": 3,
+        "schema_version": 4,
         "dataset_root": str(dataset_root),
+        "caption_candidates": {
+            modality: {
+                "path": str(Path(path).expanduser().resolve()),
+                "sha256": hashlib.sha256(Path(path).expanduser().resolve().read_bytes()).hexdigest(),
+            }
+            for modality, path in candidates.items()
+        },
+        "records_sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
         "records": len(records),
-        "views": len(records) * 5,
+        "views": len(records) * views_per_source,
+        "views_per_source": views_per_source,
         "modalities": modality_counts,
         "splits": {
             split: sum(record["split"] == split for record in records)

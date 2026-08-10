@@ -1,6 +1,6 @@
 pretrained_model_path: ../checkpoints/stable-diffusion-v1-5
 pasd_model_path: ../checkpoints/pasd/checkpoint-100000
-output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1
+output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1
 
 device: cuda:0
 mixed_precision: fp16
@@ -23,7 +23,13 @@ enable_xformers: true
 
 target_height: 512
 target_width: 256
-views_per_source: 5
+views_per_source: 1
+asset_sha256:
+  sd_text_encoder: d008943c017f0092921106440254dbbe00b6a285f7883ec8ba160c3faad88334
+  sd_vae: a2b5134f4dbc140d9c11f11cba3233099e00af40f262f136c691fb7d38d2194c
+  pasd_unet: 02cb7b57a4caeb642c58ccb4532ec61eda12ecb7af077201b9154faf6259e443
+  pasd_controlnet: 8b5cdce2ac8c356d61756d58c97fdd93bd4f4b83c1576ea950f2b1a3d3ba0d00
+  person_detector: f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36
 png_compress_level: 4
 person_detector_model: ../checkpoints/yolov8n.pt
 person_detector_confidence: 0.25

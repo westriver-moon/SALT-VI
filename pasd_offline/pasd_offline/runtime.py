@@ -28,6 +28,7 @@ from pasd.pipelines.pipeline_pasd import StableDiffusionControlNetPipeline  # no
 class PASDGenerator:
     def __init__(self, config: GenerationConfig):
         self.config = config
+        config.validate_assets()
         self.device = torch.device(config.device)
         self.dtype = {
             "fp16": torch.float16,

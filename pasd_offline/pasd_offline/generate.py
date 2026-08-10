@@ -225,13 +225,10 @@ def generate_source_group(
 ) -> dict:
     if not tasks:
         raise ValueError("source task group is empty")
-    source_key = normalize_source_key(tasks[0].source_key)
-    if (
-        any(task.task_kind != "five_view" for task in tasks)
-        or len(tasks) != 5
-        or [task.view_index for task in tasks] != list(range(5))
-    ):
-        raise ValueError(f"five-view task contract is invalid for {source_key}")
+    source_key = tasks[0].source_key or str(tasks[0].image)
+    expected_indices = list(range(generator.config.views_per_source))
+    if len(tasks) != generator.config.views_per_source or [task.view_index for task in tasks] != expected_indices:
+        raise ValueError(f"source view contract is invalid for {source_key}")
     images, geometry = generator.generate_views(
         tasks[0].image,
         [task.caption for task in tasks],
@@ -474,25 +471,14 @@ def generate_batch(
 
     generator = PASDGenerator(config)
     entries = []
-    groups = group_tasks_by_source(tasks)
-    task_kinds = {task.task_kind for task in tasks}
-    if task_kinds == {"five_view"}:
-        for group in groups:
-            entries.append(generate_source_group(generator, group, config.output_root, 1))
-        consolidate_manifest(
-            config.output_root,
-            tasks,
-            config,
-            records_path,
-            implementation_root=implementation_root,
-            environment=environment,
-        )
-        return entries
-    if task_kinds.difference({"generic"}):
-        raise ValueError(f"batch records mix incompatible task kinds: {sorted(task_kinds)}")
-    for task in tasks:
-        entries.append(generate_task(generator, task, config.output_root))
-    verify_generation_identity(config, implementation_root, environment)
-    verify_dataset_scope(config, records_path, tasks)
-    consolidate_task_manifest(config.output_root, entries, config)
+    for group in group_tasks_by_source(tasks):
+        entries.append(generate_source_group(generator, group, config.output_root, 1))
+    consolidate_manifest(
+        config.output_root,
+        tasks,
+        config,
+        records_path,
+        implementation_root=implementation_root,
+        environment=environment,
+    )
     return entries
