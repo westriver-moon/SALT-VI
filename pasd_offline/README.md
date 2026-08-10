@@ -38,10 +38,10 @@ pasd_offline/
 ```
 
 Generated datasets belong under the public data root, not in this repository.
-The adaptive five-view output is:
+The formal one-caption/one-image output is:
 
 ```text
-/home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/
+/home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/
 ```
 
 ## Caption input
@@ -135,7 +135,35 @@ Official archive identity:
 - size: `5,453,737,067` bytes;
 - SHA-256: `48eb5f434791f3d0d7c1b36c0aaf1040d935c0a065cae96d7e35336af9df93b7`.
 
-## Adaptive SYSU five-view build
+## Adaptive SYSU builds
+
+For the formal single-view RGB dataset, build only the original-caption view:
+
+```bash
+python scripts/build_sysu_multiview_records.py \
+  --dataset-root /home/cgv841/datasets/SYSU-MM01 \
+  --rgb-candidates /home/lab929/ybj/datasets/text_candidates/SYSU-MM01/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json \
+  --views-per-source 1 \
+  --output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl \
+  --pilot-output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/pilot-records.jsonl
+```
+
+Use `configs/generate_sysu_rgb_single.yaml` with the dynamic launcher. The
+validator checks every output hash, fixed size, non-constant pixels, preserved
+aspect ratio, and either a person-safe crop or an uncropped edge-padded frame.
+
+```bash
+python scripts/launch_dynamic.py \
+  --config configs/generate_sysu_rgb_single.yaml \
+  --records /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl \
+  --max-workers 3
+
+python scripts/validate_dataset.py \
+  --config configs/generate_sysu_rgb_single.yaml \
+  --records /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl
+```
+
+The older five-view contract remains available:
 
 The active contract contains the official `29,033` RGB images. Each RGB source
 uses its original caption plus four Qwen paraphrases and produces five PASD
@@ -146,6 +174,7 @@ augmentation.
 python scripts/build_sysu_multiview_records.py \
   --dataset-root /home/cgv841/datasets/SYSU-MM01 \
   --rgb-candidates /home/lab929/ybj/datasets/text_candidates/SYSU-MM01/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json \
+  --views-per-source 5 \
   --output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/source-records.jsonl \
   --pilot-output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/pilot-records.jsonl
 ```
@@ -153,7 +182,7 @@ python scripts/build_sysu_multiview_records.py \
 The dynamic launcher uses only physical GPUs 1, 2, and 3.  GPU0 is rejected by
 both the scheduler and every worker.  Idle workers claim one source at a time
 with `flock`, write each PNG atomically, and write a source completion marker
-only after all five views pass local validation.
+only after every configured view passes local validation.
 
 ```bash
 /home/lab929/miniconda3/envs/salt-pasd-offline/bin/python \

@@ -161,8 +161,9 @@ def generate_source_group(
     if not tasks:
         raise ValueError("source task group is empty")
     source_key = tasks[0].source_key or str(tasks[0].image)
-    if len(tasks) != 5 or [task.view_index for task in tasks] != list(range(5)):
-        raise ValueError(f"five-view task contract is invalid for {source_key}")
+    expected_indices = list(range(generator.config.views_per_source))
+    if len(tasks) != generator.config.views_per_source or [task.view_index for task in tasks] != expected_indices:
+        raise ValueError(f"source view contract is invalid for {source_key}")
     images, geometry = generator.generate_views(
         tasks[0].image,
         [task.caption for task in tasks],
@@ -193,7 +194,7 @@ def generate_source_group(
             }
         )
     marker = {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_key": source_key,
         "image": str(tasks[0].image),
         "input_sha256": input_digest,
@@ -320,7 +321,7 @@ def consolidate_manifest(
         os.fsync(stream.fileno())
     os.replace(temporary, manifest_path)
     summary = {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_count": len(markers),
         "view_count": sum(len(marker["views"]) for marker in markers),
         "expected_source_count": len(groups),
@@ -341,12 +342,7 @@ def generate_batch(config: GenerationConfig, tasks: list[GenerationTask]) -> lis
 
     generator = PASDGenerator(config)
     entries = []
-    groups = group_tasks_by_source(tasks)
-    if all(len(group) == 5 for group in groups):
-        for group in groups:
-            entries.append(generate_source_group(generator, group, config.output_root, 1))
-        consolidate_manifest(config.output_root, tasks, config)
-        return entries
-    for task in tasks:
-        entries.append(generate_task(generator, task, config.output_root))
+    for group in group_tasks_by_source(tasks):
+        entries.append(generate_source_group(generator, group, config.output_root, 1))
+    consolidate_manifest(config.output_root, tasks, config)
     return entries

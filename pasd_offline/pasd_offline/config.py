@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -30,6 +31,8 @@ class GenerationConfig:
     enable_xformers: bool = True
     target_height: int = 512
     target_width: int = 256
+    views_per_source: int = 5
+    asset_sha256: dict[str, str] = field(default_factory=dict)
     png_compress_level: int = 4
     person_detector_model: Path | None = None
     person_detector_confidence: float = 0.25
@@ -60,6 +63,8 @@ class GenerationConfig:
             "enable_xformers": self.enable_xformers,
             "target_height": self.target_height,
             "target_width": self.target_width,
+            "views_per_source": self.views_per_source,
+            "asset_sha256": dict(sorted(self.asset_sha256.items())),
             "png_compress_level": self.png_compress_level,
             "person_detector_model": (
                 str(self.person_detector_model) if self.person_detector_model else None
@@ -67,6 +72,28 @@ class GenerationConfig:
             "person_detector_confidence": self.person_detector_confidence,
             "person_margin": self.person_margin,
         }
+
+    def validate_assets(self) -> None:
+        files = {
+            "sd_text_encoder": self.pretrained_model_path / "text_encoder/model.safetensors",
+            "sd_vae": self.pretrained_model_path / "vae/diffusion_pytorch_model.safetensors",
+            "pasd_unet": self.pasd_model_path / "unet/diffusion_pytorch_model.safetensors",
+            "pasd_controlnet": self.pasd_model_path / "controlnet/diffusion_pytorch_model.safetensors",
+            "person_detector": self.person_detector_model,
+        }
+        unknown = set(self.asset_sha256).difference(files)
+        if unknown:
+            raise ValueError(f"unknown asset hashes: {sorted(unknown)}")
+        for name, expected in self.asset_sha256.items():
+            path = files[name]
+            if path is None or not path.is_file():
+                raise FileNotFoundError(f"missing configured asset: {name}={path}")
+            digest = hashlib.sha256()
+            with path.open("rb") as stream:
+                for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                    digest.update(block)
+            if digest.hexdigest() != expected:
+                raise ValueError(f"asset SHA-256 mismatch: {name}={path}")
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "GenerationConfig":
@@ -87,6 +114,10 @@ class GenerationConfig:
             raise ValueError("target_height and target_width must be positive")
         if target_height % 8 or target_width % 8:
             raise ValueError("PASD target dimensions must be divisible by 8")
+        views_per_source = int(values.get("views_per_source", 5))
+        if views_per_source not in (1, 5):
+            raise ValueError("views_per_source must be 1 or 5")
+        values["views_per_source"] = views_per_source
         if not 0 <= int(values.get("png_compress_level", 4)) <= 9:
             raise ValueError("png_compress_level must be in [0, 9]")
         allowlist = tuple(values.get("gpu_allowlist", (1, 2, 3)))
