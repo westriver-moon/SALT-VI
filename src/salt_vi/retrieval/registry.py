@@ -17,6 +17,3 @@ def get_retrieval_protocol(name):
             f"Unsupported retrieval_backend {normalized!r}; "
             f"expected one of {list(SUPPORTED_RETRIEVAL_BACKENDS)}"
         ) from exc
-
-
-get_retrieval_backend = get_retrieval_protocol

@@ -5,7 +5,7 @@ import torch
 
 from salt_vi.config.validation import validate_runtime_config
 from salt_vi.data.dataset import _lookup_text_description
-from salt_vi.retrieval import get_retrieval_backend, get_retrieval_protocol
+from salt_vi.retrieval import get_retrieval_protocol
 from salt_vi.retrieval import evaluator
 from salt_vi.training import build_training_recipe
 
@@ -32,7 +32,7 @@ def _config(**overrides):
 
 
 def test_backend_contract_and_runtime_config():
-    backend = get_retrieval_backend("ir_to_rgb_text")
+    backend = get_retrieval_protocol("ir_to_rgb_text")
     assert backend.TRAIN_TEXT_MODALITIES == ("rgb",)
     assert backend.QUERY_CAPTION_LOOKUP is None
     assert backend.GALLERY_CAPTION_LOOKUP == "image"
@@ -112,7 +112,7 @@ class _TrainingModel:
 
 
 def test_training_plugin_builds_only_protocol_losses():
-    backend = get_retrieval_backend("ir_to_rgb_text")
+    backend = get_retrieval_protocol("ir_to_rgb_text")
     model = _TrainingModel()
     labels = torch.tensor([0, 1])
     result = backend.training_losses(
@@ -154,7 +154,7 @@ class _EvaluationModel:
 
 
 def test_evaluator_keeps_text_on_gallery_side(monkeypatch):
-    backend = get_retrieval_backend("ir_to_rgb_text")
+    backend = get_retrieval_protocol("ir_to_rgb_text")
     loader = SimpleNamespace(
         query_loader=[{"img": torch.tensor([[1.0, 0.0]])}],
         gallery_loaders=[

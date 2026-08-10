@@ -49,7 +49,7 @@ def build_parser():
     parser.add_argument('--resume_test_model', type=int, default=-1, help='-1 for no resuming')
     parser.add_argument('--test_model_type', default='Fusion', help='the type of mode for testing["IR","Fusion","Text"]',type=str)
     parser.add_argument('--test_modality', default='Fusion', help='testing retrieval mode ["IR","Fusion","Text"]',type=str)
-    parser.add_argument('--training_mode', default='RGB_IR_Text', type=str, help='RGB_Text, RGB_IR, RGB_IR_Text')
+    parser.add_argument('--training_mode', default='RGB_IR_Text', type=str, help='RGB_IR or RGB_IR_Text')
     parser.add_argument(
         '--joint_mode',
         default='ir_crossfusion',

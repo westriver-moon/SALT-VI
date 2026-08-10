@@ -368,34 +368,11 @@ class LegacyRGBIRRecipe:
         return result
 
 
-class LegacyRGBTextRecipe:
-    name = "legacy_rgb_text"
-
-    def compute_losses(self, model, batch, mode=None, current_epoch=None):
-        validate_rgb_ir_text_batch_dict(
-            batch, model.retrieval_protocol.train_text_modalities(model.args)
-        )
-        context = _encode_batch(model, batch, mode)
-        losses = _loss_names(model)
-        result = _base_result(context)
-        text = batch["text_rgb"]
-        text_feats = extract_text_token_feat(model.base_model.encode_text(text), text)
-        features = torch.cat((context.rgb_feats, text_feats), dim=0)
-        labels = torch.cat(
-            (context.label_rgb, context.label_rgb, context.label_ir), dim=0
-        )
-        LegacyRGBIRTextRecipe._classification_and_wrt(
-            model, result, losses, features, labels
-        )
-        return result
-
-
 _RECIPES = {
     "pmt": PMTRecipe(),
     "ir_to_rgb_text": IRToRGBTextRecipe(),
     "RGB_IR_Text": LegacyRGBIRTextRecipe(),
     "RGB_IR": LegacyRGBIRRecipe(),
-    "RGB_Text": LegacyRGBTextRecipe(),
 }
 
 
