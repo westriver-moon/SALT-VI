@@ -1,6 +1,6 @@
 pretrained_model_path: ../checkpoints/stable-diffusion-v1-5
 pasd_model_path: ../checkpoints/pasd/checkpoint-100000
-output_root: /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1
+output_root: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1
 
 device: cuda:0
 mixed_precision: fp16
@@ -34,8 +34,10 @@ png_compress_level: 4
 person_detector_model: ../checkpoints/yolov8n.pt
 person_detector_confidence: 0.25
 person_margin: 0.05
+background_blur_radius: 24.0
+foreground_feather_radius: 2.0
 
-gpu_allowlist: [1, 2, 3]
+gpu_allowlist: [2, 3]
 min_free_memory_gib: 22.0
 max_gpu_utilization: 5
 worker_chunk_size: 100

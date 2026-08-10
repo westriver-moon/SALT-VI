@@ -4,8 +4,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 
 RESAMPLING = getattr(Image, "Resampling", Image)
@@ -79,17 +78,15 @@ def _expanded_bbox(
     )
 
 
-def _clamp(value: int, lower: int, upper: int) -> int:
-    return min(max(value, lower), upper)
-
-
 def prepare_control_image(
     source: Image.Image,
     detection: PersonDetection,
     target_size: tuple[int, int] = (256, 512),
     margin: float = 0.05,
+    background_blur_radius: float = 24.0,
+    foreground_feather_radius: float = 2.0,
 ) -> tuple[Image.Image, dict]:
-    """Return a fixed canvas using person-safe crop, otherwise edge padding.
+    """Fit the complete source over a blurred same-image background.
 
     ``target_size`` follows PIL's ``(width, height)`` convention.
     """
@@ -98,61 +95,49 @@ def prepare_control_image(
     width, height = source.size
     target_width, target_height = (int(value) for value in target_size)
     bbox = _expanded_bbox(detection.bbox_xyxy, width, height, float(margin))
+    fit_scale = min(target_width / width, target_height / height)
+    fit_width = min(target_width, max(1, round(width * fit_scale)))
+    fit_height = min(target_height, max(1, round(height * fit_scale)))
+    left = (target_width - fit_width) // 2
+    top = (target_height - fit_height) // 2
+    right = target_width - fit_width - left
+    bottom = target_height - fit_height - top
 
     cover_scale = max(target_width / width, target_height / height)
-    cover_width = max(target_width, int(np.ceil(width * cover_scale)))
-    cover_height = max(target_height, int(np.ceil(height * cover_scale)))
-    sx, sy = cover_width / width, cover_height / height
-    scaled_bbox = (bbox[0] * sx, bbox[1] * sy, bbox[2] * sx, bbox[3] * sy)
-    center_x = (scaled_bbox[0] + scaled_bbox[2]) / 2.0
-    center_y = (scaled_bbox[1] + scaled_bbox[3]) / 2.0
-    crop_left = _clamp(round(center_x - target_width / 2), 0, cover_width - target_width)
-    crop_top = _clamp(round(center_y - target_height / 2), 0, cover_height - target_height)
-    crop_box = (
-        crop_left,
-        crop_top,
-        crop_left + target_width,
-        crop_top + target_height,
+    cover_width = max(target_width, round(width * cover_scale))
+    cover_height = max(target_height, round(height * cover_scale))
+    cover_left = (cover_width - target_width) // 2
+    cover_top = (cover_height - target_height) // 2
+    background = source.resize((cover_width, cover_height), RESAMPLING.LANCZOS).crop(
+        (cover_left, cover_top, cover_left + target_width, cover_top + target_height)
     )
-    safe_crop = (
-        scaled_bbox[0] >= crop_box[0]
-        and scaled_bbox[1] >= crop_box[1]
-        and scaled_bbox[2] <= crop_box[2]
-        and scaled_bbox[3] <= crop_box[3]
-    )
-
-    if safe_crop:
-        resized = source.resize((cover_width, cover_height), RESAMPLING.LANCZOS)
-        control = resized.crop(crop_box)
-        geometry = {
-            "mode": "person_safe_cover_crop",
-            "scale": cover_scale,
-            "resized_size": [cover_width, cover_height],
-            "crop_box": list(crop_box),
-            "padding": [0, 0, 0, 0],
-        }
-    else:
-        fit_scale = min(target_width / width, target_height / height)
-        fit_width = min(target_width, max(1, round(width * fit_scale)))
-        fit_height = min(target_height, max(1, round(height * fit_scale)))
-        fx, fy = fit_width / width, fit_height / height
-        bbox_center_x = (bbox[0] + bbox[2]) * 0.5 * fx
-        bbox_center_y = (bbox[1] + bbox[3]) * 0.5 * fy
-        left = _clamp(round(target_width / 2 - bbox_center_x), 0, target_width - fit_width)
-        top = _clamp(round(target_height / 2 - bbox_center_y), 0, target_height - fit_height)
-        right = target_width - fit_width - left
-        bottom = target_height - fit_height - top
-        resized = source.resize((fit_width, fit_height), RESAMPLING.LANCZOS)
-        pixels = np.asarray(resized)
-        padded = np.pad(pixels, ((top, bottom), (left, right), (0, 0)), mode="edge")
-        control = Image.fromarray(padded, mode="RGB")
-        geometry = {
-            "mode": "person_fit_edge_pad",
-            "scale": fit_scale,
-            "resized_size": [fit_width, fit_height],
-            "crop_box": None,
-            "padding": [left, top, right, bottom],
-        }
+    background = background.filter(ImageFilter.GaussianBlur(background_blur_radius))
+    foreground = source.resize((fit_width, fit_height), RESAMPLING.LANCZOS)
+    foreground_layer = background.copy()
+    foreground_layer.paste(foreground, (left, top))
+    mask = Image.new("L", (target_width, target_height), 0)
+    mask.paste(255, (left, top, left + fit_width, top + fit_height))
+    if foreground_feather_radius > 0:
+        mask = mask.filter(ImageFilter.GaussianBlur(foreground_feather_radius))
+    control = Image.composite(foreground_layer, background, mask)
+    geometry = {
+        "mode": "person_fit_blurred_background",
+        "scale": fit_scale,
+        "resized_size": [fit_width, fit_height],
+        "crop_box": None,
+        "padding": [left, top, right, bottom],
+        "foreground_box": [left, top, left + fit_width, top + fit_height],
+        "background_cover_scale": cover_scale,
+        "background_resized_size": [cover_width, cover_height],
+        "background_crop_box": [
+            cover_left,
+            cover_top,
+            cover_left + target_width,
+            cover_top + target_height,
+        ],
+        "background_blur_radius": float(background_blur_radius),
+        "foreground_feather_radius": float(foreground_feather_radius),
+    }
 
     if control.size != (target_width, target_height):
         raise AssertionError(f"adaptive geometry produced {control.size}, expected {target_size}")
@@ -167,3 +152,22 @@ def prepare_control_image(
         }
     )
     return control, geometry
+
+
+def restore_blurred_background(output: Image.Image, geometry: dict) -> Image.Image:
+    """Keep PASD detail only in the complete, aspect-preserved foreground frame."""
+
+    output = output.convert("RGB")
+    background = output.filter(
+        ImageFilter.GaussianBlur(float(geometry["background_blur_radius"]))
+    )
+    box = tuple(int(value) for value in geometry["foreground_box"])
+    foreground = output.crop(box)
+    foreground_layer = background.copy()
+    foreground_layer.paste(foreground, box[:2])
+    mask = Image.new("L", output.size, 0)
+    mask.paste(255, box)
+    feather = float(geometry["foreground_feather_radius"])
+    if feather > 0:
+        mask = mask.filter(ImageFilter.GaussianBlur(feather))
+    return Image.composite(foreground_layer, background, mask)

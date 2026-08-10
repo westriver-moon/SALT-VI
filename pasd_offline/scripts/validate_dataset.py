@@ -33,18 +33,7 @@ def validate_geometry(metadata: dict, config: GenerationConfig) -> None:
     if not isinstance(detection, dict) or len(detection.get("bbox_xyxy", ())) != 4 or len(expanded or ()) != 4:
         raise ValueError("missing person crop audit")
 
-    if geometry["mode"] == "person_safe_cover_crop":
-        left, top, right, bottom = geometry["crop_box"]
-        if geometry["padding"] != [0, 0, 0, 0]:
-            raise ValueError("crop mode has padding")
-        if right - left != target_width or bottom - top != target_height:
-            raise ValueError("crop size mismatch")
-        if not (0 <= left <= right <= resized_width and 0 <= top <= bottom <= resized_height):
-            raise ValueError("crop is outside resized image")
-        x1, y1, x2, y2 = (float(value) * scale for value in expanded)
-        if x1 < left - 1 or y1 < top - 1 or x2 > right + 1 or y2 > bottom + 1:
-            raise ValueError("crop cuts the expanded person box")
-    elif geometry["mode"] == "person_fit_edge_pad":
+    if geometry["mode"] == "person_fit_blurred_background":
         if geometry["crop_box"] is not None:
             raise ValueError("padding mode has a crop")
         left, top, right, bottom = geometry["padding"]
@@ -52,6 +41,10 @@ def validate_geometry(metadata: dict, config: GenerationConfig) -> None:
             raise ValueError("negative padding")
         if left + resized_width + right != target_width or top + resized_height + bottom != target_height:
             raise ValueError("padding size mismatch")
+        if geometry.get("foreground_box") != [left, top, left + resized_width, top + resized_height]:
+            raise ValueError("foreground box mismatch")
+        if float(geometry.get("background_blur_radius", 0)) <= 0:
+            raise ValueError("invalid background blur")
     else:
         raise ValueError(f"unknown geometry mode: {geometry['mode']}")
 

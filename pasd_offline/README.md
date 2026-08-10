@@ -41,7 +41,7 @@ Generated datasets belong under the public data root, not in this repository.
 The formal one-caption/one-image output is:
 
 ```text
-/home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/
+/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/
 ```
 
 ## Caption input
@@ -153,23 +153,23 @@ python scripts/build_sysu_multiview_records.py \
   --dataset-root /home/cgv841/datasets/SYSU-MM01 \
   --rgb-candidates /home/lab929/ybj/datasets/text_candidates/SYSU-MM01/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json \
   --views-per-source 1 \
-  --output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl \
-  --pilot-output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/pilot-records.jsonl
+  --output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/source-records.jsonl \
+  --pilot-output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/pilot-records.jsonl
 ```
 
 Use `configs/generate_sysu_rgb_single.yaml` with the dynamic launcher. The
 validator checks every output hash, fixed size, non-constant pixels, preserved
-aspect ratio, and either a person-safe crop or an uncropped edge-padded frame.
+aspect ratio, and a complete uncropped foreground over a same-image blurred background.
 
 ```bash
 python scripts/launch_dynamic.py \
   --config configs/generate_sysu_rgb_single.yaml \
-  --records /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl \
-  --max-workers 3
+  --records /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/source-records.jsonl \
+  --max-workers 2
 
 python scripts/validate_dataset.py \
   --config configs/generate_sysu_rgb_single.yaml \
-  --records /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-1view-v1/source-records.jsonl
+  --records /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/source-records.jsonl
 ```
 
 The older five-view contract remains available:
@@ -184,12 +184,12 @@ python scripts/build_sysu_multiview_records.py \
   --dataset-root /home/cgv841/datasets/SYSU-MM01 \
   --rgb-candidates /home/lab929/ybj/datasets/text_candidates/SYSU-MM01/Blip_RGB_Qwen3_14B_AWQ/caption_qwen3_14b_awq_4x.json \
   --views-per-source 5 \
-  --output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/source-records.jsonl \
-  --pilot-output /home/lab929/ybj/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/pilot-records.jsonl
+  --output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/source-records.jsonl \
+  --pilot-output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-adaptive-512x256-5view-v1/pilot-records.jsonl
 ```
 
-The dynamic launcher uses only physical GPUs 1, 2, and 3.  GPU0 is rejected by
-both the scheduler and every worker.  Idle workers claim one source at a time
+The formal single-view config uses only physical GPUs 2 and 3. GPU0 is rejected by
+both the scheduler and every worker. Idle workers claim one source at a time
 with `flock`, write each PNG atomically, and write a source completion marker
 only after every configured view passes local validation.
 

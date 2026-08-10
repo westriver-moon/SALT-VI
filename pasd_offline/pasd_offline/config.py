@@ -37,6 +37,8 @@ class GenerationConfig:
     person_detector_model: Path | None = None
     person_detector_confidence: float = 0.25
     person_margin: float = 0.05
+    background_blur_radius: float = 24.0
+    foreground_feather_radius: float = 2.0
     gpu_allowlist: tuple[int, ...] = (1, 2, 3)
     min_free_memory_gib: float = 22.0
     max_gpu_utilization: int = 5
@@ -73,6 +75,8 @@ class GenerationConfig:
             ),
             "person_detector_confidence": self.person_detector_confidence,
             "person_margin": self.person_margin,
+            "background_blur_radius": self.background_blur_radius,
+            "foreground_feather_radius": self.foreground_feather_radius,
         }
 
     def validate_assets(self) -> None:
@@ -127,6 +131,10 @@ class GenerationConfig:
         values["views_per_source"] = views_per_source
         if not 0 <= int(values.get("png_compress_level", 4)) <= 9:
             raise ValueError("png_compress_level must be in [0, 9]")
+        if float(values.get("background_blur_radius", 24.0)) <= 0:
+            raise ValueError("background_blur_radius must be positive")
+        if float(values.get("foreground_feather_radius", 2.0)) < 0:
+            raise ValueError("foreground_feather_radius must be non-negative")
         if int(values.get("worker_chunk_size", 100)) <= 0:
             raise ValueError("worker_chunk_size must be positive")
         allowlist = tuple(values.get("gpu_allowlist", (1, 2, 3)))

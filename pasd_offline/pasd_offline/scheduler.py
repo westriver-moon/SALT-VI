@@ -144,8 +144,8 @@ def run_dynamic_scheduler(
                     str(records_path),
                     "--physical-gpu",
                     str(gpu),
-                    "--batch-size",
-                    "0",
+                "--batch-size",
+                "1" if config.views_per_source == 1 else "0",
                 ]
                 if worker_max_sources is not None:
                     command.extend(["--max-sources", str(worker_max_sources)])

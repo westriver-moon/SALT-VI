@@ -11,7 +11,7 @@ from PIL import Image
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from .config import GenerationConfig
-from .geometry import PersonDetector, prepare_control_image
+from .geometry import PersonDetector, prepare_control_image, restore_blurred_background
 
 
 MODULE_ROOT = Path(__file__).resolve().parents[1]
@@ -95,6 +95,8 @@ class PASDGenerator:
             detection,
             target_size=(self.config.target_width, self.config.target_height),
             margin=self.config.person_margin,
+            background_blur_radius=self.config.background_blur_radius,
+            foreground_feather_radius=self.config.foreground_feather_radius,
         )
         return self._working_image(control), geometry
 
@@ -149,6 +151,7 @@ class PASDGenerator:
                     (self.config.target_width, self.config.target_height),
                     Image.Resampling.LANCZOS,
                 )
+                image = restore_blurred_background(image, geometry)
                 if modality.lower() == "ir":
                     image = image.convert("L").convert("RGB")
                 results.append(image)
