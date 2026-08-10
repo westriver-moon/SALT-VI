@@ -12,7 +12,6 @@ preserving existing YAML, checkpoints, result keys, and training entry points.
 - `PMTRecipe`
 - `LegacyRGBIRRecipe`
 - `LegacyRGBIRTextRecipe`
-- `LegacyRGBTextRecipe`
 - `IRToRGBTextRecipe`
 
 `CLIP2ReID` retains encoders, classifiers, fusion primitives, checkpoint I/O,
