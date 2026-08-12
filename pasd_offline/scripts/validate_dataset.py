@@ -69,7 +69,7 @@ def main() -> None:
         except (OSError, KeyError, ValueError, json.JSONDecodeError) as error:
             errors.append(f"invalid:{source_key}:{error}")
     expected_sources = len(groups)
-    expected_views = expected_sources * config.views_per_source
+    expected_views = sum(len(group) for group in groups)
     summary = {
         "expected_sources": expected_sources,
         "record_sources": len(groups),

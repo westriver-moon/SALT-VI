@@ -11,6 +11,7 @@ from PIL import Image
 from salt_vi.config.validation import validate_runtime_config
 from salt_vi.data.dataset import SYSU_Tri_Data, Test_Tri_Data as SysuEvalDataset
 from salt_vi.data.pasd_multiview import PASDTrainViewStore, eval_view_path
+from salt_vi.data.sources import MultiviewVisualSource
 from salt_vi.data import loader as loader_module
 
 
@@ -34,6 +35,7 @@ def write_record(
         views.append(
             {
                 "view_index": index,
+                "hypothesis_weight": 1 / views_per_source,
                 "caption": f"caption {index}",
                 "seed": index,
                 "output": str(output),
@@ -53,7 +55,7 @@ def write_record(
     }
 
 
-def write_manifest(output_root: Path, records, complete: bool = True):
+def write_manifest(output_root: Path, records, complete: bool = True, declared_views=None):
     rows = [
         {
             **{
@@ -70,7 +72,9 @@ def write_manifest(output_root: Path, records, complete: bool = True):
         "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
         encoding="utf-8",
     )
-    views_per_source = len(records[0]["views"])
+    views_per_source = (
+        len(records[0]["views"]) if declared_views is None else declared_views
+    )
     (output_root / "manifest.json").write_text(
         json.dumps(
             {
@@ -87,8 +91,10 @@ def write_manifest(output_root: Path, records, complete: bool = True):
     return manifest
 
 
-@pytest.mark.parametrize("views", [1, 5])
-def test_manifest_backed_train_and_eval_views(tmp_path: Path, views: int):
+@pytest.mark.parametrize("views,declared", [(1, 1), (2, 0), (5, 5)])
+def test_manifest_backed_train_and_eval_views(
+    tmp_path: Path, views: int, declared: int
+):
     root = tmp_path / "SYSU-MM01"
     (root / "exp").mkdir(parents=True)
     (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
@@ -98,14 +104,38 @@ def test_manifest_backed_train_and_eval_views(tmp_path: Path, views: int):
         write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1, views),
         write_record(root, output_root, "cam3/0001/0001.jpg", "ir", 3, views),
     ]
-    manifest = write_manifest(output_root, records)
-    rgb = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), views)
-    ir = PASDTrainViewStore(root, output_root, manifest, "ir", np.asarray([0]), views)
+    manifest = write_manifest(output_root, records, declared_views=declared)
+    rgb = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), declared)
+    ir = PASDTrainViewStore(root, output_root, manifest, "ir", np.asarray([0]), declared)
     assert rgb.image(0, views - 1).shape == (512, 256, 3)
     assert ir.caption(0, views - 1) == f"caption {views - 1}"
     assert eval_view_path(
-        root / "cam1/0001/0001.jpg", root, output_root, manifest, 0, views
+        root / "cam1/0001/0001.jpg", root, output_root, manifest, 0, declared
     ).endswith("view_00.png")
+
+
+def test_weighted_visual_sampling_uses_manifest_mass(tmp_path: Path, monkeypatch):
+    root = tmp_path / "SYSU-MM01"
+    (root / "exp").mkdir(parents=True)
+    (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
+    (root / "exp" / "val_id.txt").write_text("", encoding="utf-8")
+    output_root = tmp_path / "derived"
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1, 2)
+    record["views"][0]["hypothesis_weight"] = 0.75
+    record["views"][1]["hypothesis_weight"] = 0.25
+    manifest = write_manifest(output_root, [record], declared_views=0)
+    store = PASDTrainViewStore(root, output_root, manifest, "rgb", np.asarray([0]), 0)
+
+    captured = {}
+
+    def choose(weights, count):
+        captured["weights"] = weights.tolist()
+        return __import__("torch").tensor([1])
+
+    monkeypatch.setattr("salt_vi.data.sources.torch.multinomial", choose)
+    _, view = MultiviewVisualSource(store, 0).sample(0)
+    assert captured["weights"] == pytest.approx([0.75, 0.25])
+    assert view == 1
 
 
 def test_train_store_requires_complete_validated_manifest(tmp_path: Path):
@@ -186,7 +216,8 @@ def test_rgb_only_multiview_keeps_ir_array_input(tmp_path: Path):
     assert "text_rgb" in batch and "text_ir" not in batch
 
 
-def test_multiview_config_contract():
+@pytest.mark.parametrize("views", [0, 5])
+def test_multiview_config_contract(views):
     config = SimpleNamespace(
         training_mode="RGB_IR_Text",
         joint_mode="uni",
@@ -199,7 +230,7 @@ def test_multiview_config_contract():
         sysu_sr_backend="pasd_multiview",
         sysu_sr_modalities=["rgb"],
         sysu_sr_exact_size=True,
-        sysu_sr_views_per_image=5,
+        sysu_sr_views_per_image=views,
         sysu_sr_view_manifest="manifest.jsonl",
         sysu_sr_view_sampling="independent",
         sysu_sr_eval_view_index=0,

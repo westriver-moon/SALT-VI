@@ -101,7 +101,8 @@ def run_dynamic_scheduler(
         raise ValueError("records contain no generation tasks")
     for group in groups:
         indices = [task.view_index for task in group]
-        if len(group) != config.views_per_source or indices != list(range(config.views_per_source)):
+        expected = config.views_per_source or len(group)
+        if len(group) != expected or indices != list(range(expected)):
             source_key = group[0].source_key or str(group[0].image)
             raise ValueError(f"invalid source view group {source_key}: {indices}")
     prepare_build(config, records_path, tasks)

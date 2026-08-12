@@ -388,11 +388,12 @@ def _load_compatible_state_dict(
     return result
 
 
-def _load_fixed_visual_init(model, config, device):
-    if not (config.training_weight_init and config.Fix_Visual):
+def _load_training_weight_init(model, config, device):
+    if not config.training_weight_init:
         return
     _load_compatible_state_dict(model, config.training_weight_init, device)
-    _initialize_spatial_backups(model, config)
+    if config.Fix_Visual:
+        _initialize_spatial_backups(model, config)
     print(f"Successfully load model from {config.training_weight_init}")
     if getattr(config, "training_weight_init_source_config", None):
         print(f"Resolved PMT_VIT image-only source config: {config.training_weight_init_source_config}")
@@ -487,7 +488,7 @@ def main(config):
             # Full/model-only checkpoints may contain the registered RN backup modules.
             _initialize_spatial_backups(model, config)
         else:
-            _load_fixed_visual_init(model, config, device)
+            _load_training_weight_init(model, config, device)
         if legacy_resume_epoch >= 0 and not complete_resume:
             model.resume_model(legacy_resume_epoch, mode="Fusion")
 

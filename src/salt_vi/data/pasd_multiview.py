@@ -61,8 +61,10 @@ class PASDMultiviewIndex:
         self.data_root = Path(data_root).expanduser().resolve()
         self.output_root = Path(output_root).expanduser().resolve()
         self.views = int(views)
-        if self.views not in (1, 5):
-            raise ValueError(f"SYSU PASD contract requires one or five views, got {self.views}")
+        if self.views not in (0, 1, 5):
+            raise ValueError(
+                f"SYSU PASD contract requires dynamic, one, or five views, got {self.views}"
+            )
         summary = json.loads(
             self.manifest_path.with_suffix(".json").read_text(encoding="utf-8")
         )
@@ -84,10 +86,20 @@ class PASDMultiviewIndex:
         for key, record in records.items():
             record["views"].sort(key=lambda view: int(view["view_index"]))
             indices = [int(view["view_index"]) for view in record["views"]]
-            if len(indices) != self.views:
+            if self.views and len(indices) != self.views:
                 raise ValueError(f"PASD source {key} does not have {self.views} views")
-            if indices != list(range(self.views)):
+            if not indices or indices != list(range(len(indices))):
                 raise ValueError(f"PASD source {key} has invalid view indices {indices}")
+            weights = [
+                float(view.get("hypothesis_weight", 1.0 / len(indices)))
+                for view in record["views"]
+            ]
+            if any(not np.isfinite(weight) or weight <= 0 for weight in weights):
+                raise ValueError(f"PASD source {key} has invalid hypothesis weights")
+            if not np.isclose(sum(weights), 1.0, rtol=0.0, atol=1e-6):
+                raise ValueError(f"PASD source {key} hypothesis weights do not sum to one")
+            for view, weight in zip(record["views"], weights):
+                view["hypothesis_weight"] = weight
         if len(records) != int(summary["source_count"]):
             raise ValueError("PASD final manifest source count mismatch")
         if sum(len(record["views"]) for record in records.values()) != int(
@@ -119,6 +131,12 @@ class PASDMultiviewIndex:
 
     def caption(self, source_key: str, view_index: int) -> str:
         return str(self.record(source_key)["views"][int(view_index)]["caption"])
+
+    def weights(self, source_key: str) -> list[float]:
+        return [
+            float(view["hypothesis_weight"])
+            for view in self.record(source_key)["views"]
+        ]
 
 
 @lru_cache(maxsize=8)
@@ -177,6 +195,9 @@ class PASDTrainViewStore:
 
     def caption(self, index: int, view_index: int) -> str:
         return self.index.caption(self.sources[int(index)], int(view_index))
+
+    def weights(self, index: int) -> list[float]:
+        return self.index.weights(self.sources[int(index)])
 
 
 def eval_view_path(

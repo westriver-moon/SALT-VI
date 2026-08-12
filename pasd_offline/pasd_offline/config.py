@@ -125,8 +125,8 @@ class GenerationConfig:
         if target_height % 8 or target_width % 8:
             raise ValueError("PASD target dimensions must be divisible by 8")
         views_per_source = int(values.get("views_per_source", 5))
-        if views_per_source not in (1, 5):
-            raise ValueError("views_per_source must be 1 or 5")
+        if views_per_source not in (0, 1, 5):
+            raise ValueError("views_per_source must be 0 (dynamic), 1, or 5")
         values["views_per_source"] = views_per_source
         if not 0 <= int(values.get("png_compress_level", 4)) <= 9:
             raise ValueError("png_compress_level must be in [0, 9]")

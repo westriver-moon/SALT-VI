@@ -44,6 +44,9 @@ def source_tasks(source: Path, views: int) -> list[GenerationTask]:
             identity="0001",
             source_key=f"cam1/0001/{source.name}",
             view_index=index,
+            hypothesis_id=f"h{index:02d}",
+            hypothesis_weight=1 / views,
+            imagination_contract_sha256="contract-test",
             camera=1,
             split="train",
         )
@@ -51,7 +54,7 @@ def source_tasks(source: Path, views: int) -> list[GenerationTask]:
     ]
 
 
-def build_fixture(tmp_path: Path, views: int):
+def build_fixture(tmp_path: Path, views: int, configured: int | None = None):
     source = tmp_path / "source.jpg"
     Image.new("RGB", (16, 32), "gray").save(source)
     tasks = source_tasks(source, views)
@@ -67,16 +70,18 @@ def build_fixture(tmp_path: Path, views: int):
         output_root=tmp_path / "output",
         target_height=64,
         target_width=32,
-        views_per_source=views,
+        views_per_source=views if configured is None else configured,
     )
     prepare_build(config, records, tasks)
     return config, records, source, tasks
 
 
-@pytest.mark.parametrize("views", [1, 5])
-def test_generation_and_manifest_support_one_or_five_views(tmp_path: Path, views: int):
-    config, records, _, tasks = build_fixture(tmp_path, views)
-    generate_source_group(FakeGenerator(config), tasks, config.output_root, views)
+@pytest.mark.parametrize("views,configured", [(1, 1), (2, 0), (5, 5)])
+def test_generation_and_manifest_support_fixed_or_dynamic_views(
+    tmp_path: Path, views: int, configured: int
+):
+    config, records, _, tasks = build_fixture(tmp_path, views, configured)
+    marker = generate_source_group(FakeGenerator(config), tasks, config.output_root, views)
 
     assert source_is_generated(tasks, config.output_root, config)
     assert source_is_validated(tasks, config.output_root, config)
@@ -85,7 +90,8 @@ def test_generation_and_manifest_support_one_or_five_views(tmp_path: Path, views
     assert summary["complete"]
     assert summary["source_count"] == 1
     assert summary["view_count"] == views
-    assert summary["views_per_source"] == views
+    assert summary["views_per_source"] == configured
+    assert marker["imagination_contract_sha256"] == "contract-test"
 
 
 def test_changed_caption_invalidates_source_marker(tmp_path: Path):

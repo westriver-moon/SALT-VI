@@ -47,10 +47,12 @@ class PMTViTVisual(nn.Module):
         output_dim=2048,
         pretrained_path=None,
         patch_embed_config=None,
+        gradient_checkpointing=False,
     ):
         super().__init__()
         self.input_resolution = to_2tuple(input_resolution)
         self.output_dim = output_dim
+        self.gradient_checkpointing = bool(gradient_checkpointing)
         self.vit = ViT(
             img_size=self.input_resolution,
             patch_size=patch_size,
@@ -83,7 +85,12 @@ class PMTViTVisual(nn.Module):
     def forward(self, x, mode=None):
         del mode
         tokens, _grid_size = self.prepare_tokens(x)
-        tokens = self.run_blocks(tokens, 0, len(self.vit.blocks))
+        tokens = self.run_blocks(
+            tokens,
+            0,
+            len(self.vit.blocks),
+            checkpoint_blocks=self.gradient_checkpointing and self.training,
+        )
         return self.finalize_and_package(tokens)
 
     def prepare_tokens(self, x):

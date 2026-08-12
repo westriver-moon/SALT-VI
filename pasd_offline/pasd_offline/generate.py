@@ -4,6 +4,7 @@ import contextlib
 import fcntl
 import hashlib
 import json
+import math
 import os
 import tempfile
 import time
@@ -270,9 +271,14 @@ def generate_source_group(
     if not tasks:
         raise ValueError("source task group is empty")
     source_key = tasks[0].source_key or str(tasks[0].image)
-    expected_indices = list(range(generator.config.views_per_source))
-    if len(tasks) != generator.config.views_per_source or [task.view_index for task in tasks] != expected_indices:
+    expected_count = generator.config.views_per_source or len(tasks)
+    expected_indices = list(range(expected_count))
+    if len(tasks) != expected_count or [task.view_index for task in tasks] != expected_indices:
         raise ValueError(f"source view contract is invalid for {source_key}")
+    if not math.isclose(
+        sum(task.hypothesis_weight for task in tasks), 1.0, rel_tol=0.0, abs_tol=1e-6
+    ):
+        raise ValueError(f"source hypothesis weights do not sum to one for {source_key}")
     images, geometry = generator.generate_views(
         tasks[0].image,
         [task.caption for task in tasks],
@@ -295,6 +301,8 @@ def generate_source_group(
         views.append(
             {
                 "view_index": task.view_index,
+                "hypothesis_id": task.hypothesis_id,
+                "hypothesis_weight": task.hypothesis_weight,
                 "caption": task.caption,
                 "seed": task.seed,
                 "output": str(output_path.relative_to(output_root)),
@@ -312,6 +320,7 @@ def generate_source_group(
         "camera": tasks[0].camera,
         "modality": tasks[0].modality,
         "split": tasks[0].split,
+        "imagination_contract_sha256": tasks[0].imagination_contract_sha256,
         "physical_gpu": physical_gpu,
         "batch_size": int(batch_size),
         "num_inference_steps": generator.config.num_inference_steps,
@@ -427,7 +436,14 @@ def consolidate_manifest(
             for view in marker["views"]:
                 row = {
                     key: marker[key]
-                    for key in ("source_key", "identity", "camera", "modality", "split")
+                    for key in (
+                        "source_key",
+                        "identity",
+                        "camera",
+                        "modality",
+                        "split",
+                        "imagination_contract_sha256",
+                    )
                 }
                 row.update(view)
                 encoded = (json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n").encode(

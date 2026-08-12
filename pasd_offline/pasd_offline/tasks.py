@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -16,6 +17,9 @@ class GenerationTask:
     identity: str = ""
     source_key: str = ""
     view_index: int = 0
+    hypothesis_id: str = ""
+    hypothesis_weight: float = 1.0
+    imagination_contract_sha256: str = ""
     camera: int = -1
     split: str = ""
 
@@ -59,9 +63,16 @@ def load_tasks(records_path: str | Path) -> list[GenerationTask]:
         record = json.loads(line)
         source_key = normalize_source_key(record["source_key"])
         views = list(record.get("views", ()))
-        if len(views) not in (1, 5):
-            raise ValueError(f"{source_key} must contain one or five views")
-        for view in views:
+        if not views:
+            raise ValueError(f"{source_key} must contain at least one view")
+        weights = [
+            float(view.get("hypothesis_weight", 1.0 / len(views))) for view in views
+        ]
+        if any(not math.isfinite(weight) or weight <= 0 for weight in weights):
+            raise ValueError(f"{source_key} hypothesis weights must be finite and positive")
+        if not math.isclose(sum(weights), 1.0, rel_tol=0.0, abs_tol=1e-6):
+            raise ValueError(f"{source_key} hypothesis weights must sum to one")
+        for view, weight in zip(views, weights):
             tasks.append(
                 GenerationTask(
                     image=Path(record["image"]).expanduser().resolve(),
@@ -72,6 +83,13 @@ def load_tasks(records_path: str | Path) -> list[GenerationTask]:
                     identity=str(record.get("identity", "")),
                     source_key=source_key,
                     view_index=int(view["view_index"]),
+                    hypothesis_id=str(
+                        view.get("hypothesis_id", f"h{int(view['view_index']):02d}")
+                    ),
+                    hypothesis_weight=weight,
+                    imagination_contract_sha256=str(
+                        record.get("imagination_contract_sha256", "")
+                    ),
                     camera=int(record.get("camera", -1)),
                     split=str(record.get("split", "")),
                 )

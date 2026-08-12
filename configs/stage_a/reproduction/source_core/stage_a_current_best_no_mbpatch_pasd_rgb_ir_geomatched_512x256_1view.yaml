@@ -1,0 +1,22 @@
+extends: vision_text_encoder_stage_a_current_best.yaml
+
+output_root: train_outputs/stage_a_current_best_no_mbpatch/pasd_rgb_ir_geomatched_512x256_1view_v1/
+experiment_name: stageA_current_best_NoMBPatch_PASD-RGB_IR-Geomatched_1view_seed0
+CUDA_VISIBLE_DEVICES: "1"
+gpu_id: "0"
+
+img_h: 512
+img_w: 256
+img_size: [512, 256]
+sysu_source_size: [256, 128]
+batch_size: 16
+pmt_gradient_checkpointing: true
+
+sysu_sr_data_root: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_backend: pasd_multiview
+sysu_sr_view_manifest: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl
+sysu_sr_views_per_image: 1
+sysu_sr_view_sampling: paired
+sysu_sr_eval_view_index: 0
+sysu_sr_exact_size: true

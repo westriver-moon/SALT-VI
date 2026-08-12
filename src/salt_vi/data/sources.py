@@ -4,6 +4,11 @@ import numpy as np
 import torch
 
 
+def _weighted_view(store, index):
+    weights = torch.as_tensor(store.weights(int(index)), dtype=torch.double)
+    return int(torch.multinomial(weights, 1).item())
+
+
 class ArrayVisualSource:
     def __init__(self, path):
         self.images = np.load(path, mmap_mode="r")
@@ -24,7 +29,7 @@ class MultiviewVisualSource:
         return len(self.store)
 
     def sample(self, index):
-        view = int(torch.randint(self.views, (1,)).item())
+        view = _weighted_view(self.store, index)
         return self.store.image(int(index), view), view
 
 
@@ -56,5 +61,5 @@ class MultiviewCaptionSource:
     def sample(self, index, visual_view=None):
         view = visual_view
         if self.sampling == "independent":
-            view = int(torch.randint(self.views, (1,)).item())
+            view = _weighted_view(self.store, index)
         return self.tokenize(self.store.caption(int(index), int(view)))

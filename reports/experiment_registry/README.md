@@ -21,3 +21,12 @@ SYSU-MM01 all-search / single-shot / 10-trial 的保留结果为 Rank-1
 总表中该次运行的 `archived` lifecycle 保持不变，因为它表示原始实验运行已
 完成并归档，不表示方案不再有效。当前默认身份及不要求多随机种子验证的人工
 决策记录在 `docs/protocols/SALT_R_TEXT_VISUAL_DEFAULT.md`。
+
+## SYSU 评估协议约束
+
+SYSU-MM01 的正式 Rank-1、mAP 和 mINP 只接受 10-trial gallery
+平均结果。只有存在原始日志、配置或源表直接证据的记录，才在
+`evaluation_protocol` 中标注 `10-trial`；协议为空的历史原始记录不得按
+10-trial 结果引用。1-trial 结果属于无效诊断结果，不得进入总表。配置字段
+`trial: 1` 是实验运行编号，不能解释为只评估一个 gallery trial。RegDB 的
+`T01/T03/T05` 也属于另一套训练/划分标识，不按 SYSU gallery-trial 规则处理。

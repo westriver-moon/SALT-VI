@@ -19,6 +19,7 @@ evidence, and validation boundary are recorded in
 - `docs/`: protocols, evidence indexes, and operational notes
 - `scripts/`: training, validation, and analysis entry points
 - `pasd_offline/`: independent caption-driven PASD dataset generator; not imported by the training package
+- `semantic_imagination/`: offline VLM hypothesis plugin and PASD record exporter
 - `checkpoints/`, `logs/`, `pretrained/`, `runtime/`: local runtime assets; intentionally excluded from Git
 
 ## Installation

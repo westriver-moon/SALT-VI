@@ -18,7 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from salt_vi.engine import build_model
 from salt_vi.data.loader import Loader
-from salt_vi.entrypoints.train import _load_fixed_visual_init, seed_torch
+from salt_vi.entrypoints.train import _load_training_weight_init, seed_torch
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.utils.super_resolution.verify_a3_stageb_init import verify
 from salt_vi.utils.utils import load_train_configs
@@ -67,7 +67,7 @@ def build_runtime(config, parallel):
     seed_torch(config.seed)
     device = torch.device("cuda:0")
     model = build_model(config)
-    _load_fixed_visual_init(model, config, device)
+    _load_training_weight_init(model, config, device)
     model = model.to(device)
     if parallel:
         model.configure_fixed_visual_data_parallel()
