@@ -1,32 +1,34 @@
 # SALT-VI 统一实验总表
 
-experiment_registry.csv 是 SALT-VI 唯一对外使用的实验总表。它按行保留全部实验记录，并用 record_type 区分汇总结果、逐 epoch 指标、训练曲线和清单记录。
+`experiment_registry.csv` 是 SALT-VI 跨 Stage-A、Stage-B、消融、复现和数据派生实验的唯一总表。不要从 README、日志摘要或论文草稿建立第二份“当前排行榜”。
 
-source_tables/ 是总表所依赖的原始结果表集合，按 source_core、source_baseline、experiments 等语义子目录组织；它们与总表属于同一项目，不再设置旧项目/新项目的层级。总表通过 source_table、source_row_number、source_sha256 和 extra_metrics_json 保留每条记录与原始表的对应关系。
+本次文档整合不修改该 CSV、其 source tables 或任何结构化实验结果。
 
-数据集和模型权重不复制到这里；总表只记录它们的路径、哈希和状态。
+## 使用规则
 
-2026-08-10 完成的近期协议实验集中记录在
-`source_tables/experiments/completed_20260810.csv`，人类可读摘要位于
-`reports/evidence/RECENT_COMPLETED_EXPERIMENTS_20260810.md`。该批次统一采用
-“最高 Rank-1 轮次及其同轮 mAP/mINP”作为权重保留规则。
+- 一行可以表示实验结果、单 epoch 指标、归档记录或来源记录；先查看 `record_type`。
+- `lifecycle` 表达配置当前是否可运行，`status` 表达那一次运行的状态；两者不能互相替代。
+- checkpoint 非空不代表文件仍存在，结合 checkpoint 状态、校验状态和哈希字段判断。
+- SYSU 正式结果必须注明 all-search、single-shot、10 gallery trials；总表只记录 10-trial 聚合指标。
+- RegDB 必须区分单个 numbered trial 与多 trial 均值。
+- 同一保留结果的 Rank-1、mAP 和 mINP 应来自同一选择 epoch；独立最佳指标放在补充字段，不覆盖选择结果。
+- 历史配置存在不代表其数据、初始化权重或 topology 仍完整；以 `lifecycle` 和复现状态为准。
 
-## 当前正式默认方案
+## 当前项目状态
 
-自 2026-08-08 起，`SALT_R_TEXT_VISUAL` 被提升为 SALT-VI 正式 Stage-B
-默认方案。其权威配置是 `configs/stage_b/r_text_visual_20260729.yaml`，
-SYSU-MM01 all-search / single-shot / 10-trial 的保留结果为 Rank-1
-84.0783477%、mAP 81.4333938%、mINP 71.7898627%。
+- 正式 Stage-B 默认仍为 `SALT_R_TEXT_VISUAL`，配置 `configs/stage_b/r_text_visual_20260729.yaml`。
+- 当前活跃研究是 geometry-matched PASD RGB+IR 的 Stage-A 视觉底座，详见 [`../../docs/README.md`](../../docs/README.md)。
+- 已完成的 `SALTVI-STAGEA-PASD-NOMB-B16-20260811` 已登记；仍在运行的 Direct/PostTrain60 应在完成、选择 checkpoint 并生成结构化指标后再归档。
 
-总表中该次运行的 `archived` lifecycle 保持不变，因为它表示原始实验运行已
-完成并归档，不表示方案不再有效。当前默认身份及不要求多随机种子验证的人工
-决策记录在 `docs/protocols/SALT_R_TEXT_VISUAL_DEFAULT.md`。
+## 维护流程
 
-## SYSU 评估协议约束
+完成实验后同时登记：
 
-SYSU-MM01 的正式 Rank-1、mAP 和 mINP 只接受 10-trial gallery
-平均结果。只有存在原始日志、配置或源表直接证据的记录，才在
-`evaluation_protocol` 中标注 `10-trial`；协议为空的历史原始记录不得按
-10-trial 结果引用。1-trial 结果属于无效诊断结果，不得进入总表。配置字段
-`trial: 1` 是实验运行编号，不能解释为只评估一个 gallery trial。RegDB 的
-`T01/T03/T05` 也属于另一套训练/划分标识，不按 SYSU gallery-trial 规则处理。
+1. 稳定 experiment ID、阶段、数据集与协议；
+2. 配置快照和代码提交；
+3. 实际命令、运行目录和日志；
+4. 结构化指标及选择规则；
+5. checkpoint 路径、身份、哈希和保留状态；
+6. 单 seed、测试集调参、缺失资产或其他有效性边界。
+
+原始日志、配置快照、`experiments/` 元数据和 Git 历史承担细节追溯；README 只说明总表语义，不复制表内结果。

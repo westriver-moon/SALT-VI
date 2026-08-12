@@ -20,7 +20,7 @@ from torch.cuda import amp
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-GIT_ROOT = PROJECT_ROOT.parent
+GIT_ROOT = PROJECT_ROOT
 SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
@@ -46,9 +46,9 @@ ALGORITHM_FILES = (
     "src/salt_vi/baselines/vision_text/data/transforms.py",
     "src/salt_vi/baselines/vision_text/engine/evaluator.py",
     "src/salt_vi/baselines/vision_text/engine/trainer.py",
-    "src/salt_vi/baselines/vision_text/model/pmt_model.py",
+    "src/salt_vi/baselines/vision_text/model/model.py",
     "src/salt_vi/baselines/vision_text/model/vision_transformer.py",
-    "scripts/vision_text/super_resolution/preflight_pmt_sr.py",
+    "scripts/vision_text/super_resolution/preflight_vision_text_sr.py",
     "src/salt_vi/utils/super_resolution/build_sysu_swinir_x2.py",
 )
 

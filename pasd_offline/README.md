@@ -1,44 +1,55 @@
 # PASD Offline Generator
 
-This package builds fixed-size PASD images before SALT training. It is isolated
-from `src/salt_vi` and uses the pinned implementation in `vendor/pasd`.
+`pasd_offline` 在 SALT 训练前生成固定尺寸或动态语义视图的数据集。它与 `src/salt_vi` 隔离，并使用 `vendor/pasd` 中固定版本的 PASD 实现。
 
-## Structure
+## 当前正式数据链
+
+单视图 PASD RGB 数据：
+
+```text
+/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1
+```
+
+当前 Stage-A 主线使用的 RGB+IR geometry-matched 数据：
+
+```text
+/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+```
+
+其中 RGB 沿用 PASD 输出；IR 不进行语义生成，只以相同的人物比例、模糊背景和目标尺寸进行几何适配。组合数据共有 29,033 个 RGB 和 15,712 个 IR 视图，输出均为 256×512 RGB PNG，完整性报告当前为零错误。
+
+派生数据必须放在 `/home/lab929/datasets/derived/`，不能写入源码仓库。
+
+## 结构
 
 ```text
 pasd_offline/
-├── configs/                 # generation settings
-├── pasd_offline/            # config, records, geometry, runtime, generation, scheduler
+├── configs/                  # 生成配置
+├── pasd_offline/             # records、geometry、调度、生成与校验
 ├── scripts/
 │   ├── build_sysu_records.py
 │   ├── generate_dataset.py
+│   ├── build_sysu_geomatched_dataset.py
 │   └── validate_dataset.py
 ├── tests/
-├── vendor/pasd/             # pinned PASD source
-└── checkpoints/             # local weights, ignored by Git
+├── vendor/pasd/              # 固定上游源码
+└── checkpoints/              # 本地权重，不进入 Git
 ```
 
-Generated data belongs under `/home/lab929/datasets/derived`, not in this
-repository. The formal single-view RGB dataset is:
-
-```text
-/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/
-```
-
-## Environment
+## 环境与测试
 
 ```bash
 conda create -n salt-pasd-offline python=3.10.19 -y
 conda activate salt-pasd-offline
 python -m pip install -r requirements-lock.txt
+PYTHONPATH=. python -m pytest tests
 ```
 
-The model layout is configured in YAML. The standard paths are
-`checkpoints/stable-diffusion-v1-5` and `checkpoints/pasd/checkpoint-100000`.
+标准模型目录为 `checkpoints/stable-diffusion-v1-5` 和 `checkpoints/pasd/checkpoint-100000`。
 
-## Build records
+## Records 与生成
 
-One canonical JSONL schema supports either one or five views per source:
+标准一视图 records：
 
 ```bash
 python scripts/build_sysu_records.py \
@@ -49,12 +60,7 @@ python scripts/build_sysu_records.py \
   --pilot-output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/pilot-records.jsonl
 ```
 
-Use `--views-per-source 5` to build the original-caption plus four-paraphrase
-variant. The record builder preserves the supplied captions verbatim.
-
-## Generate
-
-The same command handles local and dynamic multi-GPU generation:
+生成：
 
 ```bash
 python scripts/generate_dataset.py \
@@ -63,15 +69,17 @@ python scripts/generate_dataset.py \
   --workers 2
 ```
 
-`--workers 1` runs in the foreground. Values 2 or 3 use the configured idle
-physical GPUs; GPU 0 is rejected. Generation is resumable per source and writes
-PNG files, source metadata, `build.json`, `manifest.jsonl`, and `manifest.json`.
-The build fingerprint binds the generation config and records file.
+`--workers 1` 前台运行；2 或 3 使用配置中可用的物理 GPU。生成按 source 可恢复，并写出 PNG、source metadata、`build.json`、`manifest.jsonl` 和 `manifest.json`。build fingerprint 绑定配置和 records。
 
-Single-view generation preserves the complete source frame over a blurred
-same-image background. Both one- and five-view outputs are 256×512 RGB PNGs.
+构建 geometry-matched RGB+IR 数据时使用 `scripts/build_sysu_geomatched_dataset.py`。构建器拒绝覆盖已存在的派生目录；IR 输出必须保持源宽高比且 `semantic_generation: false`。
 
-## Validate and consume
+## 动态加权视图
+
+records 可以由 `semantic_imagination` 输出数据相关数量的假设视图。每个 source 的 `hypothesis_weight` 必须为正且总和为 1；该权重写入 manifest 并由 SALT sampler 原样使用。动态视图在生成配置中使用 `views_per_source: 0`，训练配置对应 `sysu_sr_views_per_image: 0`。
+
+当前活跃训练仍使用单视图、权重 1；动态语义视图尚未成为当前实验变量。
+
+## 校验与消费
 
 ```bash
 python scripts/validate_dataset.py \
@@ -79,7 +87,4 @@ python scripts/validate_dataset.py \
   --records /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/source-records.jsonl
 ```
 
-Stage B points `sysu_sr_view_manifest` to the published `manifest.jsonl` and
-sets `sysu_sr_views_per_image` to the same value, 1 or 5. The sibling
-`manifest.json` records completeness, counts, checksums, and the build
-fingerprint.
+SALT 配置必须同时设置 `sysu_sr_data_root`、`sysu_sr_view_manifest`、`sysu_sr_views_per_image`、`sysu_sr_modalities` 和 `sysu_sr_exact_size: true`。不要绕过 manifest 直接按文件名猜测来源或视图。
