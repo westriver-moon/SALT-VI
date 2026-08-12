@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint
 
+from salt_vi.attention import normalize_attention_backend, run_scaled_dot_product_attention
+
 
 def _ntuple(n):
     def parse(x):
@@ -91,11 +93,21 @@ class Mlp(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0.0, proj_drop=0.0):
+    def __init__(
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=False,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        attention_backend="legacy",
+    ):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = qk_scale or head_dim**-0.5
+        self.attention_backend = normalize_attention_backend(attention_backend)
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
@@ -106,10 +118,16 @@ class Attention(nn.Module):
         qkv = self.qkv(x).reshape(batch, tokens, 3, self.num_heads, channels // self.num_heads)
         qkv = qkv.permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
-        attn = (q @ k.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-        x = (attn @ v).transpose(1, 2).reshape(batch, tokens, channels)
+        x = run_scaled_dot_product_attention(
+            q,
+            k,
+            v,
+            scale=self.scale,
+            dropout_p=self.attn_drop.p,
+            training=self.training,
+            backend=self.attention_backend,
+        )
+        x = x.transpose(1, 2).reshape(batch, tokens, channels)
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
@@ -128,6 +146,7 @@ class Block(nn.Module):
         drop_path=0.0,
         act_layer=nn.GELU,
         norm_layer=nn.LayerNorm,
+        attention_backend="legacy",
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -138,6 +157,7 @@ class Block(nn.Module):
             qk_scale=qk_scale,
             attn_drop=attn_drop,
             proj_drop=drop,
+            attention_backend=attention_backend,
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.norm2 = norm_layer(dim)
@@ -267,6 +287,7 @@ class ViT(nn.Module):
         drop_path_rate=0.0,
         patch_embed_config=None,
         norm_layer=nn.LayerNorm,
+        attention_backend="legacy",
     ):
         super().__init__()
         if patch_embed_config:
@@ -296,6 +317,7 @@ class ViT(nn.Module):
                     attn_drop=attn_drop_rate,
                     drop_path=dpr[i],
                     norm_layer=norm_layer,
+                    attention_backend=attention_backend,
                 )
                 for i in range(depth)
             ]

@@ -337,6 +337,9 @@ class CLIP2ReID(nn.Module):
             pmt_gradient_checkpointing=getattr(
                 self.args, "pmt_gradient_checkpointing", False
             ),
+            pmt_attention_backend=getattr(
+                self.args, "pmt_attention_backend", "legacy"
+            ),
         )
         self.embed_dim = base_cfg['embed_dim']
         if args.pretrain_choice == 'RN50':

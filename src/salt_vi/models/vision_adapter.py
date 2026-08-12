@@ -48,6 +48,7 @@ class PMTViTVisual(nn.Module):
         pretrained_path=None,
         patch_embed_config=None,
         gradient_checkpointing=False,
+        attention_backend="legacy",
     ):
         super().__init__()
         self.input_resolution = to_2tuple(input_resolution)
@@ -65,6 +66,7 @@ class PMTViTVisual(nn.Module):
             attn_drop_rate=attn_drop_rate,
             drop_path_rate=drop_path_rate,
             patch_embed_config=patch_embed_config,
+            attention_backend=attention_backend,
         )
         if embed_dim == output_dim:
             self.projection = nn.Identity()

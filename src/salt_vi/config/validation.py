@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from salt_vi.attention import validate_attention_backend_runtime
 from salt_vi.retrieval import get_retrieval_protocol
 
 
@@ -36,6 +37,15 @@ def validate_runtime_config(config):
     training_mode = str(_value(config, "training_mode", ""))
     joint_mode = str(_value(config, "joint_mode", "image_only"))
     uses_text = "Text" in training_mode
+    attention_backend = validate_attention_backend_runtime(
+        _value(config, "pmt_attention_backend", "legacy")
+    )
+    if attention_backend != "legacy" and str(
+        _value(config, "pretrain_choice", "")
+    ) != "PMT_VIT":
+        raise ValueError(
+            "pmt_attention_backend is only implemented for pretrain_choice='PMT_VIT'"
+        )
 
     if joint_mode not in SUPPORTED_JOINT_MODES:
         raise ValueError(

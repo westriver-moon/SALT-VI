@@ -132,6 +132,11 @@ def build_parser():
     parser.add_argument("--pmt_mlp_ratio", type=float, default=4.0)
     parser.add_argument("--pmt_dropout", type=float, default=0.03)
     parser.add_argument("--pmt_attention_dropout", type=float, default=0.0)
+    parser.add_argument(
+        "--pmt_attention_backend",
+        choices=("legacy", "sdpa", "flash"),
+        default="legacy",
+    )
     parser.add_argument("--pmt_drop_path_rate", type=float, default=0.1)
     parser.add_argument("--pmt_patch_embed", type=ast.literal_eval, default=None)
 

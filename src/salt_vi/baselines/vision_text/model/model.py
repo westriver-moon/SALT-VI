@@ -59,6 +59,7 @@ class PMTModel(nn.Module):
             drop_path_rate=float(config.model.drop_path),
             patch_embed_config=config.model.get("patch_embed"),
             gradient_checkpointing=bool(config.model.get("gradient_checkpointing", False)),
+            attention_backend=config.model.get("attention_backend", "legacy"),
         )
         self.backbone_chunk_size = int(config.model.get("backbone_chunk_size", 0) or 0)
         self.num_classes = int(num_classes)
