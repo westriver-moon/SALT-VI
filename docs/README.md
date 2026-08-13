@@ -20,14 +20,14 @@
 - `manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 共同固定来源、大小、校验和与完整性；当前校验错误数为 0。
 - 训练配置使用 `sysu_sr_backend: pasd_multiview`、`sysu_sr_modalities: [rgb, ir]`、`sysu_sr_view_sampling: paired` 和 `sysu_sr_exact_size: true`。
 
-当前并行比较两种 RN50 Stage-A 适配策略：
+已完成两种 RN50 Stage-A 适配路线的工程比较：
 
-| 路线 | 配置 | 初始化与调度 | 2026-08-13 00:18 观测到的最佳 SYSU 结果 |
+| 路线 | 配置 | 初始化与调度 | 归档最佳 SYSU 结果 |
 | --- | --- | --- | --- |
-| Direct | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_direct.yaml` | ImageNet RN50 初始化；120 epoch，batch 32 | Rank-1 70.1262%，mAP 65.8976%，mINP 51.0262%（epoch 55） |
-| PostTrain60 | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_posttrain_60ep.yaml` | `pretrained/tvi_lfm/sysu/VI_sysu_BASE.pth`；60 epoch，batch 16，低学习率 | Rank-1 66.6448%，mAP 61.9430%，mINP 46.6493%（epoch 19） |
+| Direct | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_direct.yaml` | ImageNet RN50 初始化；120 epoch，batch 32 | Rank-1 71.5698%，mAP 67.8598%，mINP 53.9621%（epoch 115；完成 120 epoch） |
+| PostTrain60 | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_posttrain_60ep.yaml` | `pretrained/tvi_lfm/sysu/VI_sysu_BASE.pth`；60 epoch，batch 16，低学习率 | Rank-1 66.6448%，mAP 61.9430%，mINP 46.6493%（epoch 19；在 epoch 28 停止） |
 
-这些运行当时尚未完成。由于两条路线的初始化、batch size、学习率和调度同时不同，它们是工程路线比较，不是只隔离“是否 warm start”的严格单因素消融。
+Direct 已完成并保留 epoch 115 最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。由于两条路线的初始化、batch size、学习率和调度同时不同，它们是工程路线比较，不是只隔离“是否 warm start”的严格单因素消融。
 
 已完成的 PMT-ViT、No-MBPatch、geometry-matched PASD 单视图 Stage-A 结果为 Rank-1 67.9174%、mAP 64.9257%、mINP 51.3045%（epoch 23）。对应实验 `SALTVI-STAGEA-PASD-NOMB-B16-20260811` 已归档到总表。
 

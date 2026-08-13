@@ -18,7 +18,7 @@
 
 - 正式 Stage-B 默认仍为 `SALT_R_TEXT_VISUAL`，配置 `configs/stage_b/r_text_visual_20260729.yaml`。
 - 当前活跃研究是 geometry-matched PASD RGB+IR 的 Stage-A 视觉底座，详见 [`../../docs/README.md`](../../docs/README.md)。
-- 已完成的 `SALTVI-STAGEA-PASD-NOMB-B16-20260811` 已登记；仍在运行的 Direct/PostTrain60 应在完成、选择 checkpoint 并生成结构化指标后再归档。
+- `SALTVI-STAGEA-PASD-NOMB-B16-20260811`、RN50 Direct 与停止的 PostTrain60 均已登记；Direct 保留最佳 checkpoint，PostTrain60 仅保留配置、指标和日志。
 
 ## 维护流程
 
