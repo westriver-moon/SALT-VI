@@ -10,11 +10,14 @@
 
 1. `taxonomy.py`：类别、受控状态及状态/value 语义规则；
 2. `schema.py`：原子假设、校验问题和校验结果的数据模型；
-3. `validation.py`：结构化解析、类别约束、state/value 一致性与观测冲突校验；
-4. `sampling.py`：分层调度、确定性种子、重试、失败溯源及 manifest 构建；
-5. `clustering.py`：受控状态精确分组、非结构化文本完全链接回退与 Wilson 区间；
-6. `pasd.py`：向 PASD 动态视图记录的兼容转换；
-7. `plugin.py`：仅作为旧导入路径的兼容门面。
+3. `validator/parser.py`：结构化解析与可唯一确定的表面修复；
+4. `validator/semantic.py`：类别约束、state 主导语义、明确冲突和观测重复校验；
+5. `validator/feedback.py`：把失败代码转换成下一次重试的定向提示；
+6. `validation.py`：只保留旧导入路径兼容层；
+7. `sampling.py`：分层调度、确定性种子、带反馈重试、失败溯源及 manifest 构建；
+8. `clustering.py`：受控状态精确分组、非结构化文本完全链接回退与 Wilson 区间；
+9. `pasd.py`：向 PASD 动态视图记录的兼容转换；
+10. `plugin.py`：仅作为旧导入路径的兼容门面。
 
 ## 关键不变量
 

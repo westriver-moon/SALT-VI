@@ -211,9 +211,9 @@ For Target category {target_category}, choose exactly one canonical state from:
 Return exactly one line in this format:
 ATOM | <category> | <canonical state> | <one short value> | <body location or none>
 The value and location must not contain 'and', 'or', commas, semicolons, or a second detail.
-For a positive state, the value must explicitly name evidence for that state, for example
-'red heart graphic', 'thin frame', 'black footwear strap', or 'small shoulder bag'.
-Do not repeat a value already stated in Visible facts. Use value 'absent' only when the
+The canonical state names the semantic detail. The value may be a short qualifier such as
+color, size, material, or appearance and does not need to repeat the state name. A repeated
+qualifier is allowed when the canonical state itself adds a new detail. Use value 'absent' only when the
 selected category is not visible. Use value 'no_additional_detail' when the category is
 already visible but no compatible extra detail can be inferred; never use 'unknown'. Never
 contradict the visible facts, invent an identity, or describe the background."""
@@ -309,9 +309,9 @@ def main() -> int:
                 "embed_model": str(args.embed_model.resolve()),
                 "perturbation": "downsample-upsample+gaussian-blur+brightness+contrast-v1",
                 "max_image_tiles": args.max_image_tiles,
-                "hypothesis_schema": "atomic-category-state-value-location-v2",
+                "hypothesis_schema": "atomic-category-state-value-location-v3",
                 "canonical_state_taxonomy": "closed-category-specific-v1",
-                "atomic_validation": "schema+state-value+category+contradiction+absence+abstention+not-observed-v6",
+                "atomic_validation": "parser+repair+state-authoritative-semantics+retry-feedback-v3",
                 "atomic_max_attempts": 4,
                 "stratification": "round-robin-eight-identity-attribute-categories-v1",
                 "embedding_projection": "atomic-value-location-v1",
