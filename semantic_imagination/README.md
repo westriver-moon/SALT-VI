@@ -41,17 +41,20 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 ```
 
 后端负责 `observe`、`perturb`、单次原始 `imagine` 和 `embed`；框架负责分层
-调度、重试、失败溯源、受控状态校验、状态分组（或旧文本的完全链接）、medoid、
+调度、带失败反馈的重试、失败溯源、受控状态校验、状态分组（或旧文本的完全链接）、medoid、
 经验质量、类别内条件质量、条件区间和 record 导出。`cluster_linkage="single"`
 只应用于旧结果复现。校验耗尽样本保留在 manifest 中，但不进入语义聚类；模型
 主动返回的 `no_additional_detail` 仍是合法样本，两者不可混同。
 
-## v2 模块边界
+## v3 模块边界
 
 - `taxonomy.py`：八类状态表和 state/value 证据规则；
 - `schema.py`：原子假设与校验结果；
-- `validation.py`：结构、类别和语义一致性校验；
-- `sampling.py`：分层采样、确定性重试和诊断；
+- `validator/parser.py`：结构解析和可唯一确定的表面修复；
+- `validator/semantic.py`：state 主导语义、明确冲突和观测重复校验；
+- `validator/feedback.py`：将失败代码转换为下一次重试提示；
+- `validation.py`：旧导入路径兼容层；
+- `sampling.py`：分层采样、带反馈的确定性重试和诊断；
 - `clustering.py`：精确状态分组与旧文本完全链接；
 - `pasd.py`：PASD record 适配；
 - `plugin.py`：旧调用方兼容门面。
@@ -74,6 +77,6 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 当前研究 backend 为本地 InternVL2.5-8B，实验入口为
 `experiments/run_internvl_sampling.py`。它仍是离线生成插件，没有活跃训练 YAML
 自动启用动态视图；当前 geometry-matched Stage-A 数据仍是一视图、权重1。
-旧机制的原始结果已在v2启用后清理，只保留
-`KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md`中的审计结论。v2真实模型smoke
-结果位于`reports/20260814_v2_smoke_final/`。
+旧校验器的原始结果已清理，关键结论保留在
+`KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md`；v3 的设计、N=512 离线重放与真实
+smoke 验收见 `VALIDATOR_V3_AUDIT.md` 和 `reports/20260814_validator_v3_smoke/`。

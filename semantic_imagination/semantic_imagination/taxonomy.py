@@ -57,44 +57,61 @@ CATEGORY_STATES: Mapping[str, frozenset[str]] = {
 DEFAULT_SAMPLING_STRATA = tuple(CATEGORY_STATES)
 SENTINEL_STATES = frozenset({"absent", "no_additional_detail"})
 
-STATE_VALUE_EVIDENCE: Mapping[str, frozenset[str]] = {
-    "eyewear_type": frozenset({"glass", "glasses", "sunglass", "sunglasses", "spectacle", "goggle"}),
-    "frame_style": frozenset({"frame", "rim", "round", "rectangular", "square", "oval"}),
-    "lens_detail": frozenset({"lens", "tinted", "clear", "reflective"}),
-    "watch": frozenset({"watch", "timepiece"}),
-    "bracelet": frozenset({"bracelet", "bangle"}),
-    "wristband": frozenset({"wristband", "band"}),
-    "cap": frozenset({"cap", "baseball"}),
-    "hat": frozenset({"hat", "beanie"}),
-    "hood": frozenset({"hood", "hooded"}),
-    "other_headwear": frozenset({"helmet", "headband", "turban"}),
-    "tattoo": frozenset({"tattoo", "ink"}),
-    "scar": frozenset({"scar"}),
-    "graphic": frozenset({"graphic", "logo", "heart", "letter", "print", "symbol"}),
-    "pattern": frozenset({"pattern", "stripe", "striped", "plaid", "check", "checked", "dot"}),
-    "sleeve_detail": frozenset({"sleeve", "sleeveless", "cuff"}),
-    "backpack": frozenset({"backpack", "rucksack"}),
-    "shoulder_bag": frozenset({"bag", "purse", "satchel", "tote"}),
-    "bottle": frozenset({"bottle", "flask"}),
-    "bag_accessory": frozenset({"strap", "tag", "charm", "accessory"}),
-    "other_carried_object": frozenset({"umbrella", "book", "parcel", "phone"}),
-    "zipper": frozenset({"zipper", "zip"}),
-    "phone": frozenset({"phone", "mobile"}),
-    "keys": frozenset({"key", "keys"}),
-    "wallet": frozenset({"wallet"}),
-    "other_pocket_item": frozenset({"card", "pen", "earphone", "tissue"}),
-    "laces": frozenset({"lace", "laces", "shoelace"}),
-    "strap": frozenset({"strap", "straps"}),
-    "toe_style": frozenset({"toe", "open", "closed"}),
-    "sock_detail": frozenset({"sock", "socks"}),
-    "texture": frozenset({"texture", "leather", "suede", "canvas", "mesh"}),
-    "other_footwear_detail": frozenset({"sole", "heel", "buckle"}),
-}
-
 COLOR_TOKENS = frozenset(
     {"black", "white", "gray", "grey", "red", "blue", "green", "yellow", "brown", "beige", "dark", "light"}
 )
 
+STATE_VALUE_EVIDENCE: Mapping[str, Mapping[str, frozenset[str]]] = {
+    "eyewear": {
+        "eyewear_type": frozenset({"glass", "glasses", "sunglass", "sunglasses", "spectacle", "goggle"}),
+        "frame_style": frozenset({"frame", "rim", "round", "rectangular", "square", "oval"}),
+        "lens_detail": frozenset({"lens", "tinted", "clear", "reflective"}),
+    },
+    "wrist_accessory": {
+        "watch": frozenset({"watch", "timepiece", "band", "strap"}),
+        "bracelet": frozenset({"bracelet", "bangle"}),
+        "wristband": frozenset({"wristband", "band"}),
+    },
+    "headwear": {
+        "cap": frozenset({"cap", "baseball"}),
+        "hat": frozenset({"hat", "beanie"}),
+        "hood": frozenset({"hood", "hooded"}),
+        "other_headwear": frozenset({"helmet", "headband", "turban"}),
+    },
+    "body_marking": {
+        "tattoo": frozenset({"tattoo", "ink"}),
+        "scar": frozenset({"scar"}),
+    },
+    "clothing_detail": {
+        "graphic": frozenset({"graphic", "logo", "heart", "letter", "print", "symbol"}),
+        "pattern": frozenset({"pattern", "stripe", "striped", "plaid", "check", "checked", "dot"}),
+        "color_detail": COLOR_TOKENS,
+        "sleeve_detail": frozenset({"sleeve", "sleeveless", "cuff"}),
+    },
+    "carried_object": {
+        "backpack": frozenset({"backpack", "rucksack", "bag"}),
+        "shoulder_bag": frozenset({"bag", "purse", "satchel", "tote"}),
+        "bottle": frozenset({"bottle", "flask"}),
+        "bag_accessory": frozenset({"strap", "tag", "charm", "accessory"}),
+        "other_carried_object": frozenset({"umbrella", "book", "parcel", "phone"}),
+    },
+    "pocket_item": {
+        "zipper": frozenset({"zipper", "zip"}),
+        "phone": frozenset({"phone", "mobile"}),
+        "keys": frozenset({"key", "keys"}),
+        "wallet": frozenset({"wallet"}),
+        "other_pocket_item": frozenset({"card", "pen", "earphone", "tissue"}),
+    },
+    "footwear_detail": {
+        "laces": frozenset({"lace", "laces", "shoelace"}),
+        "strap": frozenset({"strap", "straps"}),
+        "toe_style": frozenset({"toe", "open", "closed"}),
+        "sock_detail": frozenset({"sock", "socks"}),
+        "color_detail": COLOR_TOKENS,
+        "texture": frozenset({"texture", "leather", "suede", "canvas", "mesh"}),
+        "other_footwear_detail": frozenset({"sole", "heel", "buckle"}),
+    },
+}
 
 def normalize_symbol(value: str) -> str:
     import re
@@ -102,15 +119,5 @@ def normalize_symbol(value: str) -> str:
     return re.sub(r"[^a-z0-9_]+", "_", value.strip().casefold()).strip("_")
 
 
-def state_value_compatible(state: str, value: str) -> bool:
-    normalized_value = normalize_symbol(value)
-    if state in SENTINEL_STATES:
-        return normalized_value == state
-    if normalized_value in SENTINEL_STATES:
-        return False
-
-    tokens = set(normalized_value.split("_"))
-    if state == "color_detail":
-        return bool(tokens & COLOR_TOKENS)
-    evidence = STATE_VALUE_EVIDENCE.get(state)
-    return evidence is None or bool(tokens & evidence)
+def evidence_for(category: str, state: str) -> frozenset[str]:
+    return STATE_VALUE_EVIDENCE.get(category, {}).get(state, frozenset())

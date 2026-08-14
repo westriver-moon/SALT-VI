@@ -6,7 +6,7 @@ from .plugin import (
 )
 from .schema import AtomicHypothesis, ValidationIssue, ValidationResult
 from .taxonomy import CATEGORY_STATES, DEFAULT_SAMPLING_STRATA
-from .validation import validate_atomic_response
+from .validator import validate_atomic_response
 
 __all__ = [
     "ImaginationBackend",

@@ -9,6 +9,7 @@ from typing import Protocol
 
 from .clustering import cluster_hypothesis_samples, wilson_interval
 from .schema import ValidationResult
+from .validator import build_retry_instruction
 
 
 class ImaginationBackend(Protocol):
@@ -30,11 +31,19 @@ def _default_compose(observed: str, hypothesis: str) -> str:
     return " ".join(part.strip() for part in (observed, hypothesis) if part.strip())
 
 
-def _validation_attempt(result: ValidationResult, seed: int) -> dict:
+def _validation_attempt(
+    result: ValidationResult,
+    seed: int,
+    instruction: str,
+    retry_feedback_applied: bool,
+) -> dict:
     return {
         "seed": seed,
+        "instruction": instruction,
+        "retry_feedback_applied": retry_feedback_applied,
         "raw": result.raw,
         "valid": result.valid,
+        "repairs": list(result.repairs),
         "issues": [
             {"code": issue.code, "message": issue.message} for issue in result.issues
         ],
@@ -123,10 +132,16 @@ def build_hypothesis_manifest(
         if stratum is not None:
             sample["stratum"] = stratum
         attempts = []
+        last_result: ValidationResult | None = None
         for attempt_index in range(max_attempts if validator else 1):
             attempt_seed = (sample_seed + attempt_index * 1000003) % (2**31)
+            attempt_instruction = (
+                sampled_instruction
+                if last_result is None
+                else build_retry_instruction(sampled_instruction, last_result)
+            )
             raw = str(
-                backend.imagine(perturbed, observed, sampled_instruction, attempt_seed)
+                backend.imagine(perturbed, observed, attempt_instruction, attempt_seed)
             ).strip()
             if validator is None:
                 if not raw:
@@ -134,11 +149,19 @@ def build_hypothesis_manifest(
                 text = raw
                 break
             result = validator(raw, stratum or "", observed)
-            attempts.append(_validation_attempt(result, attempt_seed))
+            attempts.append(
+                _validation_attempt(
+                    result,
+                    attempt_seed,
+                    attempt_instruction,
+                    retry_feedback_applied=attempt_index > 0,
+                )
+            )
             if result.valid:
                 assert result.hypothesis is not None
                 text = result.hypothesis.to_text()
                 break
+            last_result = result
         else:
             text = ""
 
@@ -183,11 +206,25 @@ def build_hypothesis_manifest(
             "validation_failed": len(category_samples) - valid_count,
             "valid_rate": valid_count / len(category_samples),
         }
+    issue_counts: dict[str, int] = {}
+    for sample in samples:
+        for attempt in sample.get("attempts", []):
+            for issue in attempt["issues"]:
+                code = str(issue["code"])
+                issue_counts[code] = issue_counts.get(code, 0) + 1
     diagnostics = {
         "scheduled": len(samples),
         "valid": len(valid_indices),
         "validation_failed": len(samples) - len(valid_indices),
         "valid_rate": len(valid_indices) / len(samples),
+        "attempts": sum(len(sample.get("attempts", [])) for sample in samples),
+        "retries": sum(max(0, len(sample.get("attempts", [])) - 1) for sample in samples),
+        "repaired": sum(
+            bool(sample["attempts"][-1].get("repairs"))
+            for sample in samples
+            if sample["status"] == "valid" and sample.get("attempts")
+        ),
+        "validation_issue_counts": issue_counts,
         "active_abstentions": sum(
             sample.get("text", "").find("state=no_additional_detail") >= 0
             for sample in samples
@@ -209,6 +246,7 @@ def build_hypothesis_manifest(
             "enabled": validator is not None,
             "max_attempts": max_attempts,
             "failure_policy": validation_failure_policy,
+            "retry_feedback": "validator_issue_codes" if validator is not None else "disabled",
         },
         "backend_contract": dict(contract or {}),
     }

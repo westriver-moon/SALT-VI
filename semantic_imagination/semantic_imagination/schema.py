@@ -28,7 +28,12 @@ class ValidationResult:
     raw: str
     hypothesis: AtomicHypothesis | None = None
     issues: tuple[ValidationIssue, ...] = field(default_factory=tuple)
+    repairs: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def valid(self) -> bool:
         return self.hypothesis is not None and not self.issues
+
+    @property
+    def repaired(self) -> bool:
+        return self.valid and bool(self.repairs)
