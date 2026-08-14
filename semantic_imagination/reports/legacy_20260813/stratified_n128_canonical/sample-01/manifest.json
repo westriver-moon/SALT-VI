@@ -1,0 +1,1567 @@
+{
+  "schema_version": 1,
+  "source_key": "/home/cgv841/datasets/SYSU-MM01/cam1/0102/0001.jpg",
+  "image": "/home/cgv841/datasets/SYSU-MM01/cam1/0102/0001.jpg",
+  "observed": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag.",
+  "sampling_contract": {
+    "schema_version": 1,
+    "backend_id": "OpenGVLab/InternVL2_5-8B",
+    "instruction": "Infer one atomic detail that the low-resolution image leaves genuinely ambiguous. Keep it compatible with the clearly observed pedestrian.",
+    "sample_count": 128,
+    "seed": 20260814,
+    "similarity_threshold": 0.92,
+    "cluster_linkage": "complete",
+    "sampling_strata": [
+      "eyewear",
+      "wrist_accessory",
+      "headwear",
+      "body_marking",
+      "clothing_detail",
+      "carried_object",
+      "pocket_item",
+      "footwear_detail"
+    ],
+    "backend_contract": {
+      "model_path": "/home/lab929/huggingface/OpenGVLab/InternVL2_5-8B",
+      "embed_model": "/home/lab929/huggingface/google-bert/bert-base-uncased",
+      "perturbation": "downsample-upsample+gaussian-blur+brightness+contrast-v1",
+      "max_image_tiles": 2,
+      "hypothesis_schema": "atomic-category-value-location-v1",
+      "atomic_validation": "schema+category+contradiction+absence+abstention+not-observed-v4",
+      "atomic_max_attempts": 4,
+      "stratification": "round-robin-eight-identity-attribute-categories-v1",
+      "embedding_projection": "atomic-value-location-v1",
+      "atomic_hard_states": [
+        "absent",
+        "no_additional_detail"
+      ],
+      "canonical_state_taxonomy": "closed-category-specific-v1"
+    }
+  },
+  "sampling_contract_sha256": "c5c9e9eff75db53aa8f2c1962ffdf48fbbef8e84c8f9430da430fd102960f5b6",
+  "samples": [
+    {
+      "seed": 1460987903,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 145545133,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1552638564,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 252186253,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1858931986,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 506760673,
+      "text": "category=carried_object; state=bottle; value=bottle; location=right_hip",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 447959913,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 662968219,
+      "text": "category=footwear_detail; state=color_detail; value=white; location=sneakers",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1108216321,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 168881314,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 861133212,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=head",
+      "stratum": "headwear",
+      "cluster_id": 8
+    },
+    {
+      "seed": 575456509,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 68501207,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=back",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 984680165,
+      "text": "category=carried_object; state=backpack; value=backpack; location=waist",
+      "stratum": "carried_object",
+      "cluster_id": 9
+    },
+    {
+      "seed": 754229877,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 924013725,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1976098279,
+      "text": "category=eyewear; state=frame_style; value=frame; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 1655533802,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 218057628,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1582694476,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1167243672,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 577207434,
+      "text": "category=carried_object; state=backpack; value=backpack; location=right_waist",
+      "stratum": "carried_object",
+      "cluster_id": 9
+    },
+    {
+      "seed": 293853878,
+      "text": "category=pocket_item; state=absent; value=absent; location=body location",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1522429468,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1846077110,
+      "text": "category=eyewear; state=lens_detail; value=transparent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 15
+    },
+    {
+      "seed": 387523229,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1608153592,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 238722920,
+      "text": "category=body_marking; state=scar; value=scars; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 16
+    },
+    {
+      "seed": 197629832,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 533652109,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=hand",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 490838690,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 412071818,
+      "text": "category=footwear_detail; state=laces; value=laces; location=top",
+      "stratum": "footwear_detail",
+      "cluster_id": 18
+    },
+    {
+      "seed": 447731766,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 98176885,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 19
+    },
+    {
+      "seed": 82465908,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1713943834,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1883302361,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1343066660,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=no_additional_detail",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1235690516,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1376118136,
+      "text": "category=footwear_detail; state=sock_detail; value=socks; location=ankle",
+      "stratum": "footwear_detail",
+      "cluster_id": 20
+    },
+    {
+      "seed": 1074503324,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 60873156,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 19
+    },
+    {
+      "seed": 304918954,
+      "text": "category=headwear; state=absent; value=absent; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 2001002457,
+      "text": "category=body_marking; state=scar; value=scars; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 16
+    },
+    {
+      "seed": 955748932,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 333542069,
+      "text": "category=carried_object; state=shoulder_bag; value=shoulder_bag; location=hand",
+      "stratum": "carried_object",
+      "cluster_id": 21
+    },
+    {
+      "seed": 290443775,
+      "text": "category=pocket_item; state=absent; value=absent; location=pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 371689835,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 108743008,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1711696689,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1991875041,
+      "text": "category=headwear; state=absent; value=absent; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1839755934,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 2117404637,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 393149678,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1292569781,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=no_additional_detail",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 769299595,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1744251671,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1348286432,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 19
+    },
+    {
+      "seed": 92516523,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1198577408,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 969920964,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1485673449,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=left_hip",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1544417660,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1891295374,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 720488556,
+      "text": "category=eyewear; state=frame_style; value=frame; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 2137561929,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 19
+    },
+    {
+      "seed": 966347827,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 321196135,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1960408256,
+      "text": "category=clothing_detail; state=pattern; value=patterned; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 973707466,
+      "text": "category=carried_object; state=bag_accessory; value=strap; location=side",
+      "stratum": "carried_object",
+      "cluster_id": 22
+    },
+    {
+      "seed": 1513935829,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 902559944,
+      "text": "category=footwear_detail; state=sock_detail; value=sock type; location=lower leg",
+      "stratum": "footwear_detail",
+      "cluster_id": 20
+    },
+    {
+      "seed": 1258341512,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 192604325,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 331477884,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1261990920,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 896769637,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1772588631,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 863352225,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 165756561,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=/",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1653407815,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 542268924,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1164976092,
+      "text": "category=headwear; state=absent; value=absent; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 106443743,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 23
+    },
+    {
+      "seed": 538045527,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1961222251,
+      "text": "category=carried_object; state=bag_accessory; value=strap; location=shoulder",
+      "stratum": "carried_object",
+      "cluster_id": 22
+    },
+    {
+      "seed": 510092315,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 590980453,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 10
+    },
+    {
+      "seed": 107151014,
+      "text": "category=eyewear; state=lens_detail; value=transparent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 15
+    },
+    {
+      "seed": 1093933977,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 417852643,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1161653287,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1771989536,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1956029929,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1563716574,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 815619803,
+      "text": "category=footwear_detail; state=invalid_output; value=low-resolution; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 24
+    },
+    {
+      "seed": 557060382,
+      "text": "category=eyewear; state=lens_detail; value=lens shape; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 15
+    },
+    {
+      "seed": 201982989,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 428571457,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 2051954112,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 23
+    },
+    {
+      "seed": 1757817892,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 555241675,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 331213222,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=no_additional_detail",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 465329138,
+      "text": "category=footwear_detail; state=texture; value=texture; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 25
+    },
+    {
+      "seed": 1817398300,
+      "text": "category=eyewear; state=frame_style; value=black frame; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 613904476,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 543699205,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 74593314,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 981784489,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1434133456,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1137024423,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=/",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 565461937,
+      "text": "category=footwear_detail; state=laces; value=laces; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 18
+    },
+    {
+      "seed": 834807402,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 64847447,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 165680565,
+      "text": "category=headwear; state=absent; value=absent; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1720297554,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 765275378,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 756206334,
+      "text": "category=carried_object; state=bag_accessory; value=strap; location=shoulder",
+      "stratum": "carried_object",
+      "cluster_id": 22
+    },
+    {
+      "seed": 1866466797,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1091470784,
+      "text": "category=footwear_detail; state=laces; value=laces; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 18
+    },
+    {
+      "seed": 1120204873,
+      "text": "category=eyewear; state=frame_style; value=frameless; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 1016684969,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 905539025,
+      "text": "category=headwear; state=absent; value=absent; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 821984636,
+      "text": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1494439338,
+      "text": "category=clothing_detail; state=pattern; value=checkered; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 13
+    },
+    {
+      "seed": 990565098,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1518614223,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=body_location",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1000733371,
+      "text": "category=footwear_detail; state=color_detail; value=white; location=no_additional_detail",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    }
+  ],
+  "hypotheses": [
+    {
+      "cluster_id": 0,
+      "category": "eyewear",
+      "state": "no_additional_detail",
+      "representative_index": 32,
+      "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=face",
+      "member_indices": [
+        0,
+        8,
+        32,
+        40,
+        48,
+        56,
+        72,
+        80,
+        112
+      ],
+      "count": 9,
+      "weight": 0.0703125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.037429768303939966,
+        "upper": 0.12823480349360633
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.5625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.331785563988119,
+        "upper": 0.7690134759450765
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional eyewear detail at face."
+    },
+    {
+      "cluster_id": 1,
+      "category": "wrist_accessory",
+      "state": "absent",
+      "representative_index": 1,
+      "representative": "category=wrist_accessory; state=absent; value=absent; location=none",
+      "member_indices": [
+        1,
+        9,
+        17,
+        25,
+        49,
+        73,
+        81,
+        89,
+        97,
+        105,
+        113,
+        121
+      ],
+      "count": 12,
+      "weight": 0.09375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.05444380439914702,
+        "upper": 0.15672997257307858
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.75,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.5050168346449122,
+        "upper": 0.8981793250878696
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no wrist accessory."
+    },
+    {
+      "cluster_id": 2,
+      "category": "headwear",
+      "state": "absent",
+      "representative_index": 2,
+      "representative": "category=headwear; state=absent; value=absent; location=head",
+      "member_indices": [
+        2,
+        18,
+        26,
+        34,
+        42,
+        50,
+        58,
+        66,
+        74,
+        82,
+        90,
+        98,
+        106,
+        114,
+        122
+      ],
+      "count": 15,
+      "weight": 0.1171875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.07231682349355734,
+        "upper": 0.18436615865334754
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.9375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.7167126242970107,
+        "upper": 0.9888806552353576
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no headwear at head."
+    },
+    {
+      "cluster_id": 3,
+      "category": "body_marking",
+      "state": "no_additional_detail",
+      "representative_index": 3,
+      "representative": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        3,
+        11,
+        35,
+        67,
+        75,
+        91
+      ],
+      "count": 6,
+      "weight": 0.046875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02165784417192377,
+        "upper": 0.09849752245094323
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.18481232558863633,
+        "upper": 0.6135895945449727
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional body marking detail."
+    },
+    {
+      "cluster_id": 4,
+      "category": "clothing_detail",
+      "state": "no_additional_detail",
+      "representative_index": 28,
+      "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        4,
+        12,
+        28,
+        36,
+        60,
+        76,
+        92,
+        108
+      ],
+      "count": 8,
+      "weight": 0.0625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03200692569506118,
+        "upper": 0.11848791104425867
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.5,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.27999563610326017,
+        "upper": 0.7200043638967398
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional clothing detail detail."
+    },
+    {
+      "cluster_id": 5,
+      "category": "carried_object",
+      "state": "bottle",
+      "representative_index": 5,
+      "representative": "category=carried_object; state=bottle; value=bottle; location=right_hip",
+      "member_indices": [
+        5
+      ],
+      "count": 1,
+      "weight": 0.0078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0013804318928742412,
+        "upper": 0.04292625943886061
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.0625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01111934476464252,
+        "upper": 0.28328737570298945
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have bottle at right hip."
+    },
+    {
+      "cluster_id": 6,
+      "category": "pocket_item",
+      "state": "no_additional_detail",
+      "representative_index": 6,
+      "representative": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        6,
+        14,
+        54,
+        62,
+        70,
+        78,
+        102,
+        110,
+        126
+      ],
+      "count": 9,
+      "weight": 0.0703125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.037429768303939966,
+        "upper": 0.12823480349360633
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.5625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.331785563988119,
+        "upper": 0.7690134759450765
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional pocket item detail."
+    },
+    {
+      "cluster_id": 7,
+      "category": "footwear_detail",
+      "state": "color_detail",
+      "representative_index": 7,
+      "representative": "category=footwear_detail; state=color_detail; value=white; location=sneakers",
+      "member_indices": [
+        7,
+        127
+      ],
+      "count": 2,
+      "weight": 0.015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.004295449710144079,
+        "upper": 0.055180976679817195
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03497748774324047,
+        "upper": 0.36022827265758695
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have white at sneakers."
+    },
+    {
+      "cluster_id": 8,
+      "category": "headwear",
+      "state": "no_additional_detail",
+      "representative_index": 10,
+      "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=head",
+      "member_indices": [
+        10
+      ],
+      "count": 1,
+      "weight": 0.0078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0013804318928742412,
+        "upper": 0.04292625943886061
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.0625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01111934476464252,
+        "upper": 0.28328737570298945
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional headwear detail at head."
+    },
+    {
+      "cluster_id": 9,
+      "category": "carried_object",
+      "state": "backpack",
+      "representative_index": 13,
+      "representative": "category=carried_object; state=backpack; value=backpack; location=waist",
+      "member_indices": [
+        13,
+        21
+      ],
+      "count": 2,
+      "weight": 0.015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.004295449710144079,
+        "upper": 0.055180976679817195
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03497748774324047,
+        "upper": 0.36022827265758695
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have backpack at waist."
+    },
+    {
+      "cluster_id": 10,
+      "category": "footwear_detail",
+      "state": "no_additional_detail",
+      "representative_index": 23,
+      "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        15,
+        23,
+        47,
+        55,
+        63,
+        79,
+        87
+      ],
+      "count": 7,
+      "weight": 0.0546875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02674020138134635,
+        "upper": 0.10858490029974709
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.4375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.23098652405492354,
+        "upper": 0.6682144360118811
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional footwear detail detail."
+    },
+    {
+      "cluster_id": 11,
+      "category": "eyewear",
+      "state": "frame_style",
+      "representative_index": 16,
+      "representative": "category=eyewear; state=frame_style; value=frame; location=face",
+      "member_indices": [
+        16,
+        64,
+        104,
+        120
+      ],
+      "count": 4,
+      "weight": 0.03125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01221826524505338,
+        "upper": 0.07759763126136077
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.25,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.10182067491213048,
+        "upper": 0.49498316535508774
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have frame at face."
+    },
+    {
+      "cluster_id": 12,
+      "category": "body_marking",
+      "state": "tattoo",
+      "representative_index": 19,
+      "representative": "category=body_marking; state=tattoo; value=tattoos; location=arms",
+      "member_indices": [
+        19,
+        51,
+        59,
+        107,
+        115,
+        123
+      ],
+      "count": 6,
+      "weight": 0.046875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02165784417192377,
+        "upper": 0.09849752245094323
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.18481232558863633,
+        "upper": 0.6135895945449727
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have tattoos at arms."
+    },
+    {
+      "cluster_id": 13,
+      "category": "clothing_detail",
+      "state": "pattern",
+      "representative_index": 20,
+      "representative": "category=clothing_detail; state=pattern; value=checkered; location=shirt",
+      "member_indices": [
+        20,
+        44,
+        52,
+        68,
+        84,
+        100,
+        116,
+        124
+      ],
+      "count": 8,
+      "weight": 0.0625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03200692569506118,
+        "upper": 0.11848791104425867
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.5,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.27999563610326017,
+        "upper": 0.7200043638967398
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have checkered at shirt."
+    },
+    {
+      "cluster_id": 14,
+      "category": "pocket_item",
+      "state": "absent",
+      "representative_index": 30,
+      "representative": "category=pocket_item; state=absent; value=absent; location=none",
+      "member_indices": [
+        22,
+        30,
+        38,
+        46,
+        86,
+        94,
+        118
+      ],
+      "count": 7,
+      "weight": 0.0546875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02674020138134635,
+        "upper": 0.10858490029974709
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.4375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.23098652405492354,
+        "upper": 0.6682144360118811
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no pocket item."
+    },
+    {
+      "cluster_id": 15,
+      "category": "eyewear",
+      "state": "lens_detail",
+      "representative_index": 24,
+      "representative": "category=eyewear; state=lens_detail; value=transparent; location=face",
+      "member_indices": [
+        24,
+        88,
+        96
+      ],
+      "count": 3,
+      "weight": 0.0234375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008002416396755477,
+        "upper": 0.06664374505143224
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.1875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06591599071428142,
+        "upper": 0.4300888096197414
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have transparent at face."
+    },
+    {
+      "cluster_id": 16,
+      "category": "body_marking",
+      "state": "scar",
+      "representative_index": 27,
+      "representative": "category=body_marking; state=scar; value=scars; location=none",
+      "member_indices": [
+        27,
+        43
+      ],
+      "count": 2,
+      "weight": 0.015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.004295449710144079,
+        "upper": 0.055180976679817195
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03497748774324047,
+        "upper": 0.36022827265758695
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have scars."
+    },
+    {
+      "cluster_id": 17,
+      "category": "carried_object",
+      "state": "no_additional_detail",
+      "representative_index": 53,
+      "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        29,
+        37,
+        53,
+        61,
+        77,
+        93,
+        101,
+        109,
+        125
+      ],
+      "count": 9,
+      "weight": 0.0703125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.037429768303939966,
+        "upper": 0.12823480349360633
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.5625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.331785563988119,
+        "upper": 0.7690134759450765
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional carried object detail."
+    },
+    {
+      "cluster_id": 18,
+      "category": "footwear_detail",
+      "state": "laces",
+      "representative_index": 111,
+      "representative": "category=footwear_detail; state=laces; value=laces; location=feet",
+      "member_indices": [
+        31,
+        111,
+        119
+      ],
+      "count": 3,
+      "weight": 0.0234375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008002416396755477,
+        "upper": 0.06664374505143224
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.1875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06591599071428142,
+        "upper": 0.4300888096197414
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have laces at feet."
+    },
+    {
+      "cluster_id": 19,
+      "category": "wrist_accessory",
+      "state": "no_additional_detail",
+      "representative_index": 57,
+      "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=wrist",
+      "member_indices": [
+        33,
+        41,
+        57,
+        65
+      ],
+      "count": 4,
+      "weight": 0.03125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01221826524505338,
+        "upper": 0.07759763126136077
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.25,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.10182067491213048,
+        "upper": 0.49498316535508774
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional wrist accessory detail at wrist."
+    },
+    {
+      "cluster_id": 20,
+      "category": "footwear_detail",
+      "state": "sock_detail",
+      "representative_index": 71,
+      "representative": "category=footwear_detail; state=sock_detail; value=sock type; location=lower leg",
+      "member_indices": [
+        39,
+        71
+      ],
+      "count": 2,
+      "weight": 0.015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.004295449710144079,
+        "upper": 0.055180976679817195
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03497748774324047,
+        "upper": 0.36022827265758695
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have sock type at lower leg."
+    },
+    {
+      "cluster_id": 21,
+      "category": "carried_object",
+      "state": "shoulder_bag",
+      "representative_index": 45,
+      "representative": "category=carried_object; state=shoulder_bag; value=shoulder_bag; location=hand",
+      "member_indices": [
+        45
+      ],
+      "count": 1,
+      "weight": 0.0078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0013804318928742412,
+        "upper": 0.04292625943886061
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.0625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01111934476464252,
+        "upper": 0.28328737570298945
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have shoulder bag at hand."
+    },
+    {
+      "cluster_id": 22,
+      "category": "carried_object",
+      "state": "bag_accessory",
+      "representative_index": 85,
+      "representative": "category=carried_object; state=bag_accessory; value=strap; location=shoulder",
+      "member_indices": [
+        69,
+        85,
+        117
+      ],
+      "count": 3,
+      "weight": 0.0234375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008002416396755477,
+        "upper": 0.06664374505143224
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.1875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06591599071428142,
+        "upper": 0.4300888096197414
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have strap at shoulder."
+    },
+    {
+      "cluster_id": 23,
+      "category": "body_marking",
+      "state": "absent",
+      "representative_index": 83,
+      "representative": "category=body_marking; state=absent; value=absent; location=none",
+      "member_indices": [
+        83,
+        99
+      ],
+      "count": 2,
+      "weight": 0.015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.004295449710144079,
+        "upper": 0.055180976679817195
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03497748774324047,
+        "upper": 0.36022827265758695
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no body marking."
+    },
+    {
+      "cluster_id": 24,
+      "category": "footwear_detail",
+      "state": "invalid_output",
+      "representative_index": 95,
+      "representative": "category=footwear_detail; state=invalid_output; value=low-resolution; location=none",
+      "member_indices": [
+        95
+      ],
+      "count": 1,
+      "weight": 0.0078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0013804318928742412,
+        "upper": 0.04292625943886061
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.0625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01111934476464252,
+        "upper": 0.28328737570298945
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have low-resolution."
+    },
+    {
+      "cluster_id": 25,
+      "category": "footwear_detail",
+      "state": "texture",
+      "representative_index": 103,
+      "representative": "category=footwear_detail; state=texture; value=texture; location=none",
+      "member_indices": [
+        103
+      ],
+      "count": 1,
+      "weight": 0.0078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0013804318928742412,
+        "upper": 0.04292625943886061
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.0625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01111934476464252,
+        "upper": 0.28328737570298945
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have texture."
+    }
+  ],
+  "cluster_linkage": "complete"
+}

@@ -1,0 +1,1742 @@
+{
+  "schema_version": 1,
+  "source_artifacts": "/home/lab929/ybj/SALT-VI/experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited",
+  "sample_prefixes": [
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256,
+    512
+  ],
+  "similarity_threshold": 0.92,
+  "cluster_linkage": "complete",
+  "items": [
+    {
+      "source": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+      "observed": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag.",
+      "prefixes": [
+        {
+          "sample_count": 4,
+          "cluster_count": 4,
+          "max_cluster_weight": 0.25,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.04558726080970055,
+            "upper": 0.6993581574175981
+          },
+          "max_cluster_representative": "category=eyewear; state=absent; value=absent; location=none",
+          "category_count": 4,
+          "category_masses": {
+            "body_marking": 0.25,
+            "eyewear": 0.25,
+            "headwear": 0.25,
+            "wrist_accessory": 0.25
+          },
+          "category_tv_from_previous": null,
+          "minimum_within_cluster_cosine": 0.9999999403953552,
+          "covered_category_count": 4,
+          "effective_n_by_category": {
+            "body_marking": 1,
+            "carried_object": 0,
+            "clothing_detail": 0,
+            "eyewear": 1,
+            "footwear_detail": 0,
+            "headwear": 1,
+            "pocket_item": 0,
+            "wrist_accessory": 1
+          },
+          "final_partition_tv_from_previous": null,
+          "mean_conditional_tv_from_previous": null,
+          "max_conditional_tv_from_previous": null,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "eyewear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "headwear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "wrist_accessory": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 8,
+          "cluster_count": 8,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.02241749145005667,
+            "upper": 0.4708881822128535
+          },
+          "max_cluster_representative": "category=eyewear; state=absent; value=absent; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.5,
+          "minimum_within_cluster_cosine": 0.9999999403953552,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 1,
+            "carried_object": 1,
+            "clothing_detail": 1,
+            "eyewear": 1,
+            "footwear_detail": 1,
+            "headwear": 1,
+            "pocket_item": 1,
+            "wrist_accessory": 1
+          },
+          "final_partition_tv_from_previous": 0.5,
+          "mean_conditional_tv_from_previous": 0.0,
+          "max_conditional_tv_from_previous": 0.0,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "pocket_item": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 16,
+          "cluster_count": 10,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.03497748774324047,
+            "upper": 0.36022827265758695
+          },
+          "max_cluster_representative": "category=eyewear; state=absent; value=absent; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.8532213568687439,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 2,
+            "carried_object": 2,
+            "clothing_detail": 2,
+            "eyewear": 2,
+            "footwear_detail": 2,
+            "headwear": 2,
+            "pocket_item": 2,
+            "wrist_accessory": 2
+          },
+          "final_partition_tv_from_previous": 0.125,
+          "mean_conditional_tv_from_previous": 0.125,
+          "max_conditional_tv_from_previous": 0.5,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "pocket_item": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 32,
+          "cluster_count": 13,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.04970134387480074,
+            "upper": 0.2806830548165022
+          },
+          "max_cluster_representative": "category=eyewear; state=absent; value=absent; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.6241079568862915,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 4,
+            "carried_object": 4,
+            "clothing_detail": 4,
+            "eyewear": 4,
+            "footwear_detail": 4,
+            "headwear": 4,
+            "pocket_item": 4,
+            "wrist_accessory": 4
+          },
+          "final_partition_tv_from_previous": 0.125,
+          "mean_conditional_tv_from_previous": 0.125,
+          "max_conditional_tv_from_previous": 0.5,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 4,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.15003898915214953,
+                "upper": 0.8499610108478505
+              },
+              "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "pocket_item": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 4,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.15003898915214953,
+                "upper": 0.8499610108478505
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 64,
+          "cluster_count": 17,
+          "max_cluster_weight": 0.109375,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.05400113344416799,
+            "upper": 0.2089864132689612
+          },
+          "max_cluster_representative": "category=eyewear; state=absent; value=absent; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.6241079568862915,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 8,
+            "carried_object": 8,
+            "clothing_detail": 8,
+            "eyewear": 8,
+            "footwear_detail": 8,
+            "headwear": 8,
+            "pocket_item": 8,
+            "wrist_accessory": 8
+          },
+          "final_partition_tv_from_previous": 0.140625,
+          "mean_conditional_tv_from_previous": 0.140625,
+          "max_conditional_tv_from_previous": 0.25,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 8,
+              "weight": 0.875,
+              "interval_95": {
+                "lower": 0.5291118177871464,
+                "upper": 0.9775825085499433
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 8,
+              "weight": 0.875,
+              "interval_95": {
+                "lower": 0.5291118177871464,
+                "upper": 0.9775825085499433
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 8,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.40927543031016883,
+                "upper": 0.9285207872478909
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 8,
+              "weight": 0.875,
+              "interval_95": {
+                "lower": 0.5291118177871464,
+                "upper": 0.9775825085499433
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 8,
+              "weight": 0.625,
+              "interval_95": {
+                "lower": 0.3057423946026273,
+                "upper": 0.8631557141764027
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 8,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.21521606221387757,
+                "upper": 0.7847839377861224
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 8,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.40927543031016883,
+                "upper": 0.9285207872478909
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 8,
+              "weight": 0.625,
+              "interval_95": {
+                "lower": 0.3057423946026273,
+                "upper": 0.8631557141764027
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 128,
+          "cluster_count": 18,
+          "max_cluster_weight": 0.1171875,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.07231682349355734,
+            "upper": 0.18436615865334754
+          },
+          "max_cluster_representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.5619283318519592,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 16,
+            "carried_object": 16,
+            "clothing_detail": 16,
+            "eyewear": 16,
+            "footwear_detail": 16,
+            "headwear": 16,
+            "pocket_item": 16,
+            "wrist_accessory": 16
+          },
+          "final_partition_tv_from_previous": 0.0546875,
+          "mean_conditional_tv_from_previous": 0.0546875,
+          "max_conditional_tv_from_previous": 0.125,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 16,
+              "weight": 0.875,
+              "interval_95": {
+                "lower": 0.639771727342413,
+                "upper": 0.9650225122567595
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 16,
+              "weight": 0.9375,
+              "interval_95": {
+                "lower": 0.7167126242970107,
+                "upper": 0.9888806552353576
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 16,
+              "weight": 0.8125,
+              "interval_95": {
+                "lower": 0.5699111903802586,
+                "upper": 0.9340840092857187
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 16,
+              "weight": 0.8125,
+              "interval_95": {
+                "lower": 0.5699111903802586,
+                "upper": 0.9340840092857187
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 16,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.5050168346449122,
+                "upper": 0.8981793250878696
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 16,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.27999563610326017,
+                "upper": 0.7200043638967398
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 16,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.5050168346449122,
+                "upper": 0.8981793250878696
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 16,
+              "weight": 0.5625,
+              "interval_95": {
+                "lower": 0.331785563988119,
+                "upper": 0.7690134759450765
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 256,
+          "cluster_count": 19,
+          "max_cluster_weight": 0.12109375,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.0866351706741643,
+            "upper": 0.1667557205235664
+          },
+          "max_cluster_representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.5619283318519592,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 32,
+            "carried_object": 32,
+            "clothing_detail": 32,
+            "eyewear": 32,
+            "footwear_detail": 32,
+            "headwear": 32,
+            "pocket_item": 32,
+            "wrist_accessory": 32
+          },
+          "final_partition_tv_from_previous": 0.0703125,
+          "mean_conditional_tv_from_previous": 0.0703125,
+          "max_conditional_tv_from_previous": 0.21875,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 32,
+              "weight": 0.78125,
+              "interval_95": {
+                "lower": 0.6124500635075647,
+                "upper": 0.8897616374739581
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 32,
+              "weight": 0.96875,
+              "interval_95": {
+                "lower": 0.8425573617998744,
+                "upper": 0.9944621398359969
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 32,
+              "weight": 0.8125,
+              "interval_95": {
+                "lower": 0.6469084479862404,
+                "upper": 0.9111045531043405
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 32,
+              "weight": 0.59375,
+              "interval_95": {
+                "lower": 0.4226002487538287,
+                "upper": 0.7448036515733456
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 32,
+              "weight": 0.78125,
+              "interval_95": {
+                "lower": 0.6124500635075647,
+                "upper": 0.8897616374739581
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 32,
+              "weight": 0.5625,
+              "interval_95": {
+                "lower": 0.3932559113685198,
+                "upper": 0.7183466888495963
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 32,
+              "weight": 0.8125,
+              "interval_95": {
+                "lower": 0.6469084479862404,
+                "upper": 0.9111045531043405
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 32,
+              "weight": 0.5625,
+              "interval_95": {
+                "lower": 0.3932559113685198,
+                "upper": 0.7183466888495963
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 512,
+          "cluster_count": 22,
+          "max_cluster_weight": 0.123046875,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.09736796799206317,
+            "upper": 0.1543401035490164
+          },
+          "max_cluster_representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.48306041955947876,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 64,
+            "carried_object": 64,
+            "clothing_detail": 64,
+            "eyewear": 64,
+            "footwear_detail": 64,
+            "headwear": 64,
+            "pocket_item": 64,
+            "wrist_accessory": 64
+          },
+          "final_partition_tv_from_previous": 0.046875,
+          "mean_conditional_tv_from_previous": 0.046875,
+          "max_conditional_tv_from_previous": 0.140625,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 64,
+              "weight": 0.71875,
+              "interval_95": {
+                "lower": 0.5986606971779259,
+                "upper": 0.8140662766627217
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 64,
+              "weight": 0.984375,
+              "interval_95": {
+                "lower": 0.9166589839990573,
+                "upper": 0.9972364580766624
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 64,
+              "weight": 0.828125,
+              "interval_95": {
+                "lower": 0.7178678837734179,
+                "upper": 0.9012225769875536
+              },
+              "representative": "category=clothing_detail; state=color_detail; value=red; location=t-shirt"
+            },
+            "eyewear": {
+              "effective_n": 64,
+              "weight": 0.640625,
+              "interval_95": {
+                "lower": 0.518208506097791,
+                "upper": 0.7471159770854825
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 64,
+              "weight": 0.796875,
+              "interval_95": {
+                "lower": 0.6828636426898583,
+                "upper": 0.8772658218081634
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 64,
+              "weight": 0.546875,
+              "interval_95": {
+                "lower": 0.4257359722005412,
+                "upper": 0.6627055221938832
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 64,
+              "weight": 0.671875,
+              "interval_95": {
+                "lower": 0.549991058490915,
+                "upper": 0.7742944209553081
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=right"
+            },
+            "wrist_accessory": {
+              "effective_n": 64,
+              "weight": 0.546875,
+              "interval_95": {
+                "lower": 0.4257359722005412,
+                "upper": 0.6627055221938832
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "source": "/home/cgv841/datasets/SYSU-MM01/cam1/0102/0001.jpg",
+      "observed": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag.",
+      "prefixes": [
+        {
+          "sample_count": 4,
+          "cluster_count": 4,
+          "max_cluster_weight": 0.25,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.04558726080970055,
+            "upper": 0.6993581574175981
+          },
+          "max_cluster_representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 4,
+          "category_masses": {
+            "body_marking": 0.25,
+            "eyewear": 0.25,
+            "headwear": 0.25,
+            "wrist_accessory": 0.25
+          },
+          "category_tv_from_previous": null,
+          "minimum_within_cluster_cosine": 0.9999998807907104,
+          "covered_category_count": 4,
+          "effective_n_by_category": {
+            "body_marking": 1,
+            "carried_object": 0,
+            "clothing_detail": 0,
+            "eyewear": 1,
+            "footwear_detail": 0,
+            "headwear": 1,
+            "pocket_item": 0,
+            "wrist_accessory": 1
+          },
+          "final_partition_tv_from_previous": null,
+          "mean_conditional_tv_from_previous": null,
+          "max_conditional_tv_from_previous": null,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "wrist_accessory": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 8,
+          "cluster_count": 8,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.02241749145005667,
+            "upper": 0.4708881822128535
+          },
+          "max_cluster_representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.5,
+          "minimum_within_cluster_cosine": 0.9999997019767761,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 1,
+            "carried_object": 1,
+            "clothing_detail": 1,
+            "eyewear": 1,
+            "footwear_detail": 1,
+            "headwear": 1,
+            "pocket_item": 1,
+            "wrist_accessory": 1
+          },
+          "final_partition_tv_from_previous": 0.5,
+          "mean_conditional_tv_from_previous": 0.0,
+          "max_conditional_tv_from_previous": 0.0,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "carried_object": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "footwear_detail": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 1,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.20654931437723745,
+                "upper": 1.0
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 16,
+          "cluster_count": 14,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.03497748774324047,
+            "upper": 0.36022827265758695
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.9004338979721069,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 2,
+            "carried_object": 2,
+            "clothing_detail": 2,
+            "eyewear": 2,
+            "footwear_detail": 2,
+            "headwear": 2,
+            "pocket_item": 2,
+            "wrist_accessory": 2
+          },
+          "final_partition_tv_from_previous": 0.375,
+          "mean_conditional_tv_from_previous": 0.375,
+          "max_conditional_tv_from_previous": 0.5,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "carried_object": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "footwear_detail": {
+              "effective_n": 2,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.34238022750665303,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 2,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.09453120573423074,
+                "upper": 0.9054687942657693
+              },
+              "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none"
+            }
+          }
+        },
+        {
+          "sample_count": 32,
+          "cluster_count": 14,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.04970134387480074,
+            "upper": 0.2806830548165022
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.7842621803283691,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 4,
+            "carried_object": 4,
+            "clothing_detail": 4,
+            "eyewear": 4,
+            "footwear_detail": 4,
+            "headwear": 4,
+            "pocket_item": 4,
+            "wrist_accessory": 4
+          },
+          "final_partition_tv_from_previous": 0.125,
+          "mean_conditional_tv_from_previous": 0.125,
+          "max_conditional_tv_from_previous": 0.25,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 4,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.15003898915214953,
+                "upper": 0.8499610108478505
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 4,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.15003898915214953,
+                "upper": 0.8499610108478505
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "footwear_detail": {
+              "effective_n": 4,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.5101091635454027,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 4,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.30064184258240184,
+                "upper": 0.9544127391902995
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 64,
+          "cluster_count": 15,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.06472242663330455,
+            "upper": 0.22774561821129943
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.7607741355895996,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 8,
+            "carried_object": 8,
+            "clothing_detail": 8,
+            "eyewear": 8,
+            "footwear_detail": 8,
+            "headwear": 8,
+            "pocket_item": 8,
+            "wrist_accessory": 8
+          },
+          "final_partition_tv_from_previous": 0.0625,
+          "mean_conditional_tv_from_previous": 0.0625,
+          "max_conditional_tv_from_previous": 0.25,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 8,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.40927543031016883,
+                "upper": 0.9285207872478909
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 8,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.21521606221387757,
+                "upper": 0.7847839377861224
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 8,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.6755924351161198,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 8,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.21521606221387757,
+                "upper": 0.7847839377861224
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "footwear_detail": {
+              "effective_n": 8,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.6755924351161198,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 8,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.21521606221387757,
+                "upper": 0.7847839377861224
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 8,
+              "weight": 0.875,
+              "interval_95": {
+                "lower": 0.5291118177871464,
+                "upper": 0.9775825085499433
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 8,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.40927543031016883,
+                "upper": 0.9285207872478909
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 128,
+          "cluster_count": 15,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.07842644638761664,
+            "upper": 0.19342627081751468
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.6839602589607239,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 16,
+            "carried_object": 16,
+            "clothing_detail": 16,
+            "eyewear": 16,
+            "footwear_detail": 16,
+            "headwear": 16,
+            "pocket_item": 16,
+            "wrist_accessory": 16
+          },
+          "final_partition_tv_from_previous": 0.0625,
+          "mean_conditional_tv_from_previous": 0.0625,
+          "max_conditional_tv_from_previous": 0.125,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 16,
+              "weight": 0.6875,
+              "interval_95": {
+                "lower": 0.44404355834740666,
+                "upper": 0.8583535614521796
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 16,
+              "weight": 0.625,
+              "interval_95": {
+                "lower": 0.38641040545502714,
+                "upper": 0.8151876744113636
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 16,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.8063923194655637,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 16,
+              "weight": 0.5,
+              "interval_95": {
+                "lower": 0.27999563610326017,
+                "upper": 0.7200043638967398
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 16,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.8063923194655637,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 16,
+              "weight": 0.5625,
+              "interval_95": {
+                "lower": 0.331785563988119,
+                "upper": 0.7690134759450765
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 16,
+              "weight": 0.8125,
+              "interval_95": {
+                "lower": 0.5699111903802586,
+                "upper": 0.9340840092857187
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 16,
+              "weight": 0.6875,
+              "interval_95": {
+                "lower": 0.44404355834740666,
+                "upper": 0.8583535614521796
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 256,
+          "cluster_count": 15,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.08995183318684266,
+            "upper": 0.17113605913256094
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.5619283318519592,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 32,
+            "carried_object": 32,
+            "clothing_detail": 32,
+            "eyewear": 32,
+            "footwear_detail": 32,
+            "headwear": 32,
+            "pocket_item": 32,
+            "wrist_accessory": 32
+          },
+          "final_partition_tv_from_previous": 0.03125,
+          "mean_conditional_tv_from_previous": 0.03125,
+          "max_conditional_tv_from_previous": 0.0625,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 32,
+              "weight": 0.75,
+              "interval_95": {
+                "lower": 0.5789344100575552,
+                "upper": 0.8674759908149096
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 32,
+              "weight": 0.59375,
+              "interval_95": {
+                "lower": 0.4226002487538287,
+                "upper": 0.7448036515733456
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 32,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.8928208017449293,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 32,
+              "weight": 0.53125,
+              "interval_95": {
+                "lower": 0.3644951711897464,
+                "upper": 0.6913061289193116
+              },
+              "representative": "category=eyewear; state=absent; value=absent; location=face"
+            },
+            "footwear_detail": {
+              "effective_n": 32,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.8928208017449293,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 32,
+              "weight": 0.59375,
+              "interval_95": {
+                "lower": 0.4226002487538287,
+                "upper": 0.7448036515733456
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 32,
+              "weight": 0.78125,
+              "interval_95": {
+                "lower": 0.6124500635075647,
+                "upper": 0.8897616374739581
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 32,
+              "weight": 0.625,
+              "interval_95": {
+                "lower": 0.45254407353077447,
+                "upper": 0.770661126905458
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        },
+        {
+          "sample_count": 512,
+          "cluster_count": 16,
+          "max_cluster_weight": 0.125,
+          "max_cluster_interval_95": {
+            "method": "wilson-95-conditional-on-fixed-clusters",
+            "lower": 0.0991166386113686,
+            "upper": 0.15646859318079348
+          },
+          "max_cluster_representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+          "category_count": 8,
+          "category_masses": {
+            "body_marking": 0.125,
+            "carried_object": 0.125,
+            "clothing_detail": 0.125,
+            "eyewear": 0.125,
+            "footwear_detail": 0.125,
+            "headwear": 0.125,
+            "pocket_item": 0.125,
+            "wrist_accessory": 0.125
+          },
+          "category_tv_from_previous": 0.0,
+          "minimum_within_cluster_cosine": 0.5619283318519592,
+          "covered_category_count": 8,
+          "effective_n_by_category": {
+            "body_marking": 64,
+            "carried_object": 64,
+            "clothing_detail": 64,
+            "eyewear": 64,
+            "footwear_detail": 64,
+            "headwear": 64,
+            "pocket_item": 64,
+            "wrist_accessory": 64
+          },
+          "final_partition_tv_from_previous": 0.0625,
+          "mean_conditional_tv_from_previous": 0.0625,
+          "max_conditional_tv_from_previous": 0.15625,
+          "conditional_top_by_category": {
+            "body_marking": {
+              "effective_n": 64,
+              "weight": 0.703125,
+              "interval_95": {
+                "lower": 0.5822979889645709,
+                "upper": 0.8009484867446021
+              },
+              "representative": "category=body_marking; state=absent; value=absent; location=none"
+            },
+            "carried_object": {
+              "effective_n": 64,
+              "weight": 0.71875,
+              "interval_95": {
+                "lower": 0.5986606971779259,
+                "upper": 0.8140662766627217
+              },
+              "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "clothing_detail": {
+              "effective_n": 64,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.9433759402071946,
+                "upper": 1.0
+              },
+              "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "eyewear": {
+              "effective_n": 64,
+              "weight": 0.53125,
+              "interval_95": {
+                "lower": 0.41072087051471007,
+                "upper": 0.6482401257482395
+              },
+              "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "footwear_detail": {
+              "effective_n": 64,
+              "weight": 1.0,
+              "interval_95": {
+                "lower": 0.9433759402071946,
+                "upper": 1.0
+              },
+              "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none"
+            },
+            "headwear": {
+              "effective_n": 64,
+              "weight": 0.640625,
+              "interval_95": {
+                "lower": 0.518208506097791,
+                "upper": 0.7471159770854825
+              },
+              "representative": "category=headwear; state=absent; value=absent; location=head"
+            },
+            "pocket_item": {
+              "effective_n": 64,
+              "weight": 0.859375,
+              "interval_95": {
+                "lower": 0.7538371825842297,
+                "upper": 0.9242142744396914
+              },
+              "representative": "category=pocket_item; state=absent; value=absent; location=pocket"
+            },
+            "wrist_accessory": {
+              "effective_n": 64,
+              "weight": 0.59375,
+              "interval_95": {
+                "lower": 0.4714520812860451,
+                "upper": 0.7054309075028039
+              },
+              "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
