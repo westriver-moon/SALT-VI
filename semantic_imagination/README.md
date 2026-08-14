@@ -74,4 +74,6 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 当前研究 backend 为本地 InternVL2.5-8B，实验入口为
 `experiments/run_internvl_sampling.py`。它仍是离线生成插件，没有活跃训练 YAML
 自动启用动态视图；当前 geometry-matched Stage-A 数据仍是一视图、权重1。
-迁移后的历史报告位于 `reports/legacy_20260813/`。
+旧机制的原始结果已在v2启用后清理，只保留
+`KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md`中的审计结论。v2真实模型smoke
+结果位于`reports/20260814_v2_smoke_final/`。
