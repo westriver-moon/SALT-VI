@@ -1,0 +1,112 @@
+{
+  "image": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+  "source_key": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+  "imagination_contract_sha256": "2da8ab3b1501d5ed759b4967361390ca5dcc355906b6f4ec11c7613149228926",
+  "imagination_sampling_diagnostics": {
+    "scheduled": 8,
+    "valid": 2,
+    "validation_failed": 6,
+    "valid_rate": 0.25,
+    "active_abstentions": 1,
+    "by_category": {
+      "body_marking": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      },
+      "carried_object": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      },
+      "clothing_detail": {
+        "scheduled": 1,
+        "valid": 1,
+        "validation_failed": 0,
+        "valid_rate": 1.0
+      },
+      "eyewear": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      },
+      "footwear_detail": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      },
+      "headwear": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      },
+      "pocket_item": {
+        "scheduled": 1,
+        "valid": 1,
+        "validation_failed": 0,
+        "valid_rate": 1.0
+      },
+      "wrist_accessory": {
+        "scheduled": 1,
+        "valid": 0,
+        "validation_failed": 1,
+        "valid_rate": 0.0
+      }
+    }
+  },
+  "imagination_valid_semantic_mass": 0.25,
+  "imagination_unrepresented_category_mass": 0.75,
+  "imagination_validation_failure_rate": 0.75,
+  "modality": "rgb",
+  "views": [
+    {
+      "view_index": 0,
+      "hypothesis_id": "h00",
+      "hypothesis_weight": 0.5,
+      "hypothesis_empirical_mass": 0.125,
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have red heart at t-shirt.",
+      "seed": 853447289,
+      "output": "/home/lab929/ybj/autoresearch-v2/worktrees/semantic-imagination-v2-20260814/w1/semantic_imagination/reports/20260814_v2_smoke_final/sample-00/pasd_views/h00.png",
+      "hypothesis_weight_interval_95": {
+        "method": "stratified-wilson-95-conditional-on-valid-samples",
+        "lower": 0.02581866429715468,
+        "upper": 0.125
+      },
+      "hypothesis_category": "clothing_detail",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 1.0,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.20654931437723745,
+        "upper": 1.0
+      }
+    },
+    {
+      "view_index": 1,
+      "hypothesis_id": "h01",
+      "hypothesis_weight": 0.5,
+      "hypothesis_empirical_mass": 0.125,
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional pocket item detail.",
+      "seed": 1284867551,
+      "output": "/home/lab929/ybj/autoresearch-v2/worktrees/semantic-imagination-v2-20260814/w1/semantic_imagination/reports/20260814_v2_smoke_final/sample-00/pasd_views/h01.png",
+      "hypothesis_weight_interval_95": {
+        "method": "stratified-wilson-95-conditional-on-valid-samples",
+        "lower": 0.02581866429715468,
+        "upper": 0.125
+      },
+      "hypothesis_category": "pocket_item",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 1.0,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.20654931437723745,
+        "upper": 1.0
+      }
+    }
+  ]
+}

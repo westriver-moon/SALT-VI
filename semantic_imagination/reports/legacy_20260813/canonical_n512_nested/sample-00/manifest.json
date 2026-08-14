@@ -1,0 +1,4131 @@
+{
+  "schema_version": 1,
+  "source_key": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+  "image": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+  "observed": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag.",
+  "sampling_contract": {
+    "schema_version": 1,
+    "backend_id": "OpenGVLab/InternVL2_5-8B",
+    "instruction": "Infer one atomic detail that the low-resolution image leaves genuinely ambiguous. Keep it compatible with the clearly observed pedestrian.",
+    "sample_count": 512,
+    "seed": 20260813,
+    "similarity_threshold": 0.92,
+    "cluster_linkage": "complete",
+    "sampling_strata": [
+      "eyewear",
+      "wrist_accessory",
+      "headwear",
+      "body_marking",
+      "clothing_detail",
+      "carried_object",
+      "pocket_item",
+      "footwear_detail"
+    ],
+    "backend_contract": {
+      "model_path": "/home/lab929/huggingface/OpenGVLab/InternVL2_5-8B",
+      "embed_model": "/home/lab929/huggingface/google-bert/bert-base-uncased",
+      "perturbation": "downsample-upsample+gaussian-blur+brightness+contrast-v1",
+      "max_image_tiles": 2,
+      "hypothesis_schema": "atomic-category-state-value-location-v2",
+      "canonical_state_taxonomy": "closed-category-specific-v1",
+      "atomic_validation": "schema+state-value+category+contradiction+absence+abstention+not-observed-v6",
+      "atomic_max_attempts": 4,
+      "stratification": "round-robin-eight-identity-attribute-categories-v1",
+      "embedding_projection": "atomic-value-location-v1"
+    }
+  },
+  "sampling_contract_sha256": "094c029521f339f3515f471aee1e4b71859c546b9860780f08f83973b8e04c1c",
+  "samples": [
+    {
+      "seed": 797605564,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1193974964,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1944694864,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 232900644,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 582439801,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 861958243,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 468068949,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1848070633,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=toe",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 805278811,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1337851497,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 505315779,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 856063681,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 461793307,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1589328071,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=shoulder",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1716958479,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1054813701,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 213165048,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 175932789,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1333609435,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 980593748,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1910390390,
+      "text": "category=clothing_detail; state=graphic; value=superman; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 663754348,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1780096559,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1329189241,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1940697599,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1534017789,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1622077632,
+      "text": "category=headwear; state=cap; value=head; location=head",
+      "stratum": "headwear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 594088545,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1577449553,
+      "text": "category=clothing_detail; state=graphic; value=red; location=center",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 2070345229,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 615144439,
+      "text": "category=pocket_item; state=absent; value=absent; location=pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1923880072,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 209189807,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1560596093,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1318194344,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 298030197,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 996909896,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1119207778,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1572813709,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1578824965,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 100221012,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 613596253,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1589539852,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1276333774,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 606403911,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 54878142,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1339029520,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_hip",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1250666408,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 438762887,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 739860370,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 2097258737,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 329103292,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 888145232,
+      "text": "category=clothing_detail; state=graphic; value=red heart; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1917510070,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=waist",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 50207823,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 439700543,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1583613054,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1696228490,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1745615578,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 398042985,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 40668615,
+      "text": "category=clothing_detail; state=graphic; value=heart; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1161653255,
+      "text": "category=carried_object; state=other_carried_object; value=bag_accessory; location=center",
+      "stratum": "carried_object",
+      "cluster_id": 15
+    },
+    {
+      "seed": 965579608,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 952502146,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 253343592,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 840161310,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1101505526,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1184661861,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1054562146,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1513107802,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 2056807667,
+      "text": "category=pocket_item; state=absent; value=absent; location=side",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 686819246,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1686249208,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1233551599,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 2049691286,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 2121165779,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 359544549,
+      "text": "category=clothing_detail; state=graphic; value=red heart; location=chest",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 54760894,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1586990660,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 105748518,
+      "text": "category=footwear_detail; state=other_footwear_detail; value=open-toe; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 16
+    },
+    {
+      "seed": 1878859575,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 686675457,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 269521449,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 148376855,
+      "text": "category=body_marking; state=absent; value=absent; location=body",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 250457344,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 2107594491,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 906935302,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1929764963,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1186172096,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 812769840,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 289741574,
+      "text": "category=headwear; state=cap; value=dark; location=head",
+      "stratum": "headwear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 95980649,
+      "text": "category=body_marking; state=absent; value=absent; location=upper arm",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 2030382520,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1737019574,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 384786075,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1056340508,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1133684717,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 201484221,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1975631484,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 683861856,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 343447338,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 2037394742,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 741939580,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 81229923,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1060579717,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 124780887,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1931916709,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 794075218,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1868694917,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 558017997,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=back",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 457044584,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1983426554,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1599178832,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1428514101,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 72739953,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 224675684,
+      "text": "category=body_marking; state=absent; value=absent; location=abdomen",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1236369687,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1926588047,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 312464300,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 310839916,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 857254989,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 863005132,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 958808045,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1168873326,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1874120103,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 516326073,
+      "text": "category=carried_object; state=other_carried_object; value=no additional detail; location=shoulder",
+      "stratum": "carried_object",
+      "cluster_id": 15
+    },
+    {
+      "seed": 2046642790,
+      "text": "category=pocket_item; state=absent; value=absent; location=pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 291446480,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1150123556,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1775652653,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 510237829,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 300098640,
+      "text": "category=body_marking; state=absent; value=absent; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 687416581,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1295981443,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 58455071,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1756341169,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1217428090,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1535317768,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1965876456,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1323252656,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1652986416,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 596351314,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1821740254,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1607910450,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 755155210,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1673610783,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 21992318,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1717138988,
+      "text": "category=body_marking; state=absent; value=absent; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 122403115,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1934244315,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 592772829,
+      "text": "category=pocket_item; state=absent; value=absent; location=front",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2019123382,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 2090840034,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1407190846,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 235099502,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1525373170,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1120143833,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 505873650,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 942282045,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_hip",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 141031615,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 864411509,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 399817796,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1997480716,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 414059310,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1182873202,
+      "text": "category=clothing_detail; state=graphic; value=red; location=chest",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 786659161,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 287060830,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 100305382,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1806617810,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 2040162761,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1634049376,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1126513613,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1068370739,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 28005307,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 644377223,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_hip",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1397148382,
+      "text": "category=footwear_detail; state=strap; value=present; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 1677546449,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 351036940,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1715307614,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1643566282,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 187100977,
+      "text": "category=clothing_detail; state=pattern; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 18
+    },
+    {
+      "seed": 347700813,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1844984904,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1919788187,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 437342534,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 612373929,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1724195348,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 402718301,
+      "text": "category=body_marking; state=absent; value=absent; location=body",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 2110749750,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 776028372,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 523248292,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1349862607,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1912117176,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 586439812,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 915728133,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 616023734,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 900173131,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1527661431,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 424383112,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1015782102,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 219633164,
+      "text": "category=eyewear; state=frame_style; value=glasses; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 19
+    },
+    {
+      "seed": 725049066,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 212062383,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=head",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 692816249,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1198601455,
+      "text": "category=clothing_detail; state=graphic; value=red; location=chest",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1984613532,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 2006522516,
+      "text": "category=pocket_item; state=absent; value=absent; location=pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 143991288,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1661656031,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1887926773,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1875412273,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 787556483,
+      "text": "category=body_marking; state=absent; value=absent; location=arm",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1428843141,
+      "text": "category=clothing_detail; state=graphic; value=red heart; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 658237053,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 334949548,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1790956237,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1531353167,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1970422413,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 544836807,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 41679823,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 409189050,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 528665876,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1468812531,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2049123220,
+      "text": "category=footwear_detail; state=strap; value=present; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 2140657688,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 830699405,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1738766691,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 41524840,
+      "text": "category=body_marking; state=absent; value=absent; location=body",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1174500658,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1561956727,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 2040859057,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_hip",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1606596707,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 577510565,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 430568161,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 2104867843,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 167640841,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 561192577,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=midsection",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1104338181,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 783232683,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1864682128,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1230974420,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 416657645,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1125735485,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 175860239,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 536833126,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 289150918,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 121819797,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2112002411,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1427550498,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 881901828,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 77329773,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1932122962,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 632084509,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1299210405,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1643581262,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1473261289,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 1183777060,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1735108315,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 543713079,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1622830596,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1198006813,
+      "text": "category=clothing_detail; state=graphic; value=red; location=chest",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 192159204,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=left",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1956108172,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1332774936,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 172926252,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1344097042,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1536686600,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 137623513,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 287895628,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1309099478,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 371637471,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 639350317,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 118127885,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1097282387,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 212964065,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1301515138,
+      "text": "category=body_marking; state=absent; value=absent; location=upper arm",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1248599458,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 177382632,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=hand",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 645295196,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 905650015,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 34420539,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 162266715,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 633828776,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 423061397,
+      "text": "category=body_marking; state=absent; value=absent; location=body",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1463905958,
+      "text": "category=clothing_detail; state=graphic; value=red heart; location=center",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1916832399,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1259381152,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 398220820,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 2034763940,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1098535387,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1903467969,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1871834322,
+      "text": "category=body_marking; state=absent; value=absent; location=body",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 82894773,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 476395318,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 739143449,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 324023789,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 795186510,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 76402662,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1709055870,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1221671218,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 566706208,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 864743763,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1850752433,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1478870603,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1081872636,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1810943277,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 45902155,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 697418205,
+      "text": "category=body_marking; state=absent; value=absent; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 213686010,
+      "text": "category=clothing_detail; state=graphic; value=red; location=center",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 51487878,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1207715805,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 283056407,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 2030423635,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 686910598,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 794924763,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 407694311,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1986576136,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1649638541,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 123827738,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 869953095,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1053649275,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 859265437,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1719376985,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1786887490,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1142720650,
+      "text": "category=clothing_detail; state=pattern; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 18
+    },
+    {
+      "seed": 1808399604,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 60233903,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2106543383,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 867612227,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 917345129,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 580868040,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 48095090,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 97587157,
+      "text": "category=clothing_detail; state=graphic; value=no detail; location=upper_body",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 88849249,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 2040112785,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 4262144,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 971030812,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 110022729,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 298632890,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 857027600,
+      "text": "category=body_marking; state=absent; value=absent; location=chest",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 486657675,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1944890900,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1308245655,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1809025115,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1767316958,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 2085891858,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 540356044,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 2026695043,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1872140779,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1426434462,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1643631460,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 638547482,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1609874719,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1537453596,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 2061294248,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 797083191,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 317678843,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 592654531,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1903394971,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2005384727,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1135228145,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1880369265,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 736789412,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 152570383,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 172399103,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 311213580,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=left hip",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 248239774,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1580919803,
+      "text": "category=footwear_detail; state=strap; value=present; location=foot",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 95527377,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 532272124,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1207884557,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 185300346,
+      "text": "category=body_marking; state=absent; value=absent; location=upper arm",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1736877036,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 121384587,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1604472056,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1915393205,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 1907282039,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 851437834,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 679927965,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 115714432,
+      "text": "category=body_marking; state=absent; value=absent; location=arm",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1079287457,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 855205812,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=waist",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1676256806,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1361425457,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 970299079,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 690412932,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1139635805,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1919802592,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 56013438,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 883086311,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1789594678,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 149144686,
+      "text": "category=footwear_detail; state=strap; value=present; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 9
+    },
+    {
+      "seed": 1431914176,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1149852530,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1946671418,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1215790865,
+      "text": "category=body_marking; state=absent; value=absent; location=torso",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1067767297,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 50313580,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1882924401,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 992429306,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1296805306,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 144961580,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 789281439,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1176701966,
+      "text": "category=body_marking; state=absent; value=absent; location=arms",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1495678245,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1820976844,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1119057346,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1251944185,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 121371064,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 309045192,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 824776487,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1079779056,
+      "text": "category=body_marking; state=absent; value=absent; location=abdomen",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 435420814,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 948771756,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1298856603,
+      "text": "category=pocket_item; state=absent; value=absent; location=right_pocket",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1219734439,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1062401527,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 771858505,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 756138802,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1617278792,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1766310622,
+      "text": "category=clothing_detail; state=graphic; value=red; location=chest",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1984081877,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1980809698,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1196415599,
+      "text": "category=footwear_detail; state=other_footwear_detail; value=open; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 16
+    },
+    {
+      "seed": 1616687737,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1750133914,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 715235101,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1899717595,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1826839838,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1226012014,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1384089188,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1350347344,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 74855541,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 200351040,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 137877687,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1260775816,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 518619539,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1255769567,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=shoulder",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 2091881673,
+      "text": "category=pocket_item; state=absent; value=absent; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 2097574465,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1196147119,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 577996211,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1999698596,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 962767239,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1525968459,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 341908017,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 173877684,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 636662026,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1343329520,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 344003542,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1742074392,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 715635804,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 214341389,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 480218625,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 815299866,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1579294335,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 937752872,
+      "text": "category=eyewear; state=absent; value=absent; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 814285481,
+      "text": "category=wrist_accessory; state=watch; value=left; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 20
+    },
+    {
+      "seed": 1018368558,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1696907414,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1034184881,
+      "text": "category=clothing_detail; state=graphic; value=no detail; location=front of t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 279120000,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 739766632,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 1139805447,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1414280018,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1491729551,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1119289510,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 473887248,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1767316704,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 513368042,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1338508432,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1716817143,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1602544039,
+      "text": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "eyewear",
+      "cluster_id": 14
+    },
+    {
+      "seed": 1266106268,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 543198933,
+      "text": "category=headwear; state=cap; value=1; location=head",
+      "stratum": "headwear",
+      "cluster_id": 11
+    },
+    {
+      "seed": 399297239,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 2009662060,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 2120129603,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1531695836,
+      "text": "category=pocket_item; state=absent; value=absent; location=right",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1447240827,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1128167893,
+      "text": "category=eyewear; state=frame_style; value=thin; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 19
+    },
+    {
+      "seed": 1899730125,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 166995511,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1063949802,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 985711313,
+      "text": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 503092601,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=right",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 312713549,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 563283898,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=feet",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 771109059,
+      "text": "category=eyewear; state=absent; value=absent; location=face",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1349034278,
+      "text": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "stratum": "wrist_accessory",
+      "cluster_id": 1
+    },
+    {
+      "seed": 1489817667,
+      "text": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "headwear",
+      "cluster_id": 2
+    },
+    {
+      "seed": 1341111680,
+      "text": "category=body_marking; state=absent; value=absent; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 3
+    },
+    {
+      "seed": 1526090449,
+      "text": "category=clothing_detail; state=graphic; value=red; location=shirt",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 1009219563,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 52970293,
+      "text": "category=pocket_item; state=absent; value=absent; location=left",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1609061973,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 507016647,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1770770544,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1618187518,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1678235262,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 402606579,
+      "text": "category=clothing_detail; state=graphic; value=red; location=torso",
+      "stratum": "clothing_detail",
+      "cluster_id": 4
+    },
+    {
+      "seed": 2100572634,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1646756445,
+      "text": "category=pocket_item; state=absent; value=absent; location=waist",
+      "stratum": "pocket_item",
+      "cluster_id": 6
+    },
+    {
+      "seed": 1605823547,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    },
+    {
+      "seed": 1626068071,
+      "text": "category=eyewear; state=absent; value=absent; location=eyes",
+      "stratum": "eyewear",
+      "cluster_id": 0
+    },
+    {
+      "seed": 1245336203,
+      "text": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "wrist_accessory",
+      "cluster_id": 8
+    },
+    {
+      "seed": 1424262542,
+      "text": "category=headwear; state=absent; value=absent; location=head",
+      "stratum": "headwear",
+      "cluster_id": 10
+    },
+    {
+      "seed": 1816484882,
+      "text": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "body_marking",
+      "cluster_id": 12
+    },
+    {
+      "seed": 1079812347,
+      "text": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "clothing_detail",
+      "cluster_id": 17
+    },
+    {
+      "seed": 1539544464,
+      "text": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "carried_object",
+      "cluster_id": 5
+    },
+    {
+      "seed": 1692558667,
+      "text": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "pocket_item",
+      "cluster_id": 13
+    },
+    {
+      "seed": 640926945,
+      "text": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "stratum": "footwear_detail",
+      "cluster_id": 7
+    }
+  ],
+  "hypotheses": [
+    {
+      "cluster_id": 0,
+      "category": "eyewear",
+      "state": "absent",
+      "representative_index": 16,
+      "representative": "category=eyewear; state=absent; value=absent; location=face",
+      "member_indices": [
+        0,
+        8,
+        16,
+        24,
+        32,
+        48,
+        56,
+        72,
+        80,
+        88,
+        104,
+        112,
+        120,
+        128,
+        176,
+        192,
+        208,
+        224,
+        240,
+        264,
+        272,
+        280,
+        288,
+        296,
+        328,
+        336,
+        352,
+        368,
+        376,
+        384,
+        392,
+        408,
+        416,
+        424,
+        440,
+        448,
+        456,
+        464,
+        488,
+        496,
+        504
+      ],
+      "count": 41,
+      "weight": 0.080078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.05957552205350922,
+        "upper": 0.10683502396375558
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.640625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.518208506097791,
+        "upper": 0.7471159770854825
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no eyewear at face."
+    },
+    {
+      "cluster_id": 1,
+      "category": "wrist_accessory",
+      "state": "absent",
+      "representative_index": 1,
+      "representative": "category=wrist_accessory; state=absent; value=absent; location=wrist",
+      "member_indices": [
+        1,
+        25,
+        41,
+        89,
+        105,
+        113,
+        121,
+        153,
+        161,
+        169,
+        185,
+        225,
+        233,
+        249,
+        265,
+        289,
+        297,
+        305,
+        329,
+        361,
+        377,
+        393,
+        425,
+        433,
+        441,
+        465,
+        481,
+        489
+      ],
+      "count": 28,
+      "weight": 0.0546875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03810443399268586,
+        "upper": 0.07790302876050659
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.4375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.3229400970440308,
+        "upper": 0.5591379104300699
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no wrist accessory at wrist."
+    },
+    {
+      "cluster_id": 2,
+      "category": "headwear",
+      "state": "no_additional_detail",
+      "representative_index": 2,
+      "representative": "category=headwear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        2,
+        10,
+        50,
+        82,
+        98,
+        114,
+        138,
+        146,
+        162,
+        194,
+        202,
+        210,
+        258,
+        298,
+        306,
+        330,
+        338,
+        354,
+        370,
+        394,
+        402,
+        410,
+        434,
+        442,
+        450,
+        490
+      ],
+      "count": 26,
+      "weight": 0.05078125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03488718106757213,
+        "upper": 0.07336596118345534
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.40625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.2945690924971961,
+        "upper": 0.5285479187139549
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional headwear detail."
+    },
+    {
+      "cluster_id": 3,
+      "category": "body_marking",
+      "state": "absent",
+      "representative_index": 3,
+      "representative": "category=body_marking; state=absent; value=absent; location=none",
+      "member_indices": [
+        3,
+        11,
+        19,
+        27,
+        43,
+        51,
+        59,
+        67,
+        75,
+        83,
+        91,
+        99,
+        107,
+        115,
+        131,
+        147,
+        155,
+        171,
+        187,
+        195,
+        211,
+        219,
+        227,
+        235,
+        243,
+        259,
+        275,
+        283,
+        291,
+        307,
+        315,
+        323,
+        331,
+        339,
+        371,
+        379,
+        387,
+        395,
+        403,
+        411,
+        419,
+        427,
+        451,
+        459,
+        475,
+        491
+      ],
+      "count": 46,
+      "weight": 0.08984375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06803288679144388,
+        "upper": 0.11776346048123336
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.71875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.5986606971779259,
+        "upper": 0.8140662766627217
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no body marking."
+    },
+    {
+      "cluster_id": 4,
+      "category": "clothing_detail",
+      "state": "graphic",
+      "representative_index": 68,
+      "representative": "category=clothing_detail; state=graphic; value=red; location=t-shirt",
+      "member_indices": [
+        4,
+        12,
+        20,
+        28,
+        36,
+        44,
+        52,
+        60,
+        68,
+        76,
+        92,
+        100,
+        108,
+        116,
+        124,
+        132,
+        140,
+        148,
+        156,
+        164,
+        188,
+        196,
+        204,
+        212,
+        220,
+        244,
+        252,
+        260,
+        268,
+        276,
+        284,
+        292,
+        300,
+        308,
+        316,
+        332,
+        340,
+        348,
+        356,
+        364,
+        372,
+        380,
+        388,
+        396,
+        404,
+        412,
+        420,
+        428,
+        436,
+        460,
+        468,
+        476,
+        484,
+        492,
+        500
+      ],
+      "count": 55,
+      "weight": 0.107421875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.08346452814467002,
+        "upper": 0.13722626138774963
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.859375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.7538371825842297,
+        "upper": 0.9242142744396914
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have red at t-shirt."
+    },
+    {
+      "cluster_id": 5,
+      "category": "carried_object",
+      "state": "no_additional_detail",
+      "representative_index": 5,
+      "representative": "category=carried_object; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        5,
+        13,
+        21,
+        29,
+        37,
+        45,
+        53,
+        69,
+        77,
+        85,
+        93,
+        101,
+        109,
+        117,
+        133,
+        141,
+        149,
+        157,
+        165,
+        173,
+        181,
+        189,
+        197,
+        205,
+        213,
+        221,
+        229,
+        237,
+        245,
+        253,
+        261,
+        269,
+        277,
+        285,
+        293,
+        301,
+        309,
+        317,
+        325,
+        333,
+        341,
+        349,
+        357,
+        365,
+        373,
+        381,
+        389,
+        397,
+        405,
+        413,
+        421,
+        429,
+        437,
+        445,
+        453,
+        461,
+        469,
+        477,
+        485,
+        493,
+        501,
+        509
+      ],
+      "count": 62,
+      "weight": 0.12109375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0956215685151347,
+        "upper": 0.15220934277486237
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.96875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.8930270822904169,
+        "upper": 0.9913878616538281
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional carried object detail."
+    },
+    {
+      "cluster_id": 6,
+      "category": "pocket_item",
+      "state": "absent",
+      "representative_index": 62,
+      "representative": "category=pocket_item; state=absent; value=absent; location=right",
+      "member_indices": [
+        6,
+        14,
+        22,
+        30,
+        46,
+        62,
+        70,
+        86,
+        94,
+        102,
+        110,
+        126,
+        134,
+        150,
+        158,
+        166,
+        174,
+        182,
+        198,
+        206,
+        214,
+        222,
+        230,
+        238,
+        246,
+        254,
+        270,
+        278,
+        302,
+        310,
+        326,
+        342,
+        358,
+        366,
+        374,
+        398,
+        414,
+        422,
+        438,
+        470,
+        478,
+        494,
+        502
+      ],
+      "count": 43,
+      "weight": 0.083984375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06294737053968927,
+        "upper": 0.11121749597974051
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.671875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.549991058490915,
+        "upper": 0.7742944209553081
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no pocket item at right."
+    },
+    {
+      "cluster_id": 7,
+      "category": "footwear_detail",
+      "state": "no_additional_detail",
+      "representative_index": 23,
+      "representative": "category=footwear_detail; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        7,
+        23,
+        31,
+        55,
+        63,
+        71,
+        87,
+        95,
+        103,
+        111,
+        119,
+        127,
+        135,
+        143,
+        151,
+        159,
+        167,
+        183,
+        191,
+        199,
+        207,
+        215,
+        231,
+        239,
+        247,
+        271,
+        279,
+        287,
+        295,
+        303,
+        319,
+        327,
+        335,
+        343,
+        351,
+        359,
+        383,
+        399,
+        407,
+        415,
+        431,
+        439,
+        447,
+        455,
+        463,
+        471,
+        479,
+        487,
+        495,
+        503,
+        511
+      ],
+      "count": 51,
+      "weight": 0.099609375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.07657588582865321,
+        "upper": 0.12860626269943648
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.796875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.6828636426898583,
+        "upper": 0.8772658218081634
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional footwear detail detail."
+    },
+    {
+      "cluster_id": 8,
+      "category": "wrist_accessory",
+      "state": "no_additional_detail",
+      "representative_index": 9,
+      "representative": "category=wrist_accessory; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        9,
+        17,
+        33,
+        49,
+        57,
+        65,
+        73,
+        81,
+        97,
+        129,
+        137,
+        145,
+        177,
+        193,
+        201,
+        209,
+        217,
+        241,
+        257,
+        273,
+        281,
+        313,
+        321,
+        337,
+        345,
+        353,
+        369,
+        385,
+        401,
+        409,
+        417,
+        449,
+        473,
+        497,
+        505
+      ],
+      "count": 35,
+      "weight": 0.068359375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.04956008434673709,
+        "upper": 0.09358750016403278
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.546875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.4257359722005412,
+        "upper": 0.6627055221938832
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional wrist accessory detail."
+    },
+    {
+      "cluster_id": 9,
+      "category": "footwear_detail",
+      "state": "strap",
+      "representative_index": 15,
+      "representative": "category=footwear_detail; state=strap; value=present; location=feet",
+      "member_indices": [
+        15,
+        39,
+        47,
+        175,
+        223,
+        255,
+        263,
+        311,
+        367,
+        375,
+        391
+      ],
+      "count": 11,
+      "weight": 0.021484375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.012038074956831065,
+        "upper": 0.03805766352795906
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.171875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.09877742301244645,
+        "upper": 0.282132116226582
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have present at feet."
+    },
+    {
+      "cluster_id": 10,
+      "category": "headwear",
+      "state": "absent",
+      "representative_index": 18,
+      "representative": "category=headwear; state=absent; value=absent; location=head",
+      "member_indices": [
+        18,
+        34,
+        42,
+        58,
+        66,
+        74,
+        106,
+        122,
+        130,
+        154,
+        170,
+        178,
+        186,
+        218,
+        226,
+        234,
+        242,
+        250,
+        266,
+        274,
+        282,
+        290,
+        314,
+        322,
+        346,
+        362,
+        378,
+        386,
+        418,
+        426,
+        458,
+        466,
+        482,
+        498,
+        506
+      ],
+      "count": 35,
+      "weight": 0.068359375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.04956008434673709,
+        "upper": 0.09358750016403278
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.546875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.4257359722005412,
+        "upper": 0.6627055221938832
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no headwear at head."
+    },
+    {
+      "cluster_id": 11,
+      "category": "headwear",
+      "state": "cap",
+      "representative_index": 474,
+      "representative": "category=headwear; state=cap; value=1; location=head",
+      "member_indices": [
+        26,
+        90,
+        474
+      ],
+      "count": 3,
+      "weight": 0.005859375,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0019946757921860915,
+        "upper": 0.017083780683944113
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.046875,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.01606901678629298,
+        "upper": 0.12899653740093686
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have 1 at head."
+    },
+    {
+      "cluster_id": 12,
+      "category": "body_marking",
+      "state": "no_additional_detail",
+      "representative_index": 35,
+      "representative": "category=body_marking; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        35,
+        123,
+        139,
+        163,
+        179,
+        203,
+        251,
+        267,
+        299,
+        347,
+        355,
+        363,
+        435,
+        443,
+        467,
+        483,
+        499,
+        507
+      ],
+      "count": 18,
+      "weight": 0.03515625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.022351806085305893,
+        "upper": 0.05488405415706166
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.28125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.18593372333727837,
+        "upper": 0.40133930282207403
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional body marking detail."
+    },
+    {
+      "cluster_id": 13,
+      "category": "pocket_item",
+      "state": "no_additional_detail",
+      "representative_index": 38,
+      "representative": "category=pocket_item; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        38,
+        54,
+        78,
+        118,
+        142,
+        190,
+        262,
+        286,
+        294,
+        318,
+        334,
+        350,
+        382,
+        390,
+        406,
+        430,
+        446,
+        454,
+        462,
+        486,
+        510
+      ],
+      "count": 21,
+      "weight": 0.041015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02698094895608158,
+        "upper": 0.061886392039533444
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.328125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.22570557904469185,
+        "upper": 0.45000894150908505
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional pocket item detail."
+    },
+    {
+      "cluster_id": 14,
+      "category": "eyewear",
+      "state": "no_additional_detail",
+      "representative_index": 40,
+      "representative": "category=eyewear; state=no_additional_detail; value=no_additional_detail; location=none",
+      "member_indices": [
+        40,
+        64,
+        96,
+        136,
+        144,
+        152,
+        160,
+        168,
+        184,
+        216,
+        232,
+        248,
+        256,
+        304,
+        312,
+        320,
+        344,
+        360,
+        400,
+        432,
+        472
+      ],
+      "count": 21,
+      "weight": 0.041015625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02698094895608158,
+        "upper": 0.061886392039533444
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.328125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.22570557904469185,
+        "upper": 0.45000894150908505
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional eyewear detail."
+    },
+    {
+      "cluster_id": 15,
+      "category": "carried_object",
+      "state": "other_carried_object",
+      "representative_index": 61,
+      "representative": "category=carried_object; state=other_carried_object; value=bag_accessory; location=center",
+      "member_indices": [
+        61,
+        125
+      ],
+      "count": 2,
+      "weight": 0.00390625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0010718890803936704,
+        "upper": 0.014129407144654047
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.03125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008612138346171874,
+        "upper": 0.10697291770958313
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have bag_accessory at center."
+    },
+    {
+      "cluster_id": 16,
+      "category": "footwear_detail",
+      "state": "other_footwear_detail",
+      "representative_index": 79,
+      "representative": "category=footwear_detail; state=other_footwear_detail; value=open-toe; location=feet",
+      "member_indices": [
+        79,
+        423
+      ],
+      "count": 2,
+      "weight": 0.00390625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0010718890803936704,
+        "upper": 0.014129407144654047
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.03125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008612138346171874,
+        "upper": 0.10697291770958313
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have open-toe at feet."
+    },
+    {
+      "cluster_id": 17,
+      "category": "clothing_detail",
+      "state": "no_additional_detail",
+      "representative_index": 444,
+      "representative": "category=clothing_detail; state=no_additional_detail; value=no_additional_detail; location=shirt",
+      "member_indices": [
+        84,
+        172,
+        228,
+        236,
+        444,
+        452,
+        508
+      ],
+      "count": 7,
+      "weight": 0.013671875,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.006638096992250363,
+        "upper": 0.0279490004882098
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.109375,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.05400113344416799,
+        "upper": 0.2089864132689612
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have no additional clothing detail detail at shirt."
+    },
+    {
+      "cluster_id": 18,
+      "category": "clothing_detail",
+      "state": "pattern",
+      "representative_index": 180,
+      "representative": "category=clothing_detail; state=pattern; value=red; location=t-shirt",
+      "member_indices": [
+        180,
+        324
+      ],
+      "count": 2,
+      "weight": 0.00390625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0010718890803936704,
+        "upper": 0.014129407144654047
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.03125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008612138346171874,
+        "upper": 0.10697291770958313
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have red at t-shirt."
+    },
+    {
+      "cluster_id": 19,
+      "category": "eyewear",
+      "state": "frame_style",
+      "representative_index": 200,
+      "representative": "category=eyewear; state=frame_style; value=glasses; location=face",
+      "member_indices": [
+        200,
+        480
+      ],
+      "count": 2,
+      "weight": 0.00390625,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0010718890803936704,
+        "upper": 0.014129407144654047
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.03125,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.008612138346171874,
+        "upper": 0.10697291770958313
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have glasses at face."
+    },
+    {
+      "cluster_id": 20,
+      "category": "wrist_accessory",
+      "state": "watch",
+      "representative_index": 457,
+      "representative": "category=wrist_accessory; state=watch; value=left; location=wrist",
+      "member_indices": [
+        457
+      ],
+      "count": 1,
+      "weight": 0.001953125,
+      "weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.00034485776154337486,
+        "upper": 0.010979278212421853
+      },
+      "category_weight": 0.125,
+      "conditional_weight": 0.015625,
+      "conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.002763541923337505,
+        "upper": 0.08334101600094265
+      },
+      "caption": "The pedestrian is wearing a gray t-shirt, beige shorts, and black sandals, and is carrying a white bag. The pedestrian may have left at wrist."
+    }
+  ],
+  "cluster_linkage": "complete"
+}

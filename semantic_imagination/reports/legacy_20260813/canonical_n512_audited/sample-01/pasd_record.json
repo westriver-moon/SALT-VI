@@ -1,0 +1,344 @@
+{
+  "image": "/home/cgv841/datasets/SYSU-MM01/cam1/0102/0001.jpg",
+  "source_key": "/home/cgv841/datasets/SYSU-MM01/cam1/0102/0001.jpg",
+  "imagination_contract_sha256": "be21118aced68cb8749454d7e87e33ca3ba5d4962bd6dc23fe3009733fd23261",
+  "modality": "rgb",
+  "views": [
+    {
+      "view_index": 0,
+      "hypothesis_id": "h00",
+      "hypothesis_weight": 0.06640625,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.04790706612817715,
+        "upper": 0.09136335813151024
+      },
+      "hypothesis_category": "eyewear",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.53125,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.41072087051471007,
+        "upper": 0.6482401257482395
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional eyewear detail.",
+      "seed": 485047120,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h00.png"
+    },
+    {
+      "view_index": 1,
+      "hypothesis_id": "h01",
+      "hypothesis_weight": 0.05078125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03488718106757213,
+        "upper": 0.07336596118345534
+      },
+      "hypothesis_category": "wrist_accessory",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.40625,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.2945690924971961,
+        "upper": 0.5285479187139549
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional wrist accessory detail.",
+      "seed": 2084435555,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h01.png"
+    },
+    {
+      "view_index": 2,
+      "hypothesis_id": "h02",
+      "hypothesis_weight": 0.080078125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.05957552205350922,
+        "upper": 0.10683502396375558
+      },
+      "hypothesis_category": "headwear",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.640625,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.518208506097791,
+        "upper": 0.7471159770854825
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no headwear at head.",
+      "seed": 1764451222,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h02.png"
+    },
+    {
+      "view_index": 3,
+      "hypothesis_id": "h03",
+      "hypothesis_weight": 0.037109375,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.023883775518617995,
+        "upper": 0.05722924497483205
+      },
+      "hypothesis_category": "body_marking",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.296875,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.19905151325539794,
+        "upper": 0.41770201103542925
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional body marking detail.",
+      "seed": 1433917514,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h03.png"
+    },
+    {
+      "view_index": 4,
+      "hypothesis_id": "h04",
+      "hypothesis_weight": 0.125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0991166386113686,
+        "upper": 0.15646859318079348
+      },
+      "hypothesis_category": "clothing_detail",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 1.0,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.9433759402071946,
+        "upper": 1.0
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional clothing detail detail.",
+      "seed": 1686695102,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h04.png"
+    },
+    {
+      "view_index": 5,
+      "hypothesis_id": "h05",
+      "hypothesis_weight": 0.08984375,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06803288679144388,
+        "upper": 0.11776346048123336
+      },
+      "hypothesis_category": "carried_object",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.71875,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.5986606971779259,
+        "upper": 0.8140662766627217
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional carried object detail.",
+      "seed": 1219628161,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h05.png"
+    },
+    {
+      "view_index": 6,
+      "hypothesis_id": "h06",
+      "hypothesis_weight": 0.107421875,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.08346452814467002,
+        "upper": 0.13722626138774963
+      },
+      "hypothesis_category": "pocket_item",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.859375,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.7538371825842297,
+        "upper": 0.9242142744396914
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no pocket item at pocket.",
+      "seed": 632155353,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h06.png"
+    },
+    {
+      "view_index": 7,
+      "hypothesis_id": "h07",
+      "hypothesis_weight": 0.125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.0991166386113686,
+        "upper": 0.15646859318079348
+      },
+      "hypothesis_category": "footwear_detail",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 1.0,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.9433759402071946,
+        "upper": 1.0
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional footwear detail detail.",
+      "seed": 1513386871,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h07.png"
+    },
+    {
+      "view_index": 8,
+      "hypothesis_id": "h08",
+      "hypothesis_weight": 0.046875,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.03169946068599385,
+        "upper": 0.06879936106286863
+      },
+      "hypothesis_category": "eyewear",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.375,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.2666598017882464,
+        "upper": 0.497496213159955
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no eyewear at face.",
+      "seed": 1629212983,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h08.png"
+    },
+    {
+      "view_index": 9,
+      "hypothesis_id": "h09",
+      "hypothesis_weight": 0.07421875,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.05454794773329394,
+        "upper": 0.10023111753072339
+      },
+      "hypothesis_category": "wrist_accessory",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.59375,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.4714520812860451,
+        "upper": 0.7054309075028039
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no wrist accessory at wrist.",
+      "seed": 1397658086,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h09.png"
+    },
+    {
+      "view_index": 10,
+      "hypothesis_id": "h10",
+      "hypothesis_weight": 0.044921875,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.030117718759024466,
+        "upper": 0.06650394273875553
+      },
+      "hypothesis_category": "headwear",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.359375,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.2528840229145175,
+        "upper": 0.481791493902209
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional headwear detail.",
+      "seed": 461644899,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h10.png"
+    },
+    {
+      "view_index": 11,
+      "hypothesis_id": "h11",
+      "hypothesis_weight": 0.087890625,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.06633416349299745,
+        "upper": 0.11558502352859731
+      },
+      "hypothesis_category": "body_marking",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.703125,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.5822979889645709,
+        "upper": 0.8009484867446021
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no body marking.",
+      "seed": 1978389413,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h11.png"
+    },
+    {
+      "view_index": 12,
+      "hypothesis_id": "h12",
+      "hypothesis_weight": 0.033203125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.02083204403601035,
+        "upper": 0.05252665595527472
+      },
+      "hypothesis_category": "carried_object",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.265625,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.17296379074222615,
+        "upper": 0.38482873728565137
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have small at side.",
+      "seed": 1583189965,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h12.png"
+    },
+    {
+      "view_index": 13,
+      "hypothesis_id": "h13",
+      "hypothesis_weight": 0.017578125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.009274933048931773,
+        "upper": 0.033066484933693366
+      },
+      "hypothesis_category": "pocket_item",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.140625,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.07578572556030862,
+        "upper": 0.24616281741577023
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have no additional pocket item detail.",
+      "seed": 1682677137,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h13.png"
+    },
+    {
+      "view_index": 14,
+      "hypothesis_id": "h14",
+      "hypothesis_weight": 0.01171875,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.00538157169683981,
+        "upper": 0.025328365532537866
+      },
+      "hypothesis_category": "eyewear",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.09375,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.04367825258519838,
+        "upper": 0.18982879599645597
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have dark at face.",
+      "seed": 791220225,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h14.png"
+    },
+    {
+      "view_index": 15,
+      "hypothesis_id": "h15",
+      "hypothesis_weight": 0.001953125,
+      "hypothesis_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.00034485776154337486,
+        "upper": 0.010979278212421853
+      },
+      "hypothesis_category": "carried_object",
+      "hypothesis_category_weight": 0.125,
+      "hypothesis_conditional_weight": 0.015625,
+      "hypothesis_conditional_weight_interval_95": {
+        "method": "wilson-95-conditional-on-fixed-clusters",
+        "lower": 0.002763541923337505,
+        "upper": 0.08334101600094265
+      },
+      "caption": "A person is wearing a plaid short-sleeve shirt, black shorts, gray sneakers, and glasses, and is carrying a bag. The pedestrian may have shoulder at left.",
+      "seed": 743000804,
+      "output": "experiments/semantic_imagination_corrected_sampling_20260813/canonical_n512_audited/sample-01/pasd_views/h15.png"
+    }
+  ]
+}
