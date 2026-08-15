@@ -1,7 +1,7 @@
-extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+extends: configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml
 
 # Stage B1: establish a shared identity space before cross-modal fine-tuning.
-config_select: configs/experiments/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
+config_select: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
 metric_experiment_id: STAGEB-RN50-TWO-STAGE-B1
 output_root: /tmp/stage_b_rn50_two_stage_grid_40/phase1/model_output/
 metric_events_path: /tmp/stage_b_rn50_two_stage_grid_40/phase1/events.jsonl

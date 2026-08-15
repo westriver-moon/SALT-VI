@@ -1,7 +1,7 @@
-extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+extends: configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml
 
 # Stage B2 alternative: directly constrain every RGB/IR/Text/Fusion pair.
-config_select: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
+config_select: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
 metric_experiment_id: STAGEB-RN50-TWO-STAGE-B2-FULLPAIRS
 output_root: /tmp/stage_b_rn50_two_stage_grid_40/phase2/model_output/
 metric_events_path: /tmp/stage_b_rn50_two_stage_grid_40/phase2/events.jsonl

@@ -4,9 +4,9 @@ total_epochs: 40
 source_stage_a_checkpoint: /home/lab929/ybj/SALT-VI/checkpoints/stage_a/experiments/stage_a_tvilfm_rn50_pasd_direct_20260813/best/model_IR_epoch_115.pth
 output_root: /home/lab929/ybj/SALT-VI/experiments/stage_b_rn50_two_stage_grid_40_20260815
 
-phase1_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
-triangle_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_triangle.yaml
-fullpairs_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
+phase1_config: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
+triangle_config: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_triangle.yaml
+fullpairs_config: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
 
 routes:
   r0_switch20_triangle:

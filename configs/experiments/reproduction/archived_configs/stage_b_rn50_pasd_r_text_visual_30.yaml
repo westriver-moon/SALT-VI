@@ -1,6 +1,6 @@
 extends: configs/stage_b/r_text_visual_20260729.yaml
 
-config_select: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+config_select: configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml
 output_root: ${AR2_OUTPUT_DIR}/model_output/
 metric_events_path: ${AR2_OUTPUT_DIR}/events.jsonl
 metric_experiment_id: SALTVI-STAGEB-RN50-PASD-R-TEXT-VISUAL-30-20260815

@@ -1,7 +1,7 @@
-extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+extends: configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml
 
 # Stage B2: low-rate refinement with the historical three-pair objective.
-config_select: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_triangle.yaml
+config_select: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_triangle.yaml
 metric_experiment_id: STAGEB-RN50-TWO-STAGE-B2-TRIANGLE
 output_root: /tmp/stage_b_rn50_two_stage_grid_40/phase2/model_output/
 metric_events_path: /tmp/stage_b_rn50_two_stage_grid_40/phase2/events.jsonl

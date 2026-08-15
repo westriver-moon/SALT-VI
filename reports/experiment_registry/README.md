@@ -17,8 +17,8 @@
 ## 当前项目状态
 
 - 正式 Stage-B 默认仍为 `SALT_R_TEXT_VISUAL`，配置 `configs/stage_b/r_text_visual_20260729.yaml`。
-- geometry-matched PASD RN50 Stage-A 已接入 Stage-B 并完成 30 epoch 运行；该实验已归档，但其配置 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml` 暂时保留为两阶段网格的基配置。
-- RN50 两阶段 40-epoch 网格的 r1、r2、r3 已归档；r3 是当前组内最佳并保留唯一结果权重，r1/r2 的非改进权重已清理。r0 仍在运行，因此网格配置和 runner 暂不归档。
+- geometry-matched PASD RN50 Stage-A 已接入 Stage-B 并完成 30 epoch 运行；该实验及其基础配置均已归档，配置位于 `configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml`。
+- RN50 两阶段 40-epoch 网格已全部归档；r3 是组内最佳并保留唯一结果权重，r0/r1/r2 的非改进权重均已清理。网格配置和 runner 已移入复现归档区。
 - PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 24 epoch 修复版与 70 epoch 延长版均已恢复并归档；24 epoch 最佳模型保留，70 epoch 未替代它，详见唯一 CSV 与 [`../../docs/README.md`](../../docs/README.md)。
 - `SALTVI-STAGEA-PASD-NOMB-B16-20260811`、RN50 Direct 与停止的 PostTrain60 均已登记；Direct 保留最佳 checkpoint，PostTrain60 仅保留配置、指标和日志。
 
