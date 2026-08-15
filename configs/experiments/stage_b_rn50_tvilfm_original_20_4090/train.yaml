@@ -1,0 +1,90 @@
+extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+
+# TVI-LFM original IFS/SFF/MJL text-stage recipe, adapted only where required
+# for the retained RN50/2048 Stage-A checkpoint and its matching PASD inputs.
+config_select: configs/experiments/stage_b_rn50_tvilfm_original_20_4090/train.yaml
+metric_experiment_id: SALTVI-STAGEB-RN50-TVILFM-ORIGINAL-20-4090-20260815
+output_root: /home/lab929/ybj/experiments/tvilfm_original_rn50_stagea_best_20ep_20260815/model_output/
+metric_events_path: /home/lab929/ybj/experiments/tvilfm_original_rn50_stagea_best_20ep_20260815/events.jsonl
+
+# Healthy physical GPU1 is exposed as logical cuda:0. Physical GPUs 0 and 3
+# currently report NVML device-handle errors and are deliberately excluded.
+CUDA_VISIBLE_DEVICES: "1"
+gpu_id: "0"
+
+# Retained best Stage-A dual-stream RN50 checkpoint.
+pretrain_choice: RN50_ORI
+pretrain_path: default
+prj_output_dim: 2048
+training_weight_init: /home/lab929/ybj/tvilfm_original_assets_20260815/checkpoints/model_IR_epoch_115.pth
+
+# Keep the exact image domain/geometry used to train and validate Stage A.
+img_h: 512
+img_w: 256
+img_size: [512, 256]
+sysu_data_path: /home/lab929/datasets/SYSU-MM01/
+sysu_source_size: [256, 128]
+sysu_sr_data_root: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_backend: pasd_multiview
+sysu_sr_view_manifest: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl
+sysu_sr_views_per_image: 1
+sysu_sr_view_sampling: paired
+sysu_sr_eval_view_index: 0
+sysu_sr_exact_size: true
+
+# Original TVI-LFM text assets and Vicuna/LLM paraphrase augmentation.
+text_data_root: /home/lab929/ybj/tvilfm_original_assets_20260815/Text
+training_mode: RGB_IR_Text
+captioner_name: Blip
+llm_aug: true
+llm_aug_prob: 0.5
+joint_mode: uni
+
+# Original SFF + MJL design.
+Feat_Filter: true
+fusion_way: add
+Fix_Visual: true
+visual_unfreeze_last_n_blocks: 0
+fixed_visual_data_parallel: false
+Return_B4_BN: false
+uni_BN: false
+
+# Original objective and optimizer recipe.
+loss_names: id,wrt
+id_loss_weight: 1.0
+wrt_loss_weight: 1.0
+optimizer: Adam
+lr_txt: 0.00035
+text_weight_decay: 0.0005
+text_weight_decay_bias: 0.0005
+lr_visual: 0.00035
+visual_weight_decay: 0.0005
+visual_weight_decay_bias: 0.0005
+classifier_lr_factor: 1.0
+text_bias_lr_factor: 2.0
+warmup_epochs: 10
+warmup_factor: 0.01
+warmup_method: linear
+lrscheduler: step
+milestones: [40, 60, 100]
+total_train_epoch: 20
+
+batch_size: 32
+num_pos: 4
+num_workers: 8
+sampler_type: identity_auto_replace
+seed: 0
+
+# Official SYSU Fusion evaluation cadence/protocol.
+retrieval_backend: legacy
+test_modality: Fusion
+test_model_type: Fusion
+eval_before_train: false
+eval_start_epoch: 0
+eval_epoch: 2
+gallery_trials: 10
+test_mode: all
+gall_mode: single
+save_best_per_metric: true
+max_save_model_num: 1
