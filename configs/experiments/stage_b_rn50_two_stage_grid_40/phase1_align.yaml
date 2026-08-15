@@ -1,0 +1,27 @@
+extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+
+# Stage B1: establish a shared identity space before cross-modal fine-tuning.
+config_select: configs/experiments/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
+metric_experiment_id: STAGEB-RN50-TWO-STAGE-B1
+output_root: /tmp/stage_b_rn50_two_stage_grid_40/phase1/model_output/
+metric_events_path: /tmp/stage_b_rn50_two_stage_grid_40/phase1/events.jsonl
+
+loss_names: id,wrt
+id_loss_weight: 1.0
+wrt_loss_weight: 1.0
+
+optimizer: AdamW
+lr_visual: 0.0003
+lr_txt: 0.00001
+warmup_epochs: 3
+warmup_factor: 0.01
+warmup_method: linear
+lrscheduler: cosine
+target_lr_factor: 0.01
+total_train_epoch: 20
+
+eval_before_train: true
+eval_start_epoch: 1
+eval_epoch: 1
+save_best_per_metric: true
+max_save_model_num: 1

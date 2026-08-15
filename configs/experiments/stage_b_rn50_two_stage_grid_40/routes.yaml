@@ -1,0 +1,35 @@
+schema_version: 1
+experiment_group: stage_b_rn50_two_stage_grid_40_20260815
+total_epochs: 40
+source_stage_a_checkpoint: /home/lab929/ybj/SALT-VI/checkpoints/stage_a/experiments/stage_a_tvilfm_rn50_pasd_direct_20260813/best/model_IR_epoch_115.pth
+output_root: /home/lab929/ybj/SALT-VI/experiments/stage_b_rn50_two_stage_grid_40_20260815
+
+phase1_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase1_align.yaml
+triangle_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_triangle.yaml
+fullpairs_config: configs/experiments/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
+
+routes:
+  r0_switch20_triangle:
+    gpu: 0
+    phase1_epochs: 20
+    phase2_epochs: 20
+    phase2_config: triangle_config
+    hypothesis: Equal allocation tests whether cross-modal refinement needs as much time as identity alignment.
+  r1_switch24_triangle:
+    gpu: 1
+    phase1_epochs: 24
+    phase2_epochs: 16
+    phase2_config: triangle_config
+    hypothesis: Historical E4 timing suggests switching after roughly 24 alignment epochs.
+  r2_switch28_triangle:
+    gpu: 2
+    phase1_epochs: 28
+    phase2_epochs: 12
+    phase2_config: triangle_config
+    hypothesis: A longer alignment stage may reduce the early overfitting seen in direct cross-modal training.
+  r3_switch24_fullpairs:
+    gpu: 3
+    phase1_epochs: 24
+    phase2_epochs: 16
+    phase2_config: fullpairs_config
+    hypothesis: Direct Fusion pair supervision may improve the fixed 0.5 text-IR fusion representation.
