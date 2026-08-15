@@ -5,7 +5,7 @@ SALT-VI 是可见光—红外行人重识别研究仓库。当前实现包含两
 ## 当前状态
 
 - 当前研究主线：在 SYSU-MM01 上用 geometry-matched PASD RGB 与 IR 重建 Stage-A，并把保留的 RN50 Stage-A 初始化接入 Stage-B；首个 30 epoch 衔接实验已完成并登记。
-- 最新 Stage-A 延长实验：PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 70 epoch 训练已完成；结构化后处理已恢复并归档，但未替代现有保留结果。
+- PMT-ViT、No-MBPatch、batch 128、FlashAttention 路线：24 epoch 修复版已恢复结构化结果并保留最佳模型；70 epoch 延长版已完成并归档，但未替代该结果。
 - 已完成对照：RN50 Direct 完成 120 epoch；PostTrain60 在 epoch 28 停止并归档为失败。
 - 正式 Stage-B 历史默认仍为 `configs/stage_b/r_text_visual_20260729.yaml`（`SALT_R_TEXT_VISUAL`）；新的 PASD-RN50 衔接配置为 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml`。
 - 实验指标与 checkpoint 身份的唯一总表：`reports/experiment_registry/experiment_registry.csv`。

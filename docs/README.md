@@ -22,7 +22,7 @@
 
 RN50 Direct 已完成并保留最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。两条路线同时改变初始化、batch size、学习率和调度，因此只是工程路线比较，不是严格单因素消融。PMT-ViT、No-MBPatch 的已完成结果也已登记；精确指标、选择 epoch、配置和 checkpoint 身份只查实验总表。
 
-保留的 RN50 Direct Stage-A 初始化已经接入 geometry-matched PASD Stage-B，30 epoch 运行已完成。对应配置为 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml`。PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 70 epoch Stage-A 训练也已完成；其结构化后处理已从 TensorBoard 同 step 指标恢复并归档，但未替代现有保留结果。精确指标和证据路径只记录在实验总表。
+保留的 RN50 Direct Stage-A 初始化已经接入 geometry-matched PASD Stage-B，30 epoch 运行已完成。对应配置为 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml`。PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 24 epoch 修复版与 70 epoch 延长版均已从 TensorBoard 同 step 指标恢复；24 epoch 最佳模型已保留，70 epoch 版本未替代它。精确指标和证据路径只记录在实验总表。
 
 ## 2. 正式默认与活跃研究的区别
 
