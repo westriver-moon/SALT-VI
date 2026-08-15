@@ -7,8 +7,9 @@ metric_experiment_id: SALTVI-STAGEB-RN50-TVILFM-ORIGINAL-20-4090-20260815
 output_root: /home/lab929/ybj/experiments/tvilfm_original_rn50_stagea_best_20ep_20260815/model_output/
 metric_events_path: /home/lab929/ybj/experiments/tvilfm_original_rn50_stagea_best_20ep_20260815/events.jsonl
 
-# Healthy physical GPU1 is exposed as logical cuda:0. Physical GPUs 0 and 3
-# currently report NVML device-handle errors and are deliberately excluded.
+# CUDA-visible ordinal 1 is exposed as logical cuda:0. With this host's current
+# degraded topology it resolves to healthy nvidia-smi index 2; indexes 0 and 3
+# report device-handle errors and are deliberately excluded.
 CUDA_VISIBLE_DEVICES: "1"
 gpu_id: "0"
 
