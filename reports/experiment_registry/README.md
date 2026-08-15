@@ -17,7 +17,8 @@
 ## 当前项目状态
 
 - 正式 Stage-B 默认仍为 `SALT_R_TEXT_VISUAL`，配置 `configs/stage_b/r_text_visual_20260729.yaml`。
-- 当前活跃研究是 geometry-matched PASD RGB+IR 的 Stage-A 视觉底座，详见 [`../../docs/README.md`](../../docs/README.md)。
+- geometry-matched PASD RN50 Stage-A 已接入 Stage-B 并完成 30 epoch 运行，配置 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml`；精确结果、模型哈希和证据路径见唯一 CSV。
+- PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 70 epoch Stage-A 训练已完成；结构化后处理已恢复并归档，未替代现有保留结果，详见唯一 CSV 与 [`../../docs/README.md`](../../docs/README.md)。
 - `SALTVI-STAGEA-PASD-NOMB-B16-20260811`、RN50 Direct 与停止的 PostTrain60 均已登记；Direct 保留最佳 checkpoint，PostTrain60 仅保留配置、指标和日志。
 
 ## 维护流程

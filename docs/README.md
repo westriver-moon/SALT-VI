@@ -20,16 +20,9 @@
 - `manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 共同固定来源、大小、校验和与完整性；当前校验错误数为 0。
 - 训练配置使用 `sysu_sr_backend: pasd_multiview`、`sysu_sr_modalities: [rgb, ir]`、`sysu_sr_view_sampling: paired` 和 `sysu_sr_exact_size: true`。
 
-已完成两种 RN50 Stage-A 适配路线的工程比较：
+RN50 Direct 已完成并保留最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。两条路线同时改变初始化、batch size、学习率和调度，因此只是工程路线比较，不是严格单因素消融。PMT-ViT、No-MBPatch 的已完成结果也已登记；精确指标、选择 epoch、配置和 checkpoint 身份只查实验总表。
 
-| 路线 | 配置 | 初始化与调度 | 归档最佳 SYSU 结果 |
-| --- | --- | --- | --- |
-| Direct | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_direct.yaml` | ImageNet RN50 初始化；120 epoch，batch 32 | Rank-1 71.5698%，mAP 67.8598%，mINP 53.9621%（epoch 115；完成 120 epoch） |
-| PostTrain60 | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_posttrain_60ep.yaml` | `pretrained/tvi_lfm/sysu/VI_sysu_BASE.pth`；60 epoch，batch 16，低学习率 | Rank-1 66.6448%，mAP 61.9430%，mINP 46.6493%（epoch 19；在 epoch 28 停止） |
-
-Direct 已完成并保留 epoch 115 最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。由于两条路线的初始化、batch size、学习率和调度同时不同，它们是工程路线比较，不是只隔离“是否 warm start”的严格单因素消融。
-
-已完成的 PMT-ViT、No-MBPatch、geometry-matched PASD 单视图 Stage-A 结果为 Rank-1 67.9174%、mAP 64.9257%、mINP 51.3045%（epoch 23）。对应实验 `SALTVI-STAGEA-PASD-NOMB-B16-20260811` 已归档到总表。
+保留的 RN50 Direct Stage-A 初始化已经接入 geometry-matched PASD Stage-B，30 epoch 运行已完成。对应配置为 `configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml`。PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 70 epoch Stage-A 训练也已完成；其结构化后处理已从 TensorBoard 同 step 指标恢复并归档，但未替代现有保留结果。精确指标和证据路径只记录在实验总表。
 
 ## 2. 正式默认与活跃研究的区别
 
@@ -45,9 +38,9 @@ configs/stage_b/r_text_visual_20260729.yaml
 python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.yaml
 ```
 
-`SALT_R_TEXT_VISUAL` 冻结视觉分支，使用离线 RGB+IR SwinIR x2 输入、RGB-IR/RGB-Text/IR-Text direct pair loss、双分支 patch embedding 和 learnable PatchGeM，不启用 LLM caption augmentation。其保留结果来自 SYSU-MM01 all-search、single-shot、10 gallery trials、单 seed：Rank-1 84.0783%、mAP 81.4334%、mINP 71.7899（epoch 23）。
+`SALT_R_TEXT_VISUAL` 冻结视觉分支，使用离线 RGB+IR SwinIR x2 输入、RGB-IR/RGB-Text/IR-Text direct pair loss、双分支 patch embedding 和 learnable PatchGeM，不启用 LLM caption augmentation。其保留结果来自 SYSU-MM01 all-search、single-shot、10 gallery trials、单 seed；精确指标和选择 epoch 只查实验总表。
 
-它是结果引用和 Stage-B 复现的正式默认；当前 geometry-matched Stage-A 工作是在寻找更好的上游视觉初始化，尚未替代该默认。
+它仍是历史结果引用和 Stage-B 复现默认。新的 PASD-RN50 衔接实验用于验证 geometry-matched 上游视觉初始化，没有替代该默认；两者精确结果统一查实验总表。
 
 ## 3. 系统架构
 
