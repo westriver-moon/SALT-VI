@@ -1,4 +1,4 @@
-extends: ../sysu_vision_text_mbpatch.yaml
+extends: ../vision_text/sysu_multibranch.yaml
 
 # The validated Stage-A architecture is the independent PMT MBPatch model.
 # Every SR group keeps this recipe and the global PK=8x4 batch unchanged.

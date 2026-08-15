@@ -1,7 +1,6 @@
 import json
 import os
 import random
-import regex as re
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
@@ -743,7 +742,7 @@ class Test_Tri_Data(data.Dataset):
 
 def load_data(input_data_path):
     with open(input_data_path) as f:
-        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        data_file_list = f.read().splitlines()
         # Get full list of image and labels
         file_image = [s.split(' ')[0] for s in data_file_list]
         file_label = [int(s.split(' ')[1]) for s in data_file_list]
@@ -836,7 +835,7 @@ def process_test_regdb(img_dir, trial=1, modal='visible'):
         input_data_path = img_dir + 'idx/test_thermal_{}'.format(trial) + '.txt'
 
     with open(input_data_path) as f:
-        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        data_file_list = f.read().splitlines()
         # Get full list of image and labels
         file_image = [img_dir + s.split(' ')[0] for s in data_file_list]
         file_label = [int(s.split('/')[1]) for s in data_file_list]
@@ -851,7 +850,6 @@ def process_query_llcm(data_path, mode = 1):
         cameras = ['test_nir/cam1','test_nir/cam2','test_nir/cam4','test_nir/cam5','test_nir/cam6','test_nir/cam7','test_nir/cam8','test_nir/cam9']
 
     file_path = os.path.join(data_path,'idx/test_id.txt')
-    files_rgb = []
     files_ir = []
 
     with open(file_path, 'r') as file:

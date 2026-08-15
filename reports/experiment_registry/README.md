@@ -2,7 +2,7 @@
 
 `experiment_registry.csv` 是 SALT-VI 跨 Stage-A、Stage-B、消融、复现和数据派生实验的唯一总表。不要从 README、日志摘要或论文草稿建立第二份“当前排行榜”。
 
-本次文档整合不修改该 CSV、其 source tables 或任何结构化实验结果。
+该 CSV 是唯一权威记录；历史来源表已完成逐行汇入并删除。
 
 ## 使用规则
 

@@ -1,7 +1,6 @@
 import torch
 import torchvision
 import torch.nn as nn
-from .gem_pool import GeneralizedMeanPoolingP
 
 class Normalize(nn.Module):
     def __init__(self, power=2, eps=1e-12):

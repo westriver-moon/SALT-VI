@@ -1,6 +1,5 @@
 import gzip
 import html
-import os
 try:
     from importlib.resources import files
 except ImportError:  # Python 3.8 compatibility

@@ -36,7 +36,7 @@ CONFIG_NAMES = (
     "sr_a2_swinir_rgb_x2.yaml",
     "sr_a3_swinir_both_x2.yaml",
 )
-CONFIG_DIR = PROJECT_ROOT / "configs/vision_text/super_resolution"
+CONFIG_DIR = PROJECT_ROOT / "configs/super_resolution"
 
 
 def read_idle_gpus(max_memory_mib, max_utilization):

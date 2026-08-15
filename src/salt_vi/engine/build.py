@@ -963,8 +963,6 @@ class CLIP2ReID(nn.Module):
 
     def encode_filtered_fusion(self, text, filter, ir):
         # 获取 id 形式的文本原始数据
-        caption_ids = text
-        filter_caption_ids = filter
         # 获取文本Tensor特征
         text_feat = self.encode_text_feat(text)
         # 获取filter Tensor特征

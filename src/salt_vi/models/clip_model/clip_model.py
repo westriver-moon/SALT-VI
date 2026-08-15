@@ -10,7 +10,6 @@ import hashlib
 import urllib
 from tqdm import tqdm
 import warnings
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn

@@ -3,9 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import random
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from .clustering import cluster_hypothesis_samples, wilson_interval
 from .schema import ValidationResult

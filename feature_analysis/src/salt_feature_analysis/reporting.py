@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import csv
 import json
-import math
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, List
 
-from .storage import write_json
 
 
 def _scalar(value: Any) -> Any:

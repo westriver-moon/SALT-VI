@@ -26,7 +26,6 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from salt_vi.baselines.vision_text.config import load_config
-from salt_vi.baselines.vision_text.data.sampler import build_label_positions
 from salt_vi.baselines.vision_text.engine.evaluator import evaluate_sysu
 from salt_vi.baselines.vision_text.engine.trainer import (
     build_epoch_loader,
