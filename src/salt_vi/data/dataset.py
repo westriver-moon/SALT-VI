@@ -606,7 +606,8 @@ class Test_Tri_Data(data.Dataset):
                             sysu_sr_exact_size=False, sysu_sr_backend="array",
                             sysu_sr_view_manifest=None, sysu_sr_views_per_image=1,
                             sysu_sr_eval_view_index=0,
-                            caption_lookup="identity", caption_manifest=None): # include Feat_Filter=False
+                            caption_lookup="identity", caption_manifest=None,
+                            caption_seed=0): # include Feat_Filter=False
         self.tokenizer = SimpleTokenizer() if load_text else None
         self.Feat_Filter = Feat_Filter
         self.load_text = load_text
@@ -650,6 +651,7 @@ class Test_Tri_Data(data.Dataset):
         test_image = []
         test_text_ir = []
         test_text_rgb = []
+        caption_rng = np.random.RandomState(int(caption_seed))
         self.joint_mode = joint_mode
         print(f"Loading Test {self.type} Data...")
         for i in range(len(test_img_file)):
@@ -690,7 +692,7 @@ class Test_Tri_Data(data.Dataset):
                         text_dict_rgb, dataset_name, data_path, test_img_file[i]
                     )
                 else:
-                    caption = np.random.choice(text_dict_rgb[str(test_label[i])])
+                    caption = caption_rng.choice(text_dict_rgb[str(test_label[i])])
                 test_text_rgb.append(tokenize(caption, self.tokenizer))
                 if Feat_Filter:
                     test_text_ir.append(
@@ -784,7 +786,8 @@ def process_query_sysu(data_path, mode='all', relabel=False):
 
 def process_gallery_sysu(data_path, mode='all', trial=0, relabel=False, gall_mode='single'):
 
-    random.seed(trial)
+    py_rng = random.Random(trial)
+    np_rng = np.random.default_rng(trial)
 
     if mode == 'all':
         rgb_cameras = ['cam1', 'cam2', 'cam4', 'cam5']
@@ -804,9 +807,9 @@ def process_gallery_sysu(data_path, mode='all', trial=0, relabel=False, gall_mod
             if os.path.isdir(img_dir):
                 new_files = sorted([img_dir + '/' + i for i in os.listdir(img_dir)])
                 if gall_mode == 'single':
-                    files_rgb.append(random.choice(new_files))
+                    files_rgb.append(py_rng.choice(new_files))
                 if gall_mode == 'multi':
-                    files_rgb.append(np.random.choice(new_files, 10, replace=False))
+                    files_rgb.append(np_rng.choice(new_files, 10, replace=False))
     gall_img = []
     gall_id = []
     gall_cam = []
@@ -876,7 +879,7 @@ def process_query_llcm(data_path, mode = 1):
 
 def process_gallery_llcm(data_path, mode = 1, trial = 0):
 
-    random.seed(trial)
+    py_rng = random.Random(trial)
 
     if mode== 1:
         cameras = ['test_vis/cam1','test_vis/cam2','test_vis/cam3','test_vis/cam4','test_vis/cam5','test_vis/cam6','test_vis/cam7','test_vis/cam8','test_vis/cam9']
@@ -895,7 +898,7 @@ def process_gallery_llcm(data_path, mode = 1, trial = 0):
             img_dir = os.path.join(data_path,cam,id)
             if os.path.isdir(img_dir):
                 new_files = sorted([img_dir+'/'+i for i in os.listdir(img_dir)])
-                files_rgb.append(random.choice(new_files))
+                files_rgb.append(py_rng.choice(new_files))
     gall_img = []
     gall_id = []
     gall_cam = []

@@ -1,4 +1,4 @@
-extends: configs/experiments/stage_b_rn50_pasd_r_text_visual_30/train.yaml
+extends: configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml
 
 # TVI-LFM original IFS/SFF/MJL text-stage recipe, adapted only where required
 # for the retained RN50/2048 Stage-A checkpoint and its matching PASD inputs.

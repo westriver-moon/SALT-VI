@@ -151,13 +151,14 @@ def validate_checkpoint_compatibility(config):
 
 
 def main():
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
     config_path = (
         repo_root
         / "configs"
         / "experiments"
-        / "stage_b_rn50_pasd_r_text_visual_30"
-        / "train.yaml"
+        / "reproduction"
+        / "archived_configs"
+        / "stage_b_rn50_pasd_r_text_visual_30.yaml"
     )
     config, validation = load_and_validate_config(repo_root, config_path)
     if "--validate-only" in sys.argv[1:]:

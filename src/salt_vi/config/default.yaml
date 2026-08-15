@@ -26,6 +26,7 @@ eval_start_epoch: 80
 fusion_way: add
 gall_mode: single
 gamma: 0.1
+gallery_trials: 10
 gpu_id: '0'
 id_loss_weight: 1.0
 img_h: 288

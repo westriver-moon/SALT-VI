@@ -227,7 +227,13 @@ class Loader:
         self.mode = config.mode
         self.test_mode = config.test_mode
         self.gall_mode = config.gall_mode
+        self.gallery_trials = int(getattr(config, "gallery_trials", 10))
+        if self.gallery_trials < 1:
+            raise ValueError(
+                f"gallery_trials must be positive, got {self.gallery_trials}"
+            )
         self.num_workers = config.num_workers
+        self.seed = int(getattr(config, "seed", 0))
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
         self.retrieval_protocol = get_retrieval_protocol(
@@ -290,7 +296,7 @@ class Loader:
             query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
                                                 num_workers=self.num_workers)
             gallery_loaders = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False,
                                                  drop_last=False, num_workers=self.num_workers)
                 gallery_loaders.append(gallery_loader)
@@ -341,7 +347,7 @@ class Loader:
             query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
                                                 num_workers=self.num_workers)
             gallery_loaders = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
                                              num_workers=self.num_workers)
                 gallery_loaders.append(gallery_loader)
@@ -366,7 +372,7 @@ class Loader:
                                             sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                             sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                             sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
-                                            source_modality="ir")
+                                            source_modality="ir", caption_seed=self.seed)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -375,7 +381,7 @@ class Loader:
             gallery_samples_list = []
             self.gallery_labels = []
             self.gallery_cams = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gall_img, gall_label, gall_cam = process_gallery_sysu(self.sysu_data_path, mode=self.test_mode, trial=i,
                                                                       gall_mode=self.gall_mode)
                 self.gall_cam = gall_cam
@@ -416,7 +422,7 @@ class Loader:
                                             captioner_name=self.captioner_name, \
                                                 joint_mode=self.joint_mode,gallorquery=f'query[{trial}]',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root)
+                                                text_data_root=self.text_data_root, caption_seed=self.seed)
                 query_samples_list.append(query_samples)
 
             gallery_samples_list = []
@@ -446,7 +452,7 @@ class Loader:
                                         captioner_name=self.captioner_name, \
                                             joint_mode=self.joint_mode,gallorquery='query',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root)
+                                                text_data_root=self.text_data_root, caption_seed=self.seed)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -455,7 +461,7 @@ class Loader:
             gallery_samples_list = []
             self.gallery_labels = []
             self.gallery_cams = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gall_img, gall_label, gall_cam = process_gallery_llcm(self.llcm_data_path, mode=1, trial=i) # vis
 
                 self.gall_cam = gall_cam

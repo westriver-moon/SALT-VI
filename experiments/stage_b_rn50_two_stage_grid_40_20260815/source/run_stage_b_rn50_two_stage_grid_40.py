@@ -15,11 +15,13 @@ import traceback
 import yaml
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_ROUTES = (
     REPO_ROOT
     / "configs"
     / "experiments"
+    / "reproduction"
+    / "archived_configs"
     / "stage_b_rn50_two_stage_grid_40"
     / "routes.yaml"
 )

@@ -15,8 +15,8 @@ from salt_vi.utils import make_dirs, Logger
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
 from salt_vi.config.validation import validate_runtime_config
-from salt_vi.entrypoints.output_paths import resolve_run_directory
-from salt_vi.retrieval import get_retrieval_protocol
+from salt_vi.entrypoints.output_paths import ensure_fresh_run_directory, resolve_run_directory
+from salt_vi.retrieval import build_protocol_spec, get_retrieval_protocol
 from salt_vi.utils.utils import save_train_configs, load_train_configs, time_now
 from torch.utils.tensorboard import SummaryWriter
 from copy import deepcopy
@@ -423,6 +423,7 @@ def main(config):
             "or fixed_visual_data_parallel for frozen visual replicas."
         )
     os.environ["CUDA_VISIBLE_DEVICES"] = config.CUDA_VISIBLE_DEVICES
+    protocol_spec = build_protocol_spec(config, retrieval_protocol)
     device = torch.device(f'cuda:{config.gpu_id}' if torch.cuda.is_available() else "cpu")
 
     global best_mAP_text
@@ -438,6 +439,7 @@ def main(config):
 
     print("=================Constructing output dir=================")
     config.output_path = resolve_run_directory(config)
+    ensure_fresh_run_directory(config)
     if config.DEBUG:
         print(f"Debug [{config.mode}] mode, dir: {config.output_path}")
     elif (config.auto_resume_training_from_lastest_step or config.resume_train_epoch>=0) and config.mode == 'train':
@@ -547,7 +549,8 @@ def main(config):
                 epoch=-1,
                 phase="warm_start_before_training",
                 dataset=config.dataset,
-                protocol="all-search-single-shot-10-trial",
+                protocol=protocol_spec.identifier,
+                protocol_spec=protocol_spec.as_dict(),
                 query=retrieval_protocol.QUERY_NAME,
                 gallery=retrieval_protocol.GALLERY_NAME,
                 metrics={
@@ -587,29 +590,28 @@ def main(config):
                 logger(f"Visual unfreeze summary: {unfreeze_summary}")
             scheduler.step(current_epoch)
 
-            if current_epoch < config.total_train_epoch:
-                result_vals, result = train(model, loaders, scaler, config, optimizer, current_epoch=current_epoch)
-                # visual log
-                for key, value in zip(*result_vals):
-                    loss_writer.add_scalar(key, value, current_epoch)
-                logger('Time: {}; Epoch: {}; {}'.format(time_now(), current_epoch, result))
-                epoch_values = {key: float(value) for key, value in zip(*result_vals)}
-                _append_metric_event(
-                    config,
-                    "train_epoch",
-                    epoch=current_epoch,
-                    losses={key: value for key, value in epoch_values.items() if "loss" in key},
-                    scalars={
-                        **({"accuracy": epoch_values["acc"]} if "acc" in epoch_values else {}),
-                        "learning_rate": float(optimizer.param_groups[0]["lr"]),
-                    },
-                    duration_seconds=float(time.monotonic() - epoch_started),
-                    amp_skipped_steps=int(epoch_values.get("amp_skipped_steps", 0)),
-                )
-                if getattr(model, "raw_pa", None) is not None:
-                    pa_value = float(model.current_pa().detach().cpu())
-                    logger(f"Learnable pa: {pa_value}")
-                    performance_writer.add_scalar("learnable_pa", pa_value, current_epoch)
+            result_vals, result = train(model, loaders, scaler, config, optimizer, current_epoch=current_epoch)
+            # visual log
+            for key, value in zip(*result_vals):
+                loss_writer.add_scalar(key, value, current_epoch)
+            logger('Time: {}; Epoch: {}; {}'.format(time_now(), current_epoch, result))
+            epoch_values = {key: float(value) for key, value in zip(*result_vals)}
+            _append_metric_event(
+                config,
+                "train_epoch",
+                epoch=current_epoch,
+                losses={key: value for key, value in epoch_values.items() if "loss" in key},
+                scalars={
+                    **({"accuracy": epoch_values["acc"]} if "acc" in epoch_values else {}),
+                    "learning_rate": float(optimizer.param_groups[0]["lr"]),
+                },
+                duration_seconds=float(time.monotonic() - epoch_started),
+                amp_skipped_steps=int(epoch_values.get("amp_skipped_steps", 0)),
+            )
+            if getattr(model, "raw_pa", None) is not None:
+                pa_value = float(model.current_pa().detach().cpu())
+                logger(f"Learnable pa: {pa_value}")
+                performance_writer.add_scalar("learnable_pa", pa_value, current_epoch)
 
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
@@ -678,7 +680,8 @@ def main(config):
                         "eval_epoch",
                         epoch=current_epoch,
                         dataset=config.dataset,
-                        protocol="all-search-single-shot-10-trial",
+                        protocol=protocol_spec.identifier,
+                        protocol_spec=protocol_spec.as_dict(),
                         query=retrieval_protocol.QUERY_NAME,
                         gallery=retrieval_protocol.GALLERY_NAME,
                         metrics={

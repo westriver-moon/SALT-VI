@@ -6,7 +6,7 @@ from itertools import repeat
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
+from salt_vi.utils.checkpointing import checkpoint_forward
 
 from salt_vi.attention import normalize_attention_backend, run_scaled_dot_product_attention
 
@@ -389,9 +389,7 @@ class ViT(nn.Module):
         for block_index in range(start_index, end_index):
             block = self.blocks[block_index]
             if checkpoint_blocks and torch.is_grad_enabled() and tokens.requires_grad:
-                # The production environment is pinned to PyTorch 1.8.1, whose
-                # checkpoint API predates the ``use_reentrant`` keyword.
-                tokens = checkpoint(block, tokens)
+                tokens = checkpoint_forward(block, tokens)
             else:
                 tokens = block(tokens)
         return tokens

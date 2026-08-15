@@ -19,11 +19,15 @@ jobs:
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -e ".[test]" build
+          python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -c constraints/ci.txt -e ".[test]" build
       - name: Run runtime contracts
         run: |
+          python -m pytest src/salt_vi/baselines/vision_text/tests
           python -m pytest src/salt_vi/tests
           PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
+      - name: Run semantic-imagination contracts
+        if: matrix.python-version != '3.9'
+        run: PYTHONPATH=semantic_imagination python -m pytest semantic_imagination/tests
       - name: Check CLI help
         run: python scripts/train.py --help
       - name: Build and inspect wheel resources
@@ -37,5 +41,7 @@ jobs:
           with ZipFile(wheel) as archive:
               members = archive.namelist()
           assert any(name.endswith("salt_vi/data/assets/bpe_simple_vocab_16e6.txt.gz") for name in members)
+          assert not any("/tests/" in name for name in members)
+          assert not any(name.endswith("/tests") for name in members)
           assert any(name.endswith("salt_vi/config/default.yaml") for name in members)
           PY

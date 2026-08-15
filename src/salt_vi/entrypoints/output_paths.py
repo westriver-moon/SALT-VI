@@ -60,3 +60,26 @@ def resolve_run_directory(config) -> str:
         / _variant_directory(config)
         / experiment_name
     )
+
+
+def ensure_fresh_run_directory(config) -> None:
+    """Reject a fresh training run that would mix with existing artifacts."""
+    if bool(getattr(config, "DEBUG", False)) or str(getattr(config, "mode", "")) != "train":
+        return
+    is_resume = bool(
+        getattr(config, "auto_resume_training_from_lastest_step", False)
+    ) or int(getattr(config, "resume_train_epoch", -1)) >= 0
+    if is_resume:
+        return
+
+    output_path = Path(config.output_path).expanduser()
+    if not output_path.exists():
+        return
+    entries = sorted(path.name for path in output_path.iterdir())
+    if entries:
+        preview = ", ".join(entries[:5])
+        raise FileExistsError(
+            "Fresh training refuses non-empty output directory {}: {}".format(
+                output_path, preview
+            )
+        )

@@ -39,7 +39,8 @@ def process_query_sysu(data_path: str | Path, mode: str = "all"):
 
 def process_gallery_sysu(data_path: str | Path, mode: str = "all", trial: int = 0, gall_mode: str = "single"):
     root = Path(data_path)
-    random.seed(trial)
+    py_rng = random.Random(trial)
+    np_rng = np.random.default_rng(trial)
     if mode == "all":
         rgb_cameras = ["cam1", "cam2", "cam4", "cam5"]
     elif mode == "indoor":
@@ -56,10 +57,10 @@ def process_gallery_sysu(data_path: str | Path, mode: str = "all", trial: int = 
                 if not new_files:
                     continue
                 if gall_mode == "single":
-                    files_rgb.append(random.choice(new_files))
+                    files_rgb.append(py_rng.choice(new_files))
                 elif gall_mode == "multi":
                     replace = len(new_files) < 10
-                    files_rgb.extend(np.random.choice(new_files, 10, replace=replace).tolist())
+                    files_rgb.extend(np_rng.choice(new_files, 10, replace=replace).tolist())
                 else:
                     raise ValueError(f"Unsupported gallery mode: {gall_mode}")
 

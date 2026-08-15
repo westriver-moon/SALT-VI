@@ -196,8 +196,8 @@ def build_lr_scheduler(args, optimizer):
         warmup_epochs=args.warmup_epochs,
         warmup_method=args.warmup_method,
         total_epochs=args.total_train_epoch, # 120
-        mode=args.lrscheduler, # useless
-        target_lr=args.target_lr, # useless
+        mode=args.lrscheduler,
+        target_lr=args.target_lr,
         target_lr_factor=getattr(args, "target_lr_factor", None),
-        power=args.power, # useless
+        power=args.power,
     )

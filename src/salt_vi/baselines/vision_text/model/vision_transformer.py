@@ -6,7 +6,7 @@ from itertools import repeat
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
+from salt_vi.utils.checkpointing import checkpoint_forward
 
 from salt_vi.attention import normalize_attention_backend, run_scaled_dot_product_attention
 
@@ -334,7 +334,7 @@ class ViT(nn.Module):
         x = self.pos_drop(x)
         for block in self.blocks:
             if self.gradient_checkpointing and self.training and x.requires_grad:
-                x = checkpoint(block, x)
+                x = checkpoint_forward(block, x)
             else:
                 x = block(x)
         x = self.norm(x)
