@@ -109,6 +109,21 @@ def test_runtime_validation_rejects_removed_return_before_bn_flag():
         )
 
 
+def test_runtime_validation_rejects_non_positive_batch_size():
+    with pytest.raises(ValueError, match="batch_size must be >= 1"):
+        validate_runtime_config({"batch_size": 0})
+
+
+def test_runtime_validation_rejects_non_positive_temperature():
+    with pytest.raises(ValueError, match="temperature must be > 0"):
+        validate_runtime_config({"temperature": 0.0})
+
+
+def test_runtime_validation_rejects_invalid_image_size_pair():
+    with pytest.raises(ValueError, match="img_size must be a pair"):
+        validate_runtime_config({"img_size": (288, 0)})
+
+
 def test_external_text_root_has_priority(tmp_path):
     external = tmp_path / "portable_text"
     expected = external / "Blip_RGB"
@@ -148,15 +163,96 @@ def test_training_checkpoint_round_trip_restores_full_state(tmp_path):
     expected_weight = model.weight.detach().clone()
     checkpoint_path = tmp_path / "checkpoint_latest.pth"
     train_entry._save_training_checkpoint(
-        str(checkpoint_path), 4, model, optimizer, scheduler, scaler
+        str(checkpoint_path),
+        4,
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        run_uuid="run-1",
+        run_manifest_sha256="manifest-hash-1",
     )
     with torch.no_grad():
         model.weight.zero_()
     assert train_entry._load_training_checkpoint(
-        str(checkpoint_path), model, optimizer, scheduler, scaler, torch.device("cpu")
+        str(checkpoint_path),
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        torch.device("cpu"),
+        expected_run_uuid="run-1",
+        expected_run_manifest_sha256="manifest-hash-1",
     ) == 5
     assert torch.equal(model.weight, expected_weight)
     assert train_entry.best_rank1_fusion == 0.8
+
+
+def test_training_checkpoint_rejects_run_identity_mismatch_before_state_load(tmp_path):
+    model = torch.nn.Linear(2, 1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
+    scaler = _disabled_scaler()
+    checkpoint_path = tmp_path / "checkpoint_latest.pth"
+    train_entry._save_training_checkpoint(
+        str(checkpoint_path),
+        3,
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        run_uuid="expected-run",
+        run_manifest_sha256="expected-manifest",
+    )
+    with torch.no_grad():
+        model.weight.zero_()
+    with pytest.raises(ValueError, match="run UUID mismatch"):
+        train_entry._load_training_checkpoint(
+            str(checkpoint_path),
+            model,
+            optimizer,
+            scheduler,
+            scaler,
+            torch.device("cpu"),
+            expected_run_uuid="different-run",
+            expected_run_manifest_sha256="expected-manifest",
+        )
+    assert torch.equal(model.weight, torch.zeros_like(model.weight))
+
+
+class _ProtocolStub:
+    identifier = "stub-protocol"
+
+    def as_dict(self):
+        return {"identifier": self.identifier}
+
+
+def test_run_manifest_round_trip_hashes_config_data_and_protocol(tmp_path):
+    view_manifest = tmp_path / "manifest.jsonl"
+    view_manifest.write_text("source_1\nsource_2\n", encoding="utf-8")
+    config = SimpleNamespace(
+        output_path=str(tmp_path / "run"),
+        mode="test",
+        test_model_path=None,
+        training_weight_init=None,
+        sysu_sr_view_manifest=str(view_manifest),
+        sysu_sr_data_root=None,
+        dataset="sysu",
+        batch_size=32,
+        seed=1,
+    )
+    run_uuid = "fresh-run-uuid"
+    path, manifest_hash = train_entry._write_run_manifest(
+        config, run_uuid, _ProtocolStub()
+    )
+    assert Path(path).is_file()
+    manifest = train_entry._load_run_manifest(config)
+    assert manifest["run_uuid"] == run_uuid
+    assert manifest["resolved_config_sha256"] == train_entry._resolved_config_digest(config)
+    assert manifest["data_manifest"]["paths"] == [str(view_manifest)]
+    assert manifest["protocol_identifier"] == "stub-protocol"
+    assert manifest_hash == train_entry._sha256_file(path)
+    train_entry._validate_run_manifest(config, _ProtocolStub(), manifest)
 
 
 def test_training_checkpoint_loader_requests_full_state_when_supported(monkeypatch):

@@ -6,10 +6,12 @@ import inspect
 import json
 import re
 import time
+import uuid
 import torch
 import random
 import numpy as np
 import yaml
+from pathlib import Path
 from salt_vi.data.loader import Loader
 from salt_vi.engine import train, test, build_model
 from salt_vi.utils import make_dirs, Logger
@@ -46,7 +48,17 @@ _BEST_METRIC_NAMES = (
     "best_rank1_fusion",
     "best_mINP_fusion",
 )
-_TRAINING_CHECKPOINT_SCHEMA_VERSION = 1
+_TRAINING_CHECKPOINT_SCHEMA_VERSION = 2
+_RUN_MANIFEST_SCHEMA_VERSION = 1
+_RUN_MANIFEST_FILENAME = "run_manifest.json"
+
+_RUN_MANIFEST_TRANSIENT_KEYS = {
+    "_explicit_cli_destinations",
+    "run_uuid",
+    "run_manifest_sha256",
+    "training_weight_init_verified_path",
+    "training_weight_init_verified_sha256",
+}
 
 
 def _merge_runtime_config(cli_config):
@@ -142,12 +154,24 @@ def _load_trusted_training_checkpoint(path):
     return torch.load(path, **kwargs)
 
 
-def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
+def _save_training_checkpoint(
+    path,
+    epoch,
+    model,
+    optimizer,
+    scheduler,
+    scaler,
+    *,
+    run_uuid=None,
+    run_manifest_sha256=None,
+):
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     payload = {
         "schema_version": _TRAINING_CHECKPOINT_SCHEMA_VERSION,
         "epoch": int(epoch),
+        "run_uuid": run_uuid,
+        "run_manifest_sha256": run_manifest_sha256,
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "scheduler": scheduler.state_dict(),
@@ -170,13 +194,53 @@ def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
     return path
 
 
-def _load_training_checkpoint(path, model, optimizer, scheduler, scaler, device):
+def _validate_checkpoint_run_identity(
+    checkpoint,
+    expected_run_uuid=None,
+    expected_run_manifest_sha256=None,
+):
+    if expected_run_uuid is None and expected_run_manifest_sha256 is None:
+        return
+    checkpoint_run_uuid = checkpoint.get("run_uuid")
+    checkpoint_manifest_sha256 = checkpoint.get("run_manifest_sha256")
+    if not checkpoint_run_uuid or not checkpoint_manifest_sha256:
+        raise ValueError(
+            "Training checkpoint has no run identity; convert it to the "
+            "run-manifest checkpoint schema before complete resume"
+        )
+    if checkpoint_run_uuid != expected_run_uuid:
+        raise ValueError(
+            "Training checkpoint run UUID mismatch: checkpoint={}, manifest={}".format(
+                checkpoint_run_uuid, expected_run_uuid
+            )
+        )
+    if checkpoint_manifest_sha256 != expected_run_manifest_sha256:
+        raise ValueError(
+            "Training checkpoint run manifest hash mismatch: checkpoint={}, manifest={}".format(
+                checkpoint_manifest_sha256, expected_run_manifest_sha256
+            )
+        )
+
+
+def _load_training_checkpoint(
+    path,
+    model,
+    optimizer,
+    scheduler,
+    scaler,
+    device,
+    *,
+    expected_run_uuid=None,
+    expected_run_manifest_sha256=None,
+):
     # Keep RNG byte tensors on CPU; load_state_dict moves model and optimizer
     # tensors to their owning parameter devices.
     checkpoint = _load_trusted_training_checkpoint(path)
     required = {
         "schema_version",
         "epoch",
+        "run_uuid",
+        "run_manifest_sha256",
         "model",
         "optimizer",
         "scheduler",
@@ -191,6 +255,11 @@ def _load_training_checkpoint(path, model, optimizer, scheduler, scaler, device)
         raise ValueError(
             f"Unsupported training checkpoint schema: {checkpoint['schema_version']}"
         )
+    _validate_checkpoint_run_identity(
+        checkpoint,
+        expected_run_uuid=expected_run_uuid,
+        expected_run_manifest_sha256=expected_run_manifest_sha256,
+    )
     model.load_state_dict(checkpoint["model"])
     optimizer.load_state_dict(checkpoint["optimizer"])
     scheduler.load_state_dict(checkpoint["scheduler"])
@@ -256,6 +325,155 @@ def _sha256_file(path, chunk_size=8 * 1024 * 1024):
                 break
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_json(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _jsonable(value):
+    if isinstance(value, dict):
+        return {
+            str(key): _jsonable(item)
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+        }
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, set):
+        return sorted(_jsonable(item) for item in value)
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _resolved_config_digest(config):
+    values = dict(vars(config)) if hasattr(config, "__dict__") else dict(config)
+    values = {
+        key: item
+        for key, item in values.items()
+        if key not in _RUN_MANIFEST_TRANSIENT_KEYS
+    }
+    payload = _jsonable(values)
+    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+def _data_manifest_digest(config):
+    entries = []
+    view_manifest = getattr(config, "sysu_sr_view_manifest", None)
+    if view_manifest:
+        path = os.path.abspath(os.path.expanduser(str(view_manifest)))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"PASD view manifest is missing: {path}")
+        entries.append((path, _sha256_file(path)))
+    data_root = getattr(config, "sysu_sr_data_root", None)
+    if data_root and not view_manifest:
+        root = os.path.abspath(os.path.expanduser(str(data_root)))
+        if os.path.isdir(root):
+            for name in ("manifest.json", "manifest.jsonl", "validation-report.json"):
+                path = os.path.join(root, name)
+                if os.path.isfile(path):
+                    entries.append((path, _sha256_file(path)))
+    entries = sorted(set(entries))
+    if not entries:
+        return None
+    payload = [
+        {"path": path, "sha256": digest}
+        for path, digest in entries
+    ]
+    return {
+        "paths": [path for path, _ in entries],
+        "sha256": hashlib.sha256(
+            _canonical_json(payload).encode("utf-8")
+        ).hexdigest(),
+    }
+
+
+def _run_manifest_path(config):
+    return os.path.join(str(config.output_path), _RUN_MANIFEST_FILENAME)
+
+
+def _load_run_manifest(config):
+    path = _run_manifest_path(config)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Complete resume requested but run manifest is missing: {path}"
+        )
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if int(payload.get("schema_version", 0)) != _RUN_MANIFEST_SCHEMA_VERSION:
+        raise ValueError(
+            "Unsupported run manifest schema: {}".format(
+                payload.get("schema_version")
+            )
+        )
+    return payload
+
+
+def _validate_run_manifest(config, protocol_spec, manifest):
+    expected = {
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "init_checkpoint_sha256": _init_checkpoint_digest(config),
+        "protocol_identifier": protocol_spec.identifier,
+    }
+    mismatches = []
+    for key, value in expected.items():
+        recorded = manifest.get(key)
+        if recorded != value:
+            mismatches.append(
+                "{}: recorded={!r}, recomputed={!r}".format(
+                    key, recorded, value
+                )
+            )
+    if mismatches:
+        raise ValueError(
+            "Run manifest identity mismatch in {}: {}".format(
+                _run_manifest_path(config), "; ".join(mismatches)
+            )
+        )
+
+
+def _init_checkpoint_digest(config):
+    if str(getattr(config, "mode", "")) == "test":
+        path = getattr(config, "test_model_path", None)
+    else:
+        path = getattr(config, "training_weight_init", None)
+    if not path:
+        return None
+    if str(getattr(config, "mode", "")) != "test":
+        return _verify_training_weight_init(config)
+    path = os.path.abspath(os.path.expanduser(str(path)))
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"Test checkpoint is missing: {path}")
+    return _sha256_file(path)
+
+
+def _write_run_manifest(config, run_uuid, protocol_spec):
+    path = _run_manifest_path(config)
+    payload = {
+        "schema_version": _RUN_MANIFEST_SCHEMA_VERSION,
+        "run_uuid": run_uuid,
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "init_checkpoint_sha256": _init_checkpoint_digest(config),
+        "protocol_identifier": protocol_spec.identifier,
+        "protocol_spec": protocol_spec.as_dict(),
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    temporary = path + ".tmp"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+    return path, _sha256_file(path)
 
 
 def _verify_training_weight_init(config):
@@ -475,15 +693,30 @@ def main(config):
 
     print("=================Constructing output dir=================")
     config.output_path = resolve_run_directory(config)
-    ensure_fresh_run_directory(config)
-    is_resume = bool(config.auto_resume_training_from_lastest_step) or int(
-        config.resume_train_epoch
-    ) >= 0
+    complete_resume = bool(
+        getattr(config, "auto_resume_training_from_lastest_step", False)
+    )
+    legacy_resume_epoch = int(getattr(config, "resume_train_epoch", -1))
+    is_resume = complete_resume or legacy_resume_epoch >= 0
     if config.mode == "train" and not is_resume:
         _verify_training_weight_init(config)
+    if config.mode == "train" and not is_resume:
+        ensure_fresh_run_directory(config)
+    if complete_resume or (
+        config.mode == "test" and os.path.isfile(_run_manifest_path(config))
+    ):
+        manifest = _load_run_manifest(config)
+        _validate_run_manifest(config, protocol_spec, manifest)
+        config.run_uuid = manifest["run_uuid"]
+        config.run_manifest_sha256 = _sha256_file(_run_manifest_path(config))
+    else:
+        config.run_uuid = uuid.uuid4().hex
+        _, config.run_manifest_sha256 = _write_run_manifest(
+            config, config.run_uuid, protocol_spec
+        )
     if config.DEBUG:
         print(f"Debug [{config.mode}] mode, dir: {config.output_path}")
-    elif (config.auto_resume_training_from_lastest_step or config.resume_train_epoch>=0) and config.mode == 'train':
+    elif complete_resume and config.mode == 'train':
         print(f"Resume training from the latest step, dir: {config.output_path}")
     elif config.mode == 'test':
         print(f"Start testing with trained model, dir: {config.output_path}")
@@ -523,10 +756,6 @@ def main(config):
         loss_writer = SummaryWriter(os.path.join(model.output_path,'vis_logs/loss'))
         save_train_configs(config.output_path, config)
 
-        complete_resume = bool(
-            getattr(config, "auto_resume_training_from_lastest_step", False)
-        )
-        legacy_resume_epoch = int(getattr(config, "resume_train_epoch", -1))
         if complete_resume or legacy_resume_epoch >= 0:
             # Full/model-only checkpoints may contain the registered RN backup modules.
             _initialize_spatial_backups(model, config)
@@ -556,7 +785,14 @@ def main(config):
                     f"Automatic resume requested but checkpoint is missing: {check_point_path}"
                 )
             start_train_epoch = _load_training_checkpoint(
-                check_point_path, model, optimizer, scheduler, scaler, device
+                check_point_path,
+                model,
+                optimizer,
+                scheduler,
+                scaler,
+                device,
+                expected_run_uuid=config.run_uuid,
+                expected_run_manifest_sha256=config.run_manifest_sha256,
             )
             print(f"Resuming complete training state from epoch {start_train_epoch}")
         elif legacy_resume_epoch >= 0:
@@ -778,6 +1014,8 @@ def main(config):
                     optimizer,
                     scheduler,
                     scaler,
+                    run_uuid=config.run_uuid,
+                    run_manifest_sha256=config.run_manifest_sha256,
                 )
                 logger(f"Saved complete training checkpoint: {saved_checkpoint}")
 
