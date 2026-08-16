@@ -1,0 +1,38 @@
+{
+  "created_utc": "2026-08-16T05:04:26+00:00",
+  "data_manifest": {
+    "paths": [
+      "/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl"
+    ],
+    "sha256": "6df9b117599ecb48c5b8e940e50ca0052a0016deec0c84368d80bb3340c298c7"
+  },
+  "init_checkpoint_sha256": "a7f2713e374066227af32cc6ad51837aed7245fdeaa1f25d66de22ed0903e0e0",
+  "protocol_identifier": "dataset=sysu|search=all|gallery=multi|trial_ids=0|direction=infrared-to-visible|backend=legacy|test_modality=Fusion|query=infrared-image+visible-identity-caption|gallery_modalities=visible-image|caption_lookup=query:identity|caption_seed=0|caption_source=/home/cgv841/ybj/SALT-VI/datasets/sysu/Text",
+  "protocol_spec": {
+    "caption_lookup": "query:identity",
+    "caption_source": "/home/cgv841/ybj/SALT-VI/datasets/sysu/Text",
+    "dataset": "sysu",
+    "direction": "infrared-to-visible",
+    "eval_caption_seed": 0,
+    "gallery_modalities": [
+      "visible-image"
+    ],
+    "gallery_mode": "multi",
+    "gallery_trials": 1,
+    "identifier": "dataset=sysu|search=all|gallery=multi|trial_ids=0|direction=infrared-to-visible|backend=legacy|test_modality=Fusion|query=infrared-image+visible-identity-caption|gallery_modalities=visible-image|caption_lookup=query:identity|caption_seed=0|caption_source=/home/cgv841/ybj/SALT-VI/datasets/sysu/Text",
+    "official_sampling_protocol": false,
+    "query_modalities": [
+      "infrared-image",
+      "visible-identity-caption"
+    ],
+    "retrieval_backend": "legacy",
+    "search_mode": "all",
+    "test_modality": "Fusion",
+    "trial_ids": [
+      0
+    ]
+  },
+  "resolved_config_sha256": "cee5eddde86bda5bacdd64a3f7a2879082059df7e6e41c6505364d3722b91f6e",
+  "run_uuid": "e03b166a8d654d70a00e4d793a734f41",
+  "schema_version": 1
+}

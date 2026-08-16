@@ -1,0 +1,47 @@
+{
+  "created_utc": "2026-08-16T05:06:42+00:00",
+  "data_manifest": {
+    "paths": [
+      "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1/manifest.json"
+    ],
+    "sha256": "3d8e3366ea69c5dd44439bb9ccba296e76c41a2cf9ccd4be68f360ad8e152141"
+  },
+  "init_checkpoint_sha256": "38bb215ebbc0aa36e60be34e82d13fc263fec7e6cca60dd03f601a2b186dcc79",
+  "protocol_identifier": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=ir_to_rgb_text|test_modality=IR-RGBText|query=infrared-image|gallery_modalities=visible-image+visible-image-caption|caption_lookup=gallery:image|caption_seed=0|caption_source=/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+  "protocol_spec": {
+    "caption_lookup": "gallery:image",
+    "caption_source": "/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+    "dataset": "sysu",
+    "direction": "infrared-to-visible",
+    "eval_caption_seed": 0,
+    "gallery_modalities": [
+      "visible-image",
+      "visible-image-caption"
+    ],
+    "gallery_mode": "single",
+    "gallery_trials": 10,
+    "identifier": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=ir_to_rgb_text|test_modality=IR-RGBText|query=infrared-image|gallery_modalities=visible-image+visible-image-caption|caption_lookup=gallery:image|caption_seed=0|caption_source=/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+    "official_sampling_protocol": true,
+    "query_modalities": [
+      "infrared-image"
+    ],
+    "retrieval_backend": "ir_to_rgb_text",
+    "search_mode": "all",
+    "test_modality": "IR-RGBText",
+    "trial_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "resolved_config_sha256": "4bab7bbeb243db524bd9353686851bb5f0dce8c462bf436b0ea0c5add2966703",
+  "run_uuid": "ec9cfd44d6ee4b9488ee5fc1d09b51e0",
+  "schema_version": 1
+}
