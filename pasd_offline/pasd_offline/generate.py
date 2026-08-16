@@ -480,26 +480,3 @@ def consolidate_manifest(
     }
     _atomic_json(output_root / "manifest.json", summary)
     return summary
-
-
-def generate_batch(
-    config: GenerationConfig,
-    tasks: list[GenerationTask],
-    records_path: str | Path,
-) -> list[dict]:
-    """Compatibility sequential entry point used by the small CLI."""
-
-    config.output_root.mkdir(parents=True, exist_ok=True)
-    from .runtime import PASDGenerator
-
-    generator = PASDGenerator(config)
-    entries = []
-    for group in group_tasks_by_source(tasks):
-        entries.append(generate_source_group(generator, group, config.output_root, 1))
-    consolidate_manifest(
-        config.output_root,
-        tasks,
-        config,
-        records_path,
-    )
-    return entries

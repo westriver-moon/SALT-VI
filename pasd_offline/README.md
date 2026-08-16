@@ -75,7 +75,6 @@ SYSU IR records：
 ```bash
 python scripts/build_sysu_records.py \
   --dataset-root /home/cgv841/datasets/SYSU-MM01 \
-  --rgb-candidates /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json \
   --ir-candidates /home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json \
   --views-per-source 1 \
   --output /home/lab929/datasets/derived/SYSU-MM01-pasd-ir-x4-blurpad-512x256-1view-v1/source-records.jsonl
@@ -102,7 +101,7 @@ python scripts/generate_dataset.py \
 
 SYSU IR 使用 `configs/generate_sysu_ir_single.yaml`，RegDB 使用 `configs/generate_regdb_rgb_ir_single.yaml`；两个配置的 `gpu_allowlist` 都是 `[1, 2, 3]`，调度器额外拒绝 GPU 0。
 
-`--workers 1` 前台运行；2 或 3 使用配置中可用的物理 GPU。生成按 source 可恢复，并写出 PNG、source metadata、`build.json`、`manifest.jsonl` 和 `manifest.json`。build fingerprint 绑定配置和 records。
+1、2 或 3 个 worker 均使用同一调度与恢复路径，并只使用配置 allowlist 中的物理 GPU。生成按 source 可恢复，并写出 PNG、source metadata、`build.json`、`manifest.jsonl` 和 `manifest.json`。build fingerprint 绑定配置和 records；生成 seed 只来自 records contract。
 
 构建 geometry-matched RGB+IR 数据时使用 `scripts/build_sysu_geomatched_dataset.py`。构建器拒绝覆盖已存在的派生目录；IR 输出必须保持源宽高比且 `semantic_generation: false`。
 

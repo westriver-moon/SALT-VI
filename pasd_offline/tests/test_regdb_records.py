@@ -17,7 +17,7 @@ def _make_regdb(tmp_path: Path) -> Path:
         for directory, kind in (("Visible", "v"), ("Thermal", "t")):
             path = root / directory / identity
             path.mkdir(parents=True, exist_ok=True)
-            for frame in ("00007", "00009"):
+            for frame in ("00007", "00009", "00011"):
                 Image.new("RGB", (64, 192), "gray").save(
                     path / f"male_front_{kind}_{frame}_{identity}.bmp"
                 )
@@ -47,14 +47,14 @@ def _captions(root: Path, tmp_path: Path) -> tuple[Path, Path]:
             f"rgb {identity} {frame}"
         )
         for identity in ("1", "2")
-        for frame in ("00007", "00009")
+        for frame in ("00007", "00009", "00011")
     }
     ir = {
         f"datasets/regdb/Thermal/{identity}/male_front_t_{frame}_{identity}.bmp": _caption(
             f"ir {identity} {frame}"
         )
         for identity in ("1", "2")
-        for frame in ("00007", "00009")
+        for frame in ("00007", "00009", "00011")
     }
     rgb_path = tmp_path / "rgb.json"
     ir_path = tmp_path / "ir.json"
@@ -82,15 +82,15 @@ def test_builds_all_regdb_rgb_and_ir_records(tmp_path: Path):
         views_per_source=1,
         enforce_official_counts=False,
     )
-    assert len(records) == 8
-    assert [record["modality"] for record in records].count("rgb") == 4
-    assert [record["modality"] for record in records].count("ir") == 4
-    assert {record["split"] for record in records} == {"train", "test"}
+    assert len(records) == 12
+    assert [record["modality"] for record in records].count("rgb") == 6
+    assert [record["modality"] for record in records].count("ir") == 6
+    assert {record["split"] for record in records} == {"train", "test", "all"}
     assert sum(record["split"] == "train" for record in records) == 4
     assert sum(record["split"] == "test" for record in records) == 4
     assert {record["camera"] for record in records} == {0}
     tasks = load_tasks(output)
-    assert len(tasks) == 8
+    assert len(tasks) == 12
     assert all(task.output.is_relative_to(Path("images")) for task in tasks)
     assert all(task.caption.startswith(("rgb ", "ir ")) for task in tasks)
 

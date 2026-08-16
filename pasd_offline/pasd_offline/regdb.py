@@ -72,7 +72,9 @@ def build_regdb_records(
         if len(parts) < 2:
             raise ValueError(f"invalid RegDB source path: {source_key}")
         identity = str(parts[-2]).zfill(4)
-        split = splits.get(relative, "all" if include_all else "unknown")
+        split = splits.get(relative)
+        if split is None and not include_all:
+            continue
         sources.append(
             RecordSource(
                 relative_key=relative,
@@ -80,7 +82,7 @@ def build_regdb_records(
                 metadata=metadata,
                 modality=modality,
                 identity=identity,
-                split=split,
+                split=split or "all",
                 camera=0,
             )
         )

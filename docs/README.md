@@ -141,11 +141,9 @@ python scripts/train.py --config_select <config.yaml>
 - `/README.md`：项目入口和状态摘要；
 - `/docs/README.md`：本统一指南；
 - `/pasd_offline/README.md`：PASD 独立模块；
-- `/reports/PROJECT_REMEDIATION_PLAN.md`：本轮受控重整尚未完成的唯一临时队列；
 - `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
 - `/feature_analysis/README.md`：特征分析模块；
 - `/reports/experiment_registry/README.md`：总表字段和维护边界；
 - vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
 
-新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交。整改队列清空后删除
-`reports/PROJECT_REMEDIATION_PLAN.md`，历史过程只留在 Git。
+新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交，历史过程只留在 Git。

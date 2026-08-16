@@ -10,6 +10,7 @@ from PIL import Image
 from pasd_offline.config import GenerationConfig
 from pasd_offline.generate import (
     consolidate_manifest,
+    generate_worker,
     generate_source_group,
     invalidate_invalid_sources,
     prepare_build,
@@ -123,3 +124,16 @@ def test_changed_records_cannot_publish_existing_outputs(tmp_path: Path):
     records.write_text('{"changed":true}\n', encoding="utf-8")
     with pytest.raises(ValueError, match="config or records changed"):
         consolidate_manifest(config.output_root, tasks, config, records)
+
+
+def test_worker_resumes_completed_sources(tmp_path: Path, monkeypatch):
+    config, _, _, tasks = build_fixture(tmp_path, 1)
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "1")
+    monkeypatch.setattr("pasd_offline.runtime.PASDGenerator", FakeGenerator)
+
+    first = generate_worker(config, tasks, batch_size=1, physical_gpu=1)
+    resumed = generate_worker(config, tasks, batch_size=1, physical_gpu=1)
+
+    assert first["completed"] == 1
+    assert resumed["completed"] == 0
+    assert resumed["skipped"] == 1

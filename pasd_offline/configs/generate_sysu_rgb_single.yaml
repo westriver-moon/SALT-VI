@@ -10,8 +10,6 @@ guidance_scale: 4.0
 conditioning_scale: 1.0
 added_prompt: faithful pedestrian restoration, preserve the same identity, body shape, pose, clothing structure, accessories, natural surveillance texture, sharp details
 negative_prompt: different person, changed identity, changed pose, changed body proportions, different clothing, new accessories, altered face, painting, cartoon, artificial texture, blurry, noise, raster lines, over-smoothed
-seed: 20260808
-
 decoder_tiled_size: 2048
 encoder_tiled_size: 2048
 latent_tiled_size: 320

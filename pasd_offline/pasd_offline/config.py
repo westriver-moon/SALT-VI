@@ -20,7 +20,6 @@ class GenerationConfig:
     conditioning_scale: float = 1.0
     added_prompt: str = "clean, high-resolution, detailed, sharp"
     negative_prompt: str = "blurry, noise, unclear, lowres, over-smoothed"
-    seed: int = 42
     decoder_tiled_size: int = 224
     encoder_tiled_size: int = 1024
     latent_tiled_size: int = 320
