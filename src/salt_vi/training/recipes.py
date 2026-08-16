@@ -164,8 +164,8 @@ class IRToRGBTextRecipe:
         return result
 
 
-class LegacyRGBIRTextRecipe:
-    name = "legacy_rgb_ir_text"
+class IdentityTextRGBIRTextRecipe:
+    name = "identity_text_rgb_ir_text"
 
     def compute_losses(self, model, batch, mode=None, current_epoch=None):
         validate_rgb_ir_text_batch_dict(
@@ -351,8 +351,8 @@ class LegacyRGBIRTextRecipe:
             result["wrt_loss"] = model.tri_criterion(features, labels) * model.args.wrt_loss_weight
 
 
-class LegacyRGBIRRecipe:
-    name = "legacy_rgb_ir"
+class IdentityTextRGBIRRecipe:
+    name = "identity_text_rgb_ir"
 
     def compute_losses(self, model, batch, mode=None, current_epoch=None):
         context = _encode_batch(model, batch, mode)
@@ -362,7 +362,7 @@ class LegacyRGBIRRecipe:
             (context.label_rgb, context.label_rgb, context.label_ir), dim=0
         )
         features = torch.cat((context.rgb_feats, context.ir_feats), dim=0)
-        LegacyRGBIRTextRecipe._classification_and_wrt(
+        IdentityTextRGBIRTextRecipe._classification_and_wrt(
             model, result, losses, features, labels
         )
         return result
@@ -371,8 +371,8 @@ class LegacyRGBIRRecipe:
 _RECIPES = {
     "pmt": PMTRecipe(),
     "ir_to_rgb_text": IRToRGBTextRecipe(),
-    "RGB_IR_Text": LegacyRGBIRTextRecipe(),
-    "RGB_IR": LegacyRGBIRRecipe(),
+    "identity_text_rgb_ir_text": IdentityTextRGBIRTextRecipe(),
+    "identity_text_rgb_ir": IdentityTextRGBIRRecipe(),
 }
 
 

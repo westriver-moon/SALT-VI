@@ -78,7 +78,7 @@ sampler_type: identity_auto_replace
 seed: 0
 
 # Official SYSU Fusion evaluation cadence/protocol.
-retrieval_backend: legacy
+retrieval_backend: identity_text
 test_modality: Fusion
 test_model_type: Fusion
 eval_before_train: false

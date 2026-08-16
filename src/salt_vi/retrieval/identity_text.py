@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 
 
-NAME = "legacy"
+NAME = "identity_text"
+RESULT_KEYS = ("IR", "Fusion", "Text")
 RESULT_KEY = "Fusion"
-IS_LEGACY = True
 QUERY_NAME = "infrared"
 GALLERY_NAME = "visible"
 
@@ -17,14 +17,14 @@ def _value(config, name, default=None):
 def _test_modalities(config):
     raw = str(_value(config, "test_modality", ""))
     modalities = tuple(part.strip() for part in raw.split(",") if part.strip())
-    supported = {"IR", "Fusion", "Text"}
+    supported = set(RESULT_KEYS)
     if (
         not modalities
         or len(set(modalities)) != len(modalities)
         or not set(modalities) <= supported
     ):
         raise ValueError(
-            "legacy retrieval requires a comma-separated non-empty subset of "
+            "identity_text retrieval requires a comma-separated non-empty subset of "
             "IR, Fusion, Text"
         )
     return modalities
@@ -44,6 +44,11 @@ def gallery_caption_lookup(config):
 
 
 def training_recipe(config):
+    training_mode = str(_value(config, "training_mode", ""))
+    if training_mode == "RGB_IR_Text":
+        return "identity_text_rgb_ir_text"
+    if training_mode == "RGB_IR":
+        return "identity_text_rgb_ir"
     return None
 
 
@@ -51,17 +56,17 @@ def validate(config, sr_backend=None, sr_modalities=None):
     dataset = str(_value(config, "dataset", "")).lower()
     if dataset not in {"sysu", "regdb", "llcm"}:
         raise ValueError(
-            "legacy retrieval supports only SYSU-MM01, RegDB, and LLCM"
+            "identity_text retrieval supports only SYSU-MM01, RegDB, and LLCM"
         )
     modalities = _test_modalities(config)
     caption_lookup = query_caption_lookup(config)
     if any(name in modalities for name in ("Fusion", "Text")):
         if caption_lookup != "identity":
             raise ValueError(
-                "legacy Fusion/Text retrieval requires identity caption lookup"
+                "identity_text Fusion/Text retrieval requires identity caption lookup"
             )
     elif caption_lookup is not None:
-        raise ValueError("legacy IR retrieval must not require captions")
+        raise ValueError("identity_text IR retrieval must not require captions")
     if dataset == "regdb":
         direction = str(_value(config, "regdb_test_mode", ""))
         if direction not in {"t-v", "v-t"}:
@@ -74,6 +79,6 @@ def validate(config, sr_backend=None, sr_modalities=None):
 
 
 def evaluate(model, loader, config, device):
-    from salt_vi.engine.test import evaluate_legacy
+    from salt_vi.engine.test import evaluate_identity_text
 
-    return evaluate_legacy(model, loader, config, device)
+    return evaluate_identity_text(model, loader, config, device)

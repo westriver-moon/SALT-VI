@@ -125,6 +125,24 @@ def test_runtime_validation_rejects_invalid_image_size_pair():
         validate_runtime_config({"img_size": (288, 0)})
 
 
+def test_runtime_validation_rejects_model_only_resume():
+    with pytest.raises(ValueError, match="model-only resume"):
+        validate_runtime_config(
+            {"dataset": "sysu", "test_modality": "Fusion", "resume_train_epoch": 3}
+        )
+
+
+def test_runtime_validation_rejects_metric_boost_resume():
+    with pytest.raises(ValueError, match="metric_boost_resume_epoch is retired"):
+        validate_runtime_config(
+            {
+                "dataset": "sysu",
+                "test_modality": "Fusion",
+                "metric_boost_resume_epoch": 2,
+            }
+        )
+
+
 def test_external_text_root_has_priority(tmp_path):
     external = tmp_path / "portable_text"
     expected = external / "Blip_RGB"
@@ -408,7 +426,7 @@ def test_missing_weight_hash_fails_before_loader_or_model(monkeypatch, tmp_path)
     checkpoint.write_bytes(b"checkpoint")
     config = SimpleNamespace(
         DataParallel=False,
-        retrieval_backend="legacy",
+        retrieval_backend="identity_text",
         CUDA_VISIBLE_DEVICES="0",
         gpu_id="0",
         mode="train",

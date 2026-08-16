@@ -66,7 +66,7 @@ class ProtocolSpec:
 
 def build_protocol_spec(config, backend):
     dataset = str(getattr(config, "dataset", "")).lower()
-    backend_name = str(getattr(backend, "NAME", "legacy"))
+    backend_name = str(getattr(backend, "NAME", "identity_text"))
     if dataset == "regdb":
         trial_count = int(getattr(config, "eval_num_regdb", 1))
         first_trial = int(getattr(config, "trial", 1))
@@ -95,7 +95,7 @@ def build_protocol_spec(config, backend):
         gallery_modalities = ("visible-image", "visible-image-caption")
         caption_source = str(getattr(config, "gallery_caption_manifest", "") or "")
         caption_lookup = "gallery:image"
-    else:
+    elif backend_name == "identity_text":
         query_modalities = ("infrared-image",)
         caption_source = None
         caption_lookup = None
@@ -108,6 +108,8 @@ def build_protocol_spec(config, backend):
             caption_source = str(getattr(config, "text_data_root", "") or "")
             caption_lookup = "query:identity"
         gallery_modalities = ("visible-image",)
+    else:
+        raise ValueError("Unsupported retrieval protocol: {!r}".format(backend_name))
 
     if dataset == "sysu":
         direction = "infrared-to-visible"

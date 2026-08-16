@@ -41,10 +41,14 @@ def test_fresh_training_resolves_output_root_once():
     assert resolve_run_directory(value) == f"/runs/pasd/sysu/FV/{name}"
 
 
-def test_resume_and_test_use_final_output_path():
+def test_complete_resume_and_test_use_final_output_path():
     final = "/runs/pasd/sysu/FV/experiment"
     assert resolve_run_directory(
-        config(output_root=None, output_path=final, resume_train_epoch=3)
+        config(
+            output_root=None,
+            output_path=final,
+            auto_resume_training_from_lastest_step=True,
+        )
     ) == final
     assert resolve_run_directory(config(output_root=None, output_path=final, mode="test")) == final
 

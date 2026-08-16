@@ -41,7 +41,7 @@ class Model:
         return text.float() + image.float()
 
 
-def test_sysu_legacy_modalities_share_one_trial_pipeline(monkeypatch):
+def test_sysu_identity_text_modalities_share_one_trial_pipeline(monkeypatch):
     monkeypatch.setattr(
         evaluator,
         "eval_sysu",
@@ -70,7 +70,7 @@ def test_sysu_legacy_modalities_share_one_trial_pipeline(monkeypatch):
         Feat_Filter=False,
         CAT_EVAL=True,
     )
-    result = evaluator.evaluate_legacy(Model(), loader, config, torch.device("cpu"))
+    result = evaluator.evaluate_identity_text(Model(), loader, config, torch.device("cpu"))
     assert result["IR"][2][0] == -1.0
     assert result["Fusion"][2][0] == -2.0
     assert result["Text"][2][0] == 0.0
@@ -99,5 +99,5 @@ def test_regdb_reverse_mode_reverses_features_and_labels(monkeypatch):
         CAT_EVAL=False,
         regdb_test_mode="v-t",
     )
-    evaluator.evaluate_legacy(Model(), loader, config, torch.device("cpu"))
+    evaluator.evaluate_identity_text(Model(), loader, config, torch.device("cpu"))
     assert calls == [((2, 1), [8, 9], [7])]

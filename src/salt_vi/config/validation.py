@@ -99,7 +99,7 @@ def _validate_numeric_ranges(config):
         "warmup_epochs": (0, None),
         "visual_unfreeze_last_n_blocks": (0, None),
         "visual_unfreeze_start_epoch": (0, None),
-        "qbn_freeze_running_stats_epoch": (0, None),
+        "qbn_freeze_running_stats_epoch": (-1, None),
     }
     for name, (minimum, maximum) in integer_fields.items():
         _require_integer(
@@ -213,6 +213,16 @@ def validate_runtime_config(config):
     loader/model.  It does not prescribe research hyperparameters.
     """
     _validate_numeric_ranges(config)
+    if int(_value(config, "resume_train_epoch", -1)) >= 0:
+        raise ValueError(
+            "model-only resume via resume_train_epoch is retired; convert the "
+            "checkpoint to the run-manifest full-state schema before resuming"
+        )
+    if int(_value(config, "metric_boost_resume_epoch", 0)) > 0:
+        raise ValueError(
+            "metric_boost_resume_epoch is retired; start a fresh run or use "
+            "complete run-manifest resume"
+        )
     if bool(_value(config, "Return_B4_BN", False)):
         raise ValueError(
             "Return_B4_BN was a no-op and has been removed; normalized BN features are always returned"
@@ -291,7 +301,7 @@ def validate_runtime_config(config):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
 
     retrieval_protocol = get_retrieval_protocol(
-        _value(config, "retrieval_backend", "legacy")
+        _value(config, "retrieval_backend", "identity_text")
     )
     retrieval_protocol.validate(
         config,

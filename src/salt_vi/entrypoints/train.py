@@ -97,6 +97,180 @@ def _reset_best_metrics():
         namespace[name] = 0
 
 
+def _metric_bucket(result_key):
+    return {
+        "IR": "ir",
+        "Fusion": "fusion",
+        "Text": "text",
+        "IR-RGBText": "fusion",
+    }.get(str(result_key), "fusion")
+
+
+def _best_value(bucket, metric):
+    return float(globals()["best_{}_{}".format(metric, bucket)])
+
+
+def _set_best_value(bucket, metric, value):
+    globals()["best_{}_{}".format(metric, bucket)] = float(value)
+
+
+def _log_retrieval_result(config, result_dict, protocol, logger):
+    for result_key in protocol.RESULT_KEYS:
+        if result_key not in result_dict:
+            continue
+        m_inp, m_ap, cmc = result_dict[result_key]
+        message = (
+            "Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n"
+            "Rank: {}\n"
+        ).format(
+            time_now(),
+            config.dataset,
+            result_key,
+            m_inp,
+            m_ap,
+            cmc,
+        )
+        if config.LOG4TEST:
+            logger(message)
+        else:
+            print(message)
+
+
+def _record_eval_epoch(
+    config,
+    model,
+    result_dict,
+    protocol,
+    protocol_spec,
+    current_epoch,
+    performance_writer,
+    logger,
+):
+    if not any(result_key in result_dict for result_key in protocol.RESULT_KEYS):
+        raise RuntimeError(
+            "Evaluation returned no protocol result keys; expected {}".format(
+                list(protocol.RESULT_KEYS)
+            )
+        )
+    save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
+    for result_key in protocol.RESULT_KEYS:
+        if result_key not in result_dict:
+            continue
+        m_inp, m_ap, cmc = result_dict[result_key]
+        bucket = _metric_bucket(result_key)
+        is_best_rank = cmc[0] >= _best_value(bucket, "rank1")
+        performance_writer.add_scalar(f"R1_{result_key}", cmc[0], current_epoch)
+        performance_writer.add_scalar(f"mAP_{result_key}", m_ap, current_epoch)
+        performance_writer.add_scalar(f"mINP_{result_key}", m_inp, current_epoch)
+        checkpoint_paths = {}
+        new_best_metrics = []
+        if bucket == "ir":
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("ir", "rank1", cmc[0])
+                _set_best_value("ir", "mAP", m_ap)
+                _set_best_value("ir", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("ir", "mINP"),
+                    _best_value("ir", "mAP"),
+                    _best_value("ir", "rank1"),
+                )
+            )
+            model.save_model(current_epoch, is_best_rank, mode="IR")
+        elif bucket == "text":
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("text", "rank1", cmc[0])
+                _set_best_value("text", "mAP", m_ap)
+                _set_best_value("text", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("text", "mINP"),
+                    _best_value("text", "mAP"),
+                    _best_value("text", "rank1"),
+                )
+            )
+            model.save_model(current_epoch, is_best_rank, mode="Text")
+        else:
+            is_best_rank = (
+                cmc[0] > _best_value("fusion", "rank1")
+                if save_best_per_metric
+                else cmc[0] >= _best_value("fusion", "rank1")
+            )
+            is_best_map = save_best_per_metric and m_ap > _best_value("fusion", "mAP")
+            is_best_minp = save_best_per_metric and m_inp > _best_value("fusion", "mINP")
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("fusion", "rank1", cmc[0])
+                if not save_best_per_metric:
+                    _set_best_value("fusion", "mAP", m_ap)
+                    _set_best_value("fusion", "mINP", m_inp)
+            if is_best_map:
+                _set_best_value("fusion", "mAP", m_ap)
+            if is_best_minp:
+                _set_best_value("fusion", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("fusion", "mINP"),
+                    _best_value("fusion", "mAP"),
+                    _best_value("fusion", "rank1"),
+                )
+            )
+            if save_best_per_metric:
+                new_best_metrics = [
+                    metric
+                    for metric, improved in (
+                        ("Rank-1", is_best_rank),
+                        ("mAP", is_best_map),
+                        ("mINP", is_best_minp),
+                    )
+                    if improved
+                ]
+                checkpoint_paths = model.save_metric_checkpoints(
+                    current_epoch, new_best_metrics, mode="Fusion"
+                )
+            else:
+                model.save_model(current_epoch, is_best_rank, mode="Fusion")
+        _append_metric_event(
+            config,
+            "eval_epoch",
+            epoch=current_epoch,
+            dataset=config.dataset,
+            protocol=protocol_spec.identifier,
+            protocol_spec=protocol_spec.as_dict(),
+            query=protocol.QUERY_NAME,
+            gallery=protocol.GALLERY_NAME,
+            metrics={
+                "Rank-1": float(cmc[0]),
+                "mAP": float(m_ap),
+                "mINP": float(m_inp),
+            },
+            best_so_far={
+                "Rank-1": _best_value(bucket, "rank1"),
+                "mAP": _best_value(bucket, "mAP"),
+                "mINP": _best_value(bucket, "mINP"),
+            },
+            is_new_best=bool(is_best_rank),
+            new_best_metrics=new_best_metrics,
+            checkpoint_paths=checkpoint_paths,
+        )
+        logger(
+            "Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n"
+            "Rank: {}\n".format(
+                time_now(),
+                config.dataset,
+                result_key,
+                m_inp,
+                m_ap,
+                cmc,
+            )
+        )
+
+
 def _best_metric_state():
     namespace = globals()
     return {name: float(namespace[name]) for name in _BEST_METRIC_NAMES}
@@ -714,7 +888,7 @@ def main(config):
         )
     validate_runtime_config(config)
     retrieval_protocol = get_retrieval_protocol(
-        getattr(config, "retrieval_backend", "legacy")
+        getattr(config, "retrieval_backend", "identity_text")
     )
     fusion_result_key = retrieval_protocol.RESULT_KEY
     os.environ["CUDA_VISIBLE_DEVICES"] = config.CUDA_VISIBLE_DEVICES
@@ -737,11 +911,20 @@ def main(config):
     complete_resume = bool(
         getattr(config, "auto_resume_training_from_lastest_step", False)
     )
-    legacy_resume_epoch = int(getattr(config, "resume_train_epoch", -1))
-    is_resume = complete_resume or legacy_resume_epoch >= 0
-    if config.mode == "train" and not is_resume:
+    if int(getattr(config, "resume_train_epoch", -1)) >= 0:
+        raise RuntimeError(
+            "model-only resume via resume_train_epoch is retired; convert the "
+            "checkpoint to the run-manifest full-state schema before resuming"
+        )
+    if int(getattr(config, "metric_boost_resume_epoch", 0)) > 0:
+        raise RuntimeError(
+            "metric_boost_resume_epoch is retired; start a fresh run or use "
+            "complete run-manifest resume"
+        )
+    is_resume = complete_resume
+    if config.mode == "train" and not complete_resume:
         _verify_training_weight_init(config)
-    if config.mode == "train" and not is_resume:
+    if config.mode == "train" and not complete_resume:
         ensure_fresh_run_directory(config)
     if complete_resume or (
         config.mode == "test" and os.path.isfile(_run_manifest_path(config))
@@ -797,13 +980,10 @@ def main(config):
         loss_writer = SummaryWriter(os.path.join(model.output_path,'vis_logs/loss'))
         save_train_configs(config.output_path, config)
 
-        if complete_resume or legacy_resume_epoch >= 0:
-            # Full/model-only checkpoints may contain the registered RN backup modules.
+        if complete_resume:
             _initialize_spatial_backups(model, config)
         else:
             _load_training_weight_init(model, config, device)
-        if legacy_resume_epoch >= 0 and not complete_resume:
-            model.resume_model(legacy_resume_epoch, mode="Fusion")
 
         print("=================preparing optimizer=================")
 
@@ -814,12 +994,7 @@ def main(config):
         else:
             scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
 
-        start_train_epoch = max(0, int(getattr(config, "metric_boost_resume_epoch", 0)))
-        if start_train_epoch:
-            print(
-                "Metric-boost recovery: resuming model weights at "
-                f"epoch {start_train_epoch} with a freshly initialized optimizer state"
-            )
+        start_train_epoch = 0
         if complete_resume:
             if not os.path.isfile(check_point_path):
                 raise FileNotFoundError(
@@ -836,15 +1011,9 @@ def main(config):
                 expected_run_manifest_sha256=config.run_manifest_sha256,
             )
             print(f"Resuming complete training state from epoch {start_train_epoch}")
-        elif legacy_resume_epoch >= 0:
-            start_train_epoch = legacy_resume_epoch + 1
-            print(
-                "Resuming legacy model-only checkpoint at epoch "
-                f"{start_train_epoch}; optimizer state starts fresh"
-            )
 
         # Replicas are snapshots, so they must be created only after the final
-        # model state (fresh warm-start, legacy resume, or full resume) is loaded.
+        # model state (fresh warm-start or full resume) is loaded.
         model.configure_fixed_visual_data_parallel()
 
         if bool(getattr(config, "eval_before_train", False)) and start_train_epoch == 0:
@@ -934,110 +1103,16 @@ def main(config):
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
                 result_dict = test(model, loaders, config, device)
-                if retrieval_protocol.IS_LEGACY and 'IR' in config.test_modality:
-                    mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
-                    is_best_rank_ir = (cmc_ir[0] >= best_rank1_ir)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_IR', cmc_ir[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_IR', mAP_ir, current_epoch)
-                    performance_writer.add_scalar(f'mINP_IR', mINP_ir, current_epoch)
-                    # new add
-                    if is_best_rank_ir:
-                        logger(f"New Best IR_RGB!!!")
-                        best_rank1_ir = max(cmc_ir[0], best_rank1_ir)
-                        best_mAP_ir = mAP_ir
-                        best_mINP_ir = mINP_ir
-                    logger(f"Best IR_RGB mINP: {best_mINP_ir}, Best mAP: {best_mAP_ir}, Best Rank1: {best_rank1_ir}")
-                    # new add
-                    model.save_model(current_epoch, is_best_rank_ir, mode="IR")
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
-                if not retrieval_protocol.IS_LEGACY or 'Fusion' in config.test_modality:
-                    mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
-                    save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
-                    is_best_rank_fusion = (
-                        cmc_fusion[0] > best_rank1_fusion
-                        if save_best_per_metric else cmc_fusion[0] >= best_rank1_fusion
-                    )
-                    is_best_map_fusion = save_best_per_metric and (mAP_fusion > best_mAP_fusion)
-                    is_best_minp_fusion = save_best_per_metric and (mINP_fusion > best_mINP_fusion)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_{fusion_result_key}', cmc_fusion[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_{fusion_result_key}', mAP_fusion, current_epoch)
-                    performance_writer.add_scalar(f'mINP_{fusion_result_key}', mINP_fusion, current_epoch)
-                    # new add
-                    if is_best_rank_fusion:
-                        logger(f"New Best {fusion_result_key}!!!")
-                        best_rank1_fusion = cmc_fusion[0]
-                        if not save_best_per_metric:
-                            best_mAP_fusion = mAP_fusion
-                            best_mINP_fusion = mINP_fusion
-                    if is_best_map_fusion:
-                        best_mAP_fusion = mAP_fusion
-                    if is_best_minp_fusion:
-                        best_mINP_fusion = mINP_fusion
-                    logger(f"Best {fusion_result_key} mINP: {best_mINP_fusion}, Best mAP: {best_mAP_fusion}, Best Rank1: {best_rank1_fusion}")
-                    checkpoint_paths = dict(getattr(model, "_metric_checkpoint_paths", {}))
-                    new_best_metrics = []
-                    if save_best_per_metric:
-                        new_best_metrics = [
-                            metric for metric, improved in (
-                                ("Rank-1", is_best_rank_fusion),
-                                ("mAP", is_best_map_fusion),
-                                ("mINP", is_best_minp_fusion),
-                            ) if improved
-                        ]
-                        checkpoint_paths = model.save_metric_checkpoints(
-                            current_epoch, new_best_metrics, mode='Fusion'
-                        )
-                    else:
-                        model.save_model(current_epoch, is_best_rank_fusion, mode='Fusion')
-                    _append_metric_event(
-                        config,
-                        "eval_epoch",
-                        epoch=current_epoch,
-                        dataset=config.dataset,
-                        protocol=protocol_spec.identifier,
-                        protocol_spec=protocol_spec.as_dict(),
-                        query=retrieval_protocol.QUERY_NAME,
-                        gallery=retrieval_protocol.GALLERY_NAME,
-                        metrics={
-                            "Rank-1": float(cmc_fusion[0]),
-                            "mAP": float(mAP_fusion),
-                            "mINP": float(mINP_fusion),
-                        },
-                        best_so_far={
-                            "Rank-1": float(best_rank1_fusion),
-                            "mAP": float(best_mAP_fusion),
-                            "mINP": float(best_mINP_fusion),
-                        },
-                        is_new_best=bool(is_best_rank_fusion),
-                        new_best_metrics=new_best_metrics,
-                        checkpoint_paths=checkpoint_paths,
-                    )
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-                if retrieval_protocol.IS_LEGACY and 'Text' in config.test_modality:
-                    mINP_text, mAP_text, cmc_text = result_dict['Text']
-                    is_best_rank_text = (cmc_text[0] >= best_rank1_text)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_Text', cmc_text[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_Text', mAP_text, current_epoch)
-                    performance_writer.add_scalar(f'mINP_Text', mINP_text, current_epoch)
-                    # new add
-                    if is_best_rank_text:
-                        logger(f"New Best Text_RGB!!!")
-                        best_rank1_text = max(cmc_text[0], best_rank1_text)
-                        best_mAP_text = mAP_text
-                        best_mINP_text = mINP_text
-                    logger(f"Best Text_RGB mINP: {best_mINP_text}, Best mAP: {best_mAP_text}, Best Rank1: {best_rank1_text}")
-                    # new add
-                    model.save_model(current_epoch, is_best_rank_text, mode='Text')
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
+                _record_eval_epoch(
+                    config,
+                    model,
+                    result_dict,
+                    retrieval_protocol,
+                    protocol_spec,
+                    current_epoch,
+                    performance_writer,
+                    logger,
+                )
 
                 gc.collect()
                 if torch.cuda.is_available():
@@ -1083,42 +1158,7 @@ def main(config):
         model.configure_fixed_visual_data_parallel()
         print('Successfully resume model from {}'.format(config.test_model_path))
         result_dict = test(model, loaders, config, device)
-        if retrieval_protocol.IS_LEGACY and "IR" in config.test_modality:
-            mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
-            if config.LOG4TEST:
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
-
-        if not retrieval_protocol.IS_LEGACY or "Fusion" in config.test_modality:
-            mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
-            if config.LOG4TEST:
-                if config.CAT_EVAL:
-                    logger('===================Test with CAT FEAT===================')
-                else:
-                    logger('===================Test without CAT FEAT===================')
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-
-        if retrieval_protocol.IS_LEGACY and "Text" in config.test_modality:
-            mINP_text, mAP_text, cmc_text = result_dict['Text']
-            if config.LOG4TEST:
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
+        _log_retrieval_result(config, result_dict, retrieval_protocol, logger)
 
         if getattr(config, "golden_evaluation_path", None):
             golden_path = _write_golden_evaluation(

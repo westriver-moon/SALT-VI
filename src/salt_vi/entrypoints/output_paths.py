@@ -43,7 +43,7 @@ def build_experiment_name(config) -> str:
 def resolve_run_directory(config) -> str:
     if config.DEBUG:
         return str(Path(config.DEBUG_DIR).expanduser())
-    is_resume = bool(config.auto_resume_training_from_lastest_step) or config.resume_train_epoch >= 0
+    is_resume = bool(config.auto_resume_training_from_lastest_step)
     if config.mode == "test" or is_resume:
         if not getattr(config, "output_path", None):
             raise ValueError("test and resume require the final output_path")
@@ -66,7 +66,7 @@ def ensure_fresh_run_directory(config) -> None:
         return
     is_resume = bool(
         getattr(config, "auto_resume_training_from_lastest_step", False)
-    ) or int(getattr(config, "resume_train_epoch", -1)) >= 0
+    )
     if is_resume:
         return
 

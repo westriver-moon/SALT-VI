@@ -13,7 +13,7 @@ def _eval_image_feature(base, visual_output, mode="RGB", use_backup=False):
 
 
 def test(base, loader, config, device):
-    protocol = get_retrieval_protocol(getattr(config, "retrieval_backend", "legacy"))
+    protocol = get_retrieval_protocol(getattr(config, "retrieval_backend", "identity_text"))
     return protocol.evaluate(base, loader, config, device)
 
 
@@ -123,7 +123,7 @@ def _average_metrics(trials):
     )
 
 
-def evaluate_legacy(base, loader, config, device):
+def evaluate_identity_text(base, loader, config, device):
     dataset = loader.dataset
     if dataset not in ("sysu", "regdb", "llcm"):
         raise ValueError(f"Invalid dataset: {dataset}")
