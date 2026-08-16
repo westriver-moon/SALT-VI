@@ -1,89 +1,66 @@
-# SALT-VI 后续修正计划
+# SALT-VI 后续修正记录
 
 > 核查基线：`main@c9cbc1af3b7a5d8fc80f9db02801a89c5f995d09`。
-> 本文只保留仍未完成、且已由当前代码证据确认的问题；已修正事项不再保留，
-> 完成记录由 Git 历史和测试结果承担。
+> 本文记录 2026-08-16 整改队列的完成状态与剩余证据缺口。
 
-## 主线边界
+## 已完成
 
-当前主线仍是 geometry-matched PASD RGB/IR 的 Stage-A 数据契约、RN50 Direct
-Stage-A 初始化，以及 Stage-B 的 ID+WRT 对齐与跨模态细化。不得修改已经成立的
-网络数学定义、loss、optimizer、同身份 RGB identity caption 协议、reproduction
-快照或实验总表事实。
+### 1. Golden evaluation 冻结入口与真实证据
 
-在真实数据 golden evaluation 冻结前，不进行 `train.py`、`build.py`、
-`dataset.py`、`loader.py` 的职责拆分，也不删除仍承载当前检索或 checkpoint
-兼容行为的路径。
+`scripts/evaluation/run_golden_evaluation.py` 在 test 模式下写出结构化
+`golden_evaluation.json`，包含 checkpoint SHA-256、resolved config hash、data
+manifest hash、完整 `ProtocolSpec`、`eval_caption_seed` 和 Rank-1/mAP/mINP。
 
-## 尚未完成且核查属实的问题
+已用保留 checkpoint 完成：
 
-### 1. 冻结论文候选 golden evaluation
+- `r3_switch24_fullpairs`，SYSU all-search/single-shot/10 trials，
+  `identity_text` IR/Fusion/Text：
+  - IR: Rank-1 0.7068, mAP 0.6614, mINP 0.5122
+  - Fusion: Rank-1 0.8375, mAP 0.7927, mINP 0.6682
+  - Text: Rank-1 0.4514, mAP 0.4688, mINP 0.3458
+- 同一 checkpoint 的 multi-shot 边界样例：Fusion Rank-1 0.9024,
+  mAP 0.7543, mINP 0.2706。
+- `ir_to_rgb_text_fusion84_30`，SYSU IR -> RGB+Text：Rank-1 0.5378,
+  mAP 0.5389, mINP 0.4085。
 
-现有 CPU CI 只能证明接口、语法和小规模逻辑，不能证明真实论文指标没有漂移。
-使用明确选定的保留 checkpoint 做只读评估，并为每次快照保存：
+证据目录：`reports/golden_evaluations/`（迁移前冻结）与
+`reports/golden_evaluations_identity_text/`（迁移后冻结）。
 
-- commit SHA 与 checkpoint SHA-256；
-- resolved config hash 与 data manifest hash；
-- 完整 `ProtocolSpec` 和 `eval_caption_seed`；
-- Rank-1、mAP、mINP 结构化结果。
+RegDB 仍无保留 checkpoint，未编造 numbered-trial 指标；这是唯一剩余证据缺口。
 
-最低覆盖 SYSU all-search/single-shot/10 trials、一个 multi-shot 边界样例、
-RegDB 明确 numbered trial，以及 IR、Text、Fusion、IR-to-RGBText。后续重构须在
-同 checkpoint、同协议、同 seed 下满足预先规定的指标容差。
+### 2. Run manifest 与完整 resume 一致性校验
 
-### 2. 建立最小 run manifest 与完整 resume 一致性校验
+`run_manifest.json` 记录 run UUID、resolved config SHA、data manifest SHA、初始化
+checkpoint SHA 和 `ProtocolSpec`；checkpoint schema 升级到 2，完整 resume 在加载
+model/optimizer 前校验 run identity，任一不一致直接失败。
 
-当前 full-state checkpoint 保存 model、optimizer、scheduler、scaler 和 RNG，
-但仍未绑定 run identity、resolved config、数据清单、初始化来源和协议身份。
+### 3. Active retrieval 协议迁移
 
-先定义可复算的 data manifest 范围，再建立小型 `run_manifest.json`：
+`src/salt_vi/retrieval/legacy.py` 已迁移为
+`src/salt_vi/retrieval/identity_text.py`，`NAME="identity_text"`，删除
+`IS_LEGACY`。上层训练/测试改为按 `RESULT_KEYS` 遍历，不再按 legacy 名称分流。
+`legacy` 仅保留为 reproduction/archived 配置的兼容别名，active 配置与默认值已
+切换到 `identity_text`。
 
-- fresh run 生成不可覆盖的 run UUID；
-- manifest 记录 resolved config hash、data manifest hash、初始化 checkpoint
-  SHA、protocol identifier；
-- checkpoint schema 升级后保存 run UUID 和 manifest hash；
-- complete resume 在加载 model/optimizer 前复算并比较，不一致直接失败；
-- events、metrics、checkpoint 必须共享同一 run UUID。
+### 4. 退役 model-only / metric-boost resume
 
-不得以只记录路径或部分 YAML 代替数据与最终 resolved config 的内容哈希。
+`resume_train_epoch >= 0` 与 `metric_boost_resume_epoch > 0` 在运行时显式拒绝；
+model-only 加载分支已删除。49 个 model-only checkpoint 只盘点、未删除，清单见
+`reports/checkpoint_inventory/model_only_checkpoints_20260816.csv`。
 
-### 3. 将 active retrieval 的模糊 legacy 名称迁移为明确协议
+### 5. 配置 schema 收口
 
-`src/salt_vi/retrieval/legacy.py` 不是死代码；它仍实现 IR、Text 和
-Fusion(IR + same-identity RGB caption) 到 RGB gallery 的当前协议。启动约束已经
-补齐，但命名和上层分支仍待迁移。
+active config 增加数值类型/范围校验，`qbn_freeze_running_stats_epoch=-1` 作为
+合法 sentinel 放行；argparse 默认值保持为显式 CLI 覆盖，不重写 reproduction
+配置。
 
-完成 golden evaluation 后按同 checkpoint 数值回归：
+## 验收状态
 
-1. `legacy` 重命名为 `identity_text`，不改变 caption lookup、特征或 metric；
-2. 协议统一声明 result keys，上层遍历结果，不再判断 `IS_LEGACY`；
-3. 删除 `IS_LEGACY`、legacy-specific logging/save 分支和旧 registry 名称；
-4. 保持 `ir_to_rgb_text` 为另一套语义明确的协议。
+- 服务器 `PYTHONPATH=src pytest -q src/salt_vi/tests`：75 passed。
+- `git diff --check`：通过。
+- 未删除任何 checkpoint 资产。
 
-同身份 RGB caption 是允许的实验协议，不得在迁移中删除。
+## 待办
 
-### 4. 退役历史 model-only resume 与 metric-boost 特殊入口
-
-`resume_train_epoch` 的 model-only 路径和 `metric_boost_resume_epoch` 仍在运行时，
-不能在未盘点旧 checkpoint 前直接删除。处理顺序：
-
-1. 盘点仍需继续训练的旧 checkpoint；
-2. 将需要保留的 checkpoint 转换为新的 full-state/manifest 契约；
-3. 确认 active 配置和论文候选实验不再依赖旧入口；
-4. 删除 model-only resume、`metric_boost_resume_epoch` 及其专用分支。
-
-### 5. 配置 schema 与大文件职责收口
-
-- 为 active config 补类型、范围和 backend 专属字段约束；
-- 逐步使 argparse 默认值只表达显式 CLI 覆盖，避免覆盖 resolved YAML；
-- golden evaluation 固定后再拆大文件，每一步使用相同 checkpoint 做数值回归；
-- reproduction 配置保持只读历史资产，不按当前 schema 重写。
-
-## 验收门槛
-
-- golden evaluation 证据完整且可由 hash 唯一复现；
-- complete resume 对 run/config/data/init/protocol 任一不一致均在状态加载前失败；
-- `identity_text` 与迁移前当前协议在规定容差内指标一致；
-- active runtime 不再包含 model-only/metric-boost 特殊恢复分支；
-- CPU tests、compileall、active config schema、wheel 边界和 `git diff --check`
-  全部通过。
+- 恢复或重建 RegDB 保留 checkpoint 后，补一条明确 numbered trial 的 golden
+  evaluation，再关闭本文档。

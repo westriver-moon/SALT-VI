@@ -64,6 +64,7 @@ visual_forward_chunk_size: 0
 test_batch_size: 128
 metric_events_path: null
 metric_experiment_id: null
+golden_evaluation_path: null
 pa: 0.1
 learnable_pa: false
 pa_init: 0.5
@@ -132,7 +133,7 @@ sysu_sr_view_manifest: null
 sysu_sr_views_per_image: 1
 sysu_sr_view_sampling: independent
 sysu_sr_eval_view_index: 0
-retrieval_backend: legacy
+retrieval_backend: identity_text
 gallery_caption_manifest: null
 gallery_text_dropout: 0.0
 ir_rgb_text_pair_weight: 1.0
@@ -155,7 +156,6 @@ training_weight_init: null
 training_weight_init_sha256: null
 qbn_freeze_running_stats_epoch: null
 save_best_per_metric: false
-metric_boost_resume_epoch: 0
 trial: 1
 uni_BN: false
 visual_bias_lr_factor: 1.0

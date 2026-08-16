@@ -242,7 +242,7 @@ class Loader:
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
         self.retrieval_protocol = get_retrieval_protocol(
-            getattr(config, "retrieval_backend", "legacy")
+            getattr(config, "retrieval_backend", "identity_text")
         )
         self.use_train_text = "Text" in self.training_mode
         self.train_text_modalities = self.retrieval_protocol.train_text_modalities(config)

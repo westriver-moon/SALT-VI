@@ -14,7 +14,7 @@ def _config(**overrides):
         "gall_mode": "single",
         "gallery_trials": 10,
         "test_modality": "Fusion",
-        "retrieval_backend": "legacy",
+        "retrieval_backend": "identity_text",
         "text_data_root": "/captions",
         "gallery_caption_manifest": None,
         "eval_num_regdb": 1,
@@ -26,7 +26,7 @@ def _config(**overrides):
     return SimpleNamespace(**values)
 
 
-def test_legacy_protocol_records_identity_text_query():
+def test_identity_text_protocol_records_query_caption():
     config = _config()
     spec = build_protocol_spec(
         config, get_retrieval_protocol(config.retrieval_backend)

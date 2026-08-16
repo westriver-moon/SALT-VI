@@ -1,0 +1,67 @@
+{
+  "checkpoint_path": "/home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/stage_b_rn50_two_stage_grid_40_20260815/r3_switch24_fullpairs/best/model_Fusion_epoch_6.pth",
+  "checkpoint_sha256": "a7f2713e374066227af32cc6ad51837aed7245fdeaa1f25d66de22ed0903e0e0",
+  "created_utc": "2026-08-16T05:01:59+00:00",
+  "data_manifest": {
+    "paths": [
+      "/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl"
+    ],
+    "sha256": "6df9b117599ecb48c5b8e940e50ca0052a0016deec0c84368d80bb3340c298c7"
+  },
+  "eval_caption_seed": 0,
+  "experiment_id": "STAGEB-RN50-TWO-STAGE-B2-FULLPAIRS",
+  "metrics": {
+    "Fusion": {
+      "Rank-1": 0.8374703526496887,
+      "mAP": 0.7926893650874987,
+      "mINP": 0.6681751667200795
+    },
+    "IR": {
+      "Rank-1": 0.7067841291427612,
+      "mAP": 0.6614320863932385,
+      "mINP": 0.512168557499107
+    },
+    "Text": {
+      "Rank-1": 0.4514330327510834,
+      "mAP": 0.4687545991617725,
+      "mINP": 0.34576413149548413
+    }
+  },
+  "protocol_spec": {
+    "caption_lookup": "query:identity",
+    "caption_source": "/home/cgv841/ybj/SALT-VI/datasets/sysu/Text",
+    "dataset": "sysu",
+    "direction": "infrared-to-visible",
+    "eval_caption_seed": 0,
+    "gallery_modalities": [
+      "visible-image"
+    ],
+    "gallery_mode": "single",
+    "gallery_trials": 10,
+    "identifier": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=legacy|test_modality=IR,Fusion,Text|query=infrared-image+visible-identity-caption|gallery_modalities=visible-image|caption_lookup=query:identity|caption_seed=0|caption_source=/home/cgv841/ybj/SALT-VI/datasets/sysu/Text",
+    "official_sampling_protocol": true,
+    "query_modalities": [
+      "infrared-image",
+      "visible-identity-caption"
+    ],
+    "retrieval_backend": "legacy",
+    "search_mode": "all",
+    "test_modality": "IR,Fusion,Text",
+    "trial_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "resolved_config_sha256": "189d3f5fcc335cc77a021a210b35d1cd36dd583ad8cffe709f308c338b01792a",
+  "run_manifest_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text/run_manifest.json",
+  "run_manifest_sha256": "d1d674c56086a9aaebdd5b5829a443f4e3c5aa8bb58bd17cdc4992e4553c3387",
+  "schema_version": 1
+}

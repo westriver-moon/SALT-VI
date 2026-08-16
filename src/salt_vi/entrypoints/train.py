@@ -6,10 +6,12 @@ import inspect
 import json
 import re
 import time
+import uuid
 import torch
 import random
 import numpy as np
 import yaml
+from pathlib import Path
 from salt_vi.data.loader import Loader
 from salt_vi.engine import train, test, build_model
 from salt_vi.utils import make_dirs, Logger
@@ -46,7 +48,18 @@ _BEST_METRIC_NAMES = (
     "best_rank1_fusion",
     "best_mINP_fusion",
 )
-_TRAINING_CHECKPOINT_SCHEMA_VERSION = 1
+_TRAINING_CHECKPOINT_SCHEMA_VERSION = 2
+_RUN_MANIFEST_SCHEMA_VERSION = 1
+_RUN_MANIFEST_FILENAME = "run_manifest.json"
+_GOLDEN_EVALUATION_SCHEMA_VERSION = 1
+
+_RUN_MANIFEST_TRANSIENT_KEYS = {
+    "_explicit_cli_destinations",
+    "run_uuid",
+    "run_manifest_sha256",
+    "training_weight_init_verified_path",
+    "training_weight_init_verified_sha256",
+}
 
 
 def _merge_runtime_config(cli_config):
@@ -82,6 +95,180 @@ def _reset_best_metrics():
     namespace = globals()
     for name in _BEST_METRIC_NAMES:
         namespace[name] = 0
+
+
+def _metric_bucket(result_key):
+    return {
+        "IR": "ir",
+        "Fusion": "fusion",
+        "Text": "text",
+        "IR-RGBText": "fusion",
+    }.get(str(result_key), "fusion")
+
+
+def _best_value(bucket, metric):
+    return float(globals()["best_{}_{}".format(metric, bucket)])
+
+
+def _set_best_value(bucket, metric, value):
+    globals()["best_{}_{}".format(metric, bucket)] = float(value)
+
+
+def _log_retrieval_result(config, result_dict, protocol, logger):
+    for result_key in protocol.RESULT_KEYS:
+        if result_key not in result_dict:
+            continue
+        m_inp, m_ap, cmc = result_dict[result_key]
+        message = (
+            "Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n"
+            "Rank: {}\n"
+        ).format(
+            time_now(),
+            config.dataset,
+            result_key,
+            m_inp,
+            m_ap,
+            cmc,
+        )
+        if config.LOG4TEST:
+            logger(message)
+        else:
+            print(message)
+
+
+def _record_eval_epoch(
+    config,
+    model,
+    result_dict,
+    protocol,
+    protocol_spec,
+    current_epoch,
+    performance_writer,
+    logger,
+):
+    if not any(result_key in result_dict for result_key in protocol.RESULT_KEYS):
+        raise RuntimeError(
+            "Evaluation returned no protocol result keys; expected {}".format(
+                list(protocol.RESULT_KEYS)
+            )
+        )
+    save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
+    for result_key in protocol.RESULT_KEYS:
+        if result_key not in result_dict:
+            continue
+        m_inp, m_ap, cmc = result_dict[result_key]
+        bucket = _metric_bucket(result_key)
+        is_best_rank = cmc[0] >= _best_value(bucket, "rank1")
+        performance_writer.add_scalar(f"R1_{result_key}", cmc[0], current_epoch)
+        performance_writer.add_scalar(f"mAP_{result_key}", m_ap, current_epoch)
+        performance_writer.add_scalar(f"mINP_{result_key}", m_inp, current_epoch)
+        checkpoint_paths = {}
+        new_best_metrics = []
+        if bucket == "ir":
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("ir", "rank1", cmc[0])
+                _set_best_value("ir", "mAP", m_ap)
+                _set_best_value("ir", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("ir", "mINP"),
+                    _best_value("ir", "mAP"),
+                    _best_value("ir", "rank1"),
+                )
+            )
+            model.save_model(current_epoch, is_best_rank, mode="IR")
+        elif bucket == "text":
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("text", "rank1", cmc[0])
+                _set_best_value("text", "mAP", m_ap)
+                _set_best_value("text", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("text", "mINP"),
+                    _best_value("text", "mAP"),
+                    _best_value("text", "rank1"),
+                )
+            )
+            model.save_model(current_epoch, is_best_rank, mode="Text")
+        else:
+            is_best_rank = (
+                cmc[0] > _best_value("fusion", "rank1")
+                if save_best_per_metric
+                else cmc[0] >= _best_value("fusion", "rank1")
+            )
+            is_best_map = save_best_per_metric and m_ap > _best_value("fusion", "mAP")
+            is_best_minp = save_best_per_metric and m_inp > _best_value("fusion", "mINP")
+            if is_best_rank:
+                logger(f"New Best {result_key}!!!")
+                _set_best_value("fusion", "rank1", cmc[0])
+                if not save_best_per_metric:
+                    _set_best_value("fusion", "mAP", m_ap)
+                    _set_best_value("fusion", "mINP", m_inp)
+            if is_best_map:
+                _set_best_value("fusion", "mAP", m_ap)
+            if is_best_minp:
+                _set_best_value("fusion", "mINP", m_inp)
+            logger(
+                "Best {} mINP: {}, Best mAP: {}, Best Rank1: {}".format(
+                    result_key,
+                    _best_value("fusion", "mINP"),
+                    _best_value("fusion", "mAP"),
+                    _best_value("fusion", "rank1"),
+                )
+            )
+            if save_best_per_metric:
+                new_best_metrics = [
+                    metric
+                    for metric, improved in (
+                        ("Rank-1", is_best_rank),
+                        ("mAP", is_best_map),
+                        ("mINP", is_best_minp),
+                    )
+                    if improved
+                ]
+                checkpoint_paths = model.save_metric_checkpoints(
+                    current_epoch, new_best_metrics, mode="Fusion"
+                )
+            else:
+                model.save_model(current_epoch, is_best_rank, mode="Fusion")
+        _append_metric_event(
+            config,
+            "eval_epoch",
+            epoch=current_epoch,
+            dataset=config.dataset,
+            protocol=protocol_spec.identifier,
+            protocol_spec=protocol_spec.as_dict(),
+            query=protocol.QUERY_NAME,
+            gallery=protocol.GALLERY_NAME,
+            metrics={
+                "Rank-1": float(cmc[0]),
+                "mAP": float(m_ap),
+                "mINP": float(m_inp),
+            },
+            best_so_far={
+                "Rank-1": _best_value(bucket, "rank1"),
+                "mAP": _best_value(bucket, "mAP"),
+                "mINP": _best_value(bucket, "mINP"),
+            },
+            is_new_best=bool(is_best_rank),
+            new_best_metrics=new_best_metrics,
+            checkpoint_paths=checkpoint_paths,
+        )
+        logger(
+            "Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n"
+            "Rank: {}\n".format(
+                time_now(),
+                config.dataset,
+                result_key,
+                m_inp,
+                m_ap,
+                cmc,
+            )
+        )
 
 
 def _best_metric_state():
@@ -142,12 +329,24 @@ def _load_trusted_training_checkpoint(path):
     return torch.load(path, **kwargs)
 
 
-def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
+def _save_training_checkpoint(
+    path,
+    epoch,
+    model,
+    optimizer,
+    scheduler,
+    scaler,
+    *,
+    run_uuid=None,
+    run_manifest_sha256=None,
+):
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     payload = {
         "schema_version": _TRAINING_CHECKPOINT_SCHEMA_VERSION,
         "epoch": int(epoch),
+        "run_uuid": run_uuid,
+        "run_manifest_sha256": run_manifest_sha256,
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "scheduler": scheduler.state_dict(),
@@ -170,13 +369,53 @@ def _save_training_checkpoint(path, epoch, model, optimizer, scheduler, scaler):
     return path
 
 
-def _load_training_checkpoint(path, model, optimizer, scheduler, scaler, device):
+def _validate_checkpoint_run_identity(
+    checkpoint,
+    expected_run_uuid=None,
+    expected_run_manifest_sha256=None,
+):
+    if expected_run_uuid is None and expected_run_manifest_sha256 is None:
+        return
+    checkpoint_run_uuid = checkpoint.get("run_uuid")
+    checkpoint_manifest_sha256 = checkpoint.get("run_manifest_sha256")
+    if not checkpoint_run_uuid or not checkpoint_manifest_sha256:
+        raise ValueError(
+            "Training checkpoint has no run identity; convert it to the "
+            "run-manifest checkpoint schema before complete resume"
+        )
+    if checkpoint_run_uuid != expected_run_uuid:
+        raise ValueError(
+            "Training checkpoint run UUID mismatch: checkpoint={}, manifest={}".format(
+                checkpoint_run_uuid, expected_run_uuid
+            )
+        )
+    if checkpoint_manifest_sha256 != expected_run_manifest_sha256:
+        raise ValueError(
+            "Training checkpoint run manifest hash mismatch: checkpoint={}, manifest={}".format(
+                checkpoint_manifest_sha256, expected_run_manifest_sha256
+            )
+        )
+
+
+def _load_training_checkpoint(
+    path,
+    model,
+    optimizer,
+    scheduler,
+    scaler,
+    device,
+    *,
+    expected_run_uuid=None,
+    expected_run_manifest_sha256=None,
+):
     # Keep RNG byte tensors on CPU; load_state_dict moves model and optimizer
     # tensors to their owning parameter devices.
     checkpoint = _load_trusted_training_checkpoint(path)
     required = {
         "schema_version",
         "epoch",
+        "run_uuid",
+        "run_manifest_sha256",
         "model",
         "optimizer",
         "scheduler",
@@ -191,6 +430,11 @@ def _load_training_checkpoint(path, model, optimizer, scheduler, scaler, device)
         raise ValueError(
             f"Unsupported training checkpoint schema: {checkpoint['schema_version']}"
         )
+    _validate_checkpoint_run_identity(
+        checkpoint,
+        expected_run_uuid=expected_run_uuid,
+        expected_run_manifest_sha256=expected_run_manifest_sha256,
+    )
     model.load_state_dict(checkpoint["model"])
     optimizer.load_state_dict(checkpoint["optimizer"])
     scheduler.load_state_dict(checkpoint["scheduler"])
@@ -256,6 +500,195 @@ def _sha256_file(path, chunk_size=8 * 1024 * 1024):
                 break
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_json(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _jsonable(value):
+    if isinstance(value, dict):
+        return {
+            str(key): _jsonable(item)
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+        }
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, set):
+        return sorted(_jsonable(item) for item in value)
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _resolved_config_digest(config):
+    values = dict(vars(config)) if hasattr(config, "__dict__") else dict(config)
+    values = {
+        key: item
+        for key, item in values.items()
+        if key not in _RUN_MANIFEST_TRANSIENT_KEYS
+    }
+    payload = _jsonable(values)
+    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+
+
+def _data_manifest_digest(config):
+    entries = []
+    view_manifest = getattr(config, "sysu_sr_view_manifest", None)
+    if view_manifest:
+        path = os.path.abspath(os.path.expanduser(str(view_manifest)))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"PASD view manifest is missing: {path}")
+        entries.append((path, _sha256_file(path)))
+    data_root = getattr(config, "sysu_sr_data_root", None)
+    if data_root and not view_manifest:
+        root = os.path.abspath(os.path.expanduser(str(data_root)))
+        if os.path.isdir(root):
+            for name in ("manifest.json", "manifest.jsonl", "validation-report.json"):
+                path = os.path.join(root, name)
+                if os.path.isfile(path):
+                    entries.append((path, _sha256_file(path)))
+    entries = sorted(set(entries))
+    if not entries:
+        return None
+    payload = [
+        {"path": path, "sha256": digest}
+        for path, digest in entries
+    ]
+    return {
+        "paths": [path for path, _ in entries],
+        "sha256": hashlib.sha256(
+            _canonical_json(payload).encode("utf-8")
+        ).hexdigest(),
+    }
+
+
+def _run_manifest_path(config):
+    return os.path.join(str(config.output_path), _RUN_MANIFEST_FILENAME)
+
+
+def _load_run_manifest(config):
+    path = _run_manifest_path(config)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Complete resume requested but run manifest is missing: {path}"
+        )
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if int(payload.get("schema_version", 0)) != _RUN_MANIFEST_SCHEMA_VERSION:
+        raise ValueError(
+            "Unsupported run manifest schema: {}".format(
+                payload.get("schema_version")
+            )
+        )
+    return payload
+
+
+def _validate_run_manifest(config, protocol_spec, manifest):
+    expected = {
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "init_checkpoint_sha256": _init_checkpoint_digest(config),
+        "protocol_identifier": protocol_spec.identifier,
+    }
+    mismatches = []
+    for key, value in expected.items():
+        recorded = manifest.get(key)
+        if recorded != value:
+            mismatches.append(
+                "{}: recorded={!r}, recomputed={!r}".format(
+                    key, recorded, value
+                )
+            )
+    if mismatches:
+        raise ValueError(
+            "Run manifest identity mismatch in {}: {}".format(
+                _run_manifest_path(config), "; ".join(mismatches)
+            )
+        )
+
+
+def _init_checkpoint_digest(config):
+    if str(getattr(config, "mode", "")) == "test":
+        path = getattr(config, "test_model_path", None)
+    else:
+        path = getattr(config, "training_weight_init", None)
+    if not path:
+        return None
+    if str(getattr(config, "mode", "")) != "test":
+        return _verify_training_weight_init(config)
+    path = os.path.abspath(os.path.expanduser(str(path)))
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"Test checkpoint is missing: {path}")
+    return _sha256_file(path)
+
+
+def _write_run_manifest(config, run_uuid, protocol_spec):
+    path = _run_manifest_path(config)
+    payload = {
+        "schema_version": _RUN_MANIFEST_SCHEMA_VERSION,
+        "run_uuid": run_uuid,
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "init_checkpoint_sha256": _init_checkpoint_digest(config),
+        "protocol_identifier": protocol_spec.identifier,
+        "protocol_spec": protocol_spec.as_dict(),
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    temporary = path + ".tmp"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+    return path, _sha256_file(path)
+
+
+def _write_golden_evaluation(config, protocol_spec, result_dict):
+    path = os.path.abspath(os.path.expanduser(str(config.golden_evaluation_path)))
+    if os.path.exists(path):
+        raise FileExistsError(f"Refusing to overwrite golden evaluation: {path}")
+    payload = {
+        "schema_version": _GOLDEN_EVALUATION_SCHEMA_VERSION,
+        "experiment_id": getattr(config, "metric_experiment_id", None),
+        "checkpoint_path": os.path.abspath(
+            os.path.expanduser(str(config.test_model_path))
+        ),
+        "checkpoint_sha256": _sha256_file(config.test_model_path),
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "protocol_spec": protocol_spec.as_dict(),
+        "eval_caption_seed": protocol_spec.eval_caption_seed,
+        "metrics": {},
+        "run_manifest_path": _run_manifest_path(config),
+        "run_manifest_sha256": config.run_manifest_sha256,
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    for mode, (minp, m_ap, cmc) in result_dict.items():
+        payload["metrics"][mode] = {
+            "Rank-1": float(cmc[0]),
+            "mAP": float(m_ap),
+            "mINP": float(minp),
+        }
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temporary = path + ".tmp"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+    return path
 
 
 def _verify_training_weight_init(config):
@@ -455,7 +888,7 @@ def main(config):
         )
     validate_runtime_config(config)
     retrieval_protocol = get_retrieval_protocol(
-        getattr(config, "retrieval_backend", "legacy")
+        getattr(config, "retrieval_backend", "identity_text")
     )
     fusion_result_key = retrieval_protocol.RESULT_KEY
     os.environ["CUDA_VISIBLE_DEVICES"] = config.CUDA_VISIBLE_DEVICES
@@ -475,15 +908,39 @@ def main(config):
 
     print("=================Constructing output dir=================")
     config.output_path = resolve_run_directory(config)
-    ensure_fresh_run_directory(config)
-    is_resume = bool(config.auto_resume_training_from_lastest_step) or int(
-        config.resume_train_epoch
-    ) >= 0
-    if config.mode == "train" and not is_resume:
+    complete_resume = bool(
+        getattr(config, "auto_resume_training_from_lastest_step", False)
+    )
+    if int(getattr(config, "resume_train_epoch", -1)) >= 0:
+        raise RuntimeError(
+            "model-only resume via resume_train_epoch is retired; convert the "
+            "checkpoint to the run-manifest full-state schema before resuming"
+        )
+    if int(getattr(config, "metric_boost_resume_epoch", 0)) > 0:
+        raise RuntimeError(
+            "metric_boost_resume_epoch is retired; start a fresh run or use "
+            "complete run-manifest resume"
+        )
+    is_resume = complete_resume
+    if config.mode == "train" and not complete_resume:
         _verify_training_weight_init(config)
+    if config.mode == "train" and not complete_resume:
+        ensure_fresh_run_directory(config)
+    if complete_resume or (
+        config.mode == "test" and os.path.isfile(_run_manifest_path(config))
+    ):
+        manifest = _load_run_manifest(config)
+        _validate_run_manifest(config, protocol_spec, manifest)
+        config.run_uuid = manifest["run_uuid"]
+        config.run_manifest_sha256 = _sha256_file(_run_manifest_path(config))
+    else:
+        config.run_uuid = uuid.uuid4().hex
+        _, config.run_manifest_sha256 = _write_run_manifest(
+            config, config.run_uuid, protocol_spec
+        )
     if config.DEBUG:
         print(f"Debug [{config.mode}] mode, dir: {config.output_path}")
-    elif (config.auto_resume_training_from_lastest_step or config.resume_train_epoch>=0) and config.mode == 'train':
+    elif complete_resume and config.mode == 'train':
         print(f"Resume training from the latest step, dir: {config.output_path}")
     elif config.mode == 'test':
         print(f"Start testing with trained model, dir: {config.output_path}")
@@ -523,17 +980,10 @@ def main(config):
         loss_writer = SummaryWriter(os.path.join(model.output_path,'vis_logs/loss'))
         save_train_configs(config.output_path, config)
 
-        complete_resume = bool(
-            getattr(config, "auto_resume_training_from_lastest_step", False)
-        )
-        legacy_resume_epoch = int(getattr(config, "resume_train_epoch", -1))
-        if complete_resume or legacy_resume_epoch >= 0:
-            # Full/model-only checkpoints may contain the registered RN backup modules.
+        if complete_resume:
             _initialize_spatial_backups(model, config)
         else:
             _load_training_weight_init(model, config, device)
-        if legacy_resume_epoch >= 0 and not complete_resume:
-            model.resume_model(legacy_resume_epoch, mode="Fusion")
 
         print("=================preparing optimizer=================")
 
@@ -544,30 +994,26 @@ def main(config):
         else:
             scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
 
-        start_train_epoch = max(0, int(getattr(config, "metric_boost_resume_epoch", 0)))
-        if start_train_epoch:
-            print(
-                "Metric-boost recovery: resuming model weights at "
-                f"epoch {start_train_epoch} with a freshly initialized optimizer state"
-            )
+        start_train_epoch = 0
         if complete_resume:
             if not os.path.isfile(check_point_path):
                 raise FileNotFoundError(
                     f"Automatic resume requested but checkpoint is missing: {check_point_path}"
                 )
             start_train_epoch = _load_training_checkpoint(
-                check_point_path, model, optimizer, scheduler, scaler, device
+                check_point_path,
+                model,
+                optimizer,
+                scheduler,
+                scaler,
+                device,
+                expected_run_uuid=config.run_uuid,
+                expected_run_manifest_sha256=config.run_manifest_sha256,
             )
             print(f"Resuming complete training state from epoch {start_train_epoch}")
-        elif legacy_resume_epoch >= 0:
-            start_train_epoch = legacy_resume_epoch + 1
-            print(
-                "Resuming legacy model-only checkpoint at epoch "
-                f"{start_train_epoch}; optimizer state starts fresh"
-            )
 
         # Replicas are snapshots, so they must be created only after the final
-        # model state (fresh warm-start, legacy resume, or full resume) is loaded.
+        # model state (fresh warm-start or full resume) is loaded.
         model.configure_fixed_visual_data_parallel()
 
         if bool(getattr(config, "eval_before_train", False)) and start_train_epoch == 0:
@@ -657,110 +1103,16 @@ def main(config):
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
                 result_dict = test(model, loaders, config, device)
-                if retrieval_protocol.IS_LEGACY and 'IR' in config.test_modality:
-                    mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
-                    is_best_rank_ir = (cmc_ir[0] >= best_rank1_ir)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_IR', cmc_ir[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_IR', mAP_ir, current_epoch)
-                    performance_writer.add_scalar(f'mINP_IR', mINP_ir, current_epoch)
-                    # new add
-                    if is_best_rank_ir:
-                        logger(f"New Best IR_RGB!!!")
-                        best_rank1_ir = max(cmc_ir[0], best_rank1_ir)
-                        best_mAP_ir = mAP_ir
-                        best_mINP_ir = mINP_ir
-                    logger(f"Best IR_RGB mINP: {best_mINP_ir}, Best mAP: {best_mAP_ir}, Best Rank1: {best_rank1_ir}")
-                    # new add
-                    model.save_model(current_epoch, is_best_rank_ir, mode="IR")
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
-                if not retrieval_protocol.IS_LEGACY or 'Fusion' in config.test_modality:
-                    mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
-                    save_best_per_metric = bool(getattr(config, "save_best_per_metric", False))
-                    is_best_rank_fusion = (
-                        cmc_fusion[0] > best_rank1_fusion
-                        if save_best_per_metric else cmc_fusion[0] >= best_rank1_fusion
-                    )
-                    is_best_map_fusion = save_best_per_metric and (mAP_fusion > best_mAP_fusion)
-                    is_best_minp_fusion = save_best_per_metric and (mINP_fusion > best_mINP_fusion)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_{fusion_result_key}', cmc_fusion[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_{fusion_result_key}', mAP_fusion, current_epoch)
-                    performance_writer.add_scalar(f'mINP_{fusion_result_key}', mINP_fusion, current_epoch)
-                    # new add
-                    if is_best_rank_fusion:
-                        logger(f"New Best {fusion_result_key}!!!")
-                        best_rank1_fusion = cmc_fusion[0]
-                        if not save_best_per_metric:
-                            best_mAP_fusion = mAP_fusion
-                            best_mINP_fusion = mINP_fusion
-                    if is_best_map_fusion:
-                        best_mAP_fusion = mAP_fusion
-                    if is_best_minp_fusion:
-                        best_mINP_fusion = mINP_fusion
-                    logger(f"Best {fusion_result_key} mINP: {best_mINP_fusion}, Best mAP: {best_mAP_fusion}, Best Rank1: {best_rank1_fusion}")
-                    checkpoint_paths = dict(getattr(model, "_metric_checkpoint_paths", {}))
-                    new_best_metrics = []
-                    if save_best_per_metric:
-                        new_best_metrics = [
-                            metric for metric, improved in (
-                                ("Rank-1", is_best_rank_fusion),
-                                ("mAP", is_best_map_fusion),
-                                ("mINP", is_best_minp_fusion),
-                            ) if improved
-                        ]
-                        checkpoint_paths = model.save_metric_checkpoints(
-                            current_epoch, new_best_metrics, mode='Fusion'
-                        )
-                    else:
-                        model.save_model(current_epoch, is_best_rank_fusion, mode='Fusion')
-                    _append_metric_event(
-                        config,
-                        "eval_epoch",
-                        epoch=current_epoch,
-                        dataset=config.dataset,
-                        protocol=protocol_spec.identifier,
-                        protocol_spec=protocol_spec.as_dict(),
-                        query=retrieval_protocol.QUERY_NAME,
-                        gallery=retrieval_protocol.GALLERY_NAME,
-                        metrics={
-                            "Rank-1": float(cmc_fusion[0]),
-                            "mAP": float(mAP_fusion),
-                            "mINP": float(mINP_fusion),
-                        },
-                        best_so_far={
-                            "Rank-1": float(best_rank1_fusion),
-                            "mAP": float(best_mAP_fusion),
-                            "mINP": float(best_mINP_fusion),
-                        },
-                        is_new_best=bool(is_best_rank_fusion),
-                        new_best_metrics=new_best_metrics,
-                        checkpoint_paths=checkpoint_paths,
-                    )
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-                if retrieval_protocol.IS_LEGACY and 'Text' in config.test_modality:
-                    mINP_text, mAP_text, cmc_text = result_dict['Text']
-                    is_best_rank_text = (cmc_text[0] >= best_rank1_text)
-                    # visual log
-                    performance_writer.add_scalar(f'R1_Text', cmc_text[0], current_epoch)
-                    performance_writer.add_scalar(f'mAP_Text', mAP_text, current_epoch)
-                    performance_writer.add_scalar(f'mINP_Text', mINP_text, current_epoch)
-                    # new add
-                    if is_best_rank_text:
-                        logger(f"New Best Text_RGB!!!")
-                        best_rank1_text = max(cmc_text[0], best_rank1_text)
-                        best_mAP_text = mAP_text
-                        best_mINP_text = mINP_text
-                    logger(f"Best Text_RGB mINP: {best_mINP_text}, Best mAP: {best_mAP_text}, Best Rank1: {best_rank1_text}")
-                    # new add
-                    model.save_model(current_epoch, is_best_rank_text, mode='Text')
-                    logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
+                _record_eval_epoch(
+                    config,
+                    model,
+                    result_dict,
+                    retrieval_protocol,
+                    protocol_spec,
+                    current_epoch,
+                    performance_writer,
+                    logger,
+                )
 
                 gc.collect()
                 if torch.cuda.is_available():
@@ -778,6 +1130,8 @@ def main(config):
                     optimizer,
                     scheduler,
                     scaler,
+                    run_uuid=config.run_uuid,
+                    run_manifest_sha256=config.run_manifest_sha256,
                 )
                 logger(f"Saved complete training checkpoint: {saved_checkpoint}")
 
@@ -804,42 +1158,13 @@ def main(config):
         model.configure_fixed_visual_data_parallel()
         print('Successfully resume model from {}'.format(config.test_model_path))
         result_dict = test(model, loaders, config, device)
-        if retrieval_protocol.IS_LEGACY and "IR" in config.test_modality:
-            mINP_ir, mAP_ir, cmc_ir = result_dict['IR']
-            if config.LOG4TEST:
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"IR_RGB",
-                                                                                    mINP_ir, mAP_ir, cmc_ir))
+        _log_retrieval_result(config, result_dict, retrieval_protocol, logger)
 
-        if not retrieval_protocol.IS_LEGACY or "Fusion" in config.test_modality:
-            mINP_fusion, mAP_fusion, cmc_fusion = result_dict[fusion_result_key]
-            if config.LOG4TEST:
-                if config.CAT_EVAL:
-                    logger('===================Test with CAT FEAT===================')
-                else:
-                    logger('===================Test without CAT FEAT===================')
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,fusion_result_key,
-                                                                                    mINP_fusion, mAP_fusion, cmc_fusion))
-
-        if retrieval_protocol.IS_LEGACY and "Text" in config.test_modality:
-            mINP_text, mAP_text, cmc_text = result_dict['Text']
-            if config.LOG4TEST:
-                logger('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
-            else:
-                print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
-                                                                                    config.dataset,"Text_RGB",
-                                                                                    mINP_text, mAP_text, cmc_text))
+        if getattr(config, "golden_evaluation_path", None):
+            golden_path = _write_golden_evaluation(
+                config, protocol_spec, result_dict
+            )
+            print(f"Wrote golden evaluation: {golden_path}")
 
 
 if __name__ == '__main__':

@@ -271,7 +271,7 @@ class CLIP2ReID(nn.Module):
         validate_runtime_config(args)
         validate_fusion_compatibility(args.training_mode, args.joint_mode, args.fusion_way)
         self.retrieval_protocol = get_retrieval_protocol(
-            getattr(args, "retrieval_backend", "legacy")
+            getattr(args, "retrieval_backend", "identity_text")
         )
         self.training_recipe = build_training_recipe(args, self.retrieval_protocol)
         self.max_save_model_num = args.max_save_model_num

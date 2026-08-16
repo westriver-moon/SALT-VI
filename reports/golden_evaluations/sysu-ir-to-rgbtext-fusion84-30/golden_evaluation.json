@@ -1,0 +1,57 @@
+{
+  "checkpoint_path": "/home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/ir_to_rgb_text_fusion84_30_20260809/best/model_Fusion_epoch_10.pth",
+  "checkpoint_sha256": "38bb215ebbc0aa36e60be34e82d13fc263fec7e6cca60dd03f601a2b186dcc79",
+  "created_utc": "2026-08-16T05:10:56+00:00",
+  "data_manifest": {
+    "paths": [
+      "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1/manifest.json"
+    ],
+    "sha256": "3d8e3366ea69c5dd44439bb9ccba296e76c41a2cf9ccd4be68f360ad8e152141"
+  },
+  "eval_caption_seed": 0,
+  "experiment_id": "SALTVI-IR-TO-RGBTEXT-FUSION84-30-20260809",
+  "metrics": {
+    "IR-RGBText": {
+      "Rank-1": 0.5378122925758362,
+      "mAP": 0.5389167061157163,
+      "mINP": 0.4084623199331941
+    }
+  },
+  "protocol_spec": {
+    "caption_lookup": "gallery:image",
+    "caption_source": "/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+    "dataset": "sysu",
+    "direction": "infrared-to-visible",
+    "eval_caption_seed": 0,
+    "gallery_modalities": [
+      "visible-image",
+      "visible-image-caption"
+    ],
+    "gallery_mode": "single",
+    "gallery_trials": 10,
+    "identifier": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=ir_to_rgb_text|test_modality=IR-RGBText|query=infrared-image|gallery_modalities=visible-image+visible-image-caption|caption_lookup=gallery:image|caption_seed=0|caption_source=/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+    "official_sampling_protocol": true,
+    "query_modalities": [
+      "infrared-image"
+    ],
+    "retrieval_backend": "ir_to_rgb_text",
+    "search_mode": "all",
+    "test_modality": "IR-RGBText",
+    "trial_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "resolved_config_sha256": "4bab7bbeb243db524bd9353686851bb5f0dce8c462bf436b0ea0c5add2966703",
+  "run_manifest_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-ir-to-rgbtext-fusion84-30/run_manifest.json",
+  "run_manifest_sha256": "5792a151a3faead1babfa12d55c6409622af688c9ed305c9708a7f8d89b843d2",
+  "schema_version": 1
+}

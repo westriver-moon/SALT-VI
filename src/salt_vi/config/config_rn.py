@@ -87,12 +87,13 @@ def build_parser():
  
     ######################## eval and log config during training ########################
     parser.add_argument('--test_model_path', type=str, default=None)
+    parser.add_argument('--golden_evaluation_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default='/data0/hzy_log/WORK_2024_LOG/logs/',
                         help='path to save related informations')
     parser.add_argument('--clip_download_root', type=str, default='~/.cache/clip',
                         help='path to cache OpenAI CLIP model weights')
     parser.add_argument('--max_save_model_num', type=int, default=1, help='0 for max num is infinit')
-    parser.add_argument('--resume_train_epoch', type=int, default=-1, help='-1 for no resuming')
+    parser.add_argument('--resume_train_epoch', type=int, default=-1, help='-1 for no resuming; model-only resume is retired')
     parser.add_argument('--auto_resume_training_from_lastest_step', action="store_true", default=False)
     parser.add_argument('--eval_epoch', type=int, default=2)
     parser.add_argument('--eval_start_epoch', type=int, default=80)

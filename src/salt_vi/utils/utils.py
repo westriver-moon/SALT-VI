@@ -385,7 +385,6 @@ def load_train_configs(path):
     needs_training_weight_init = (
         args.get("mode", "train") == "train"
         and not bool(args.get("auto_resume_training_from_lastest_step", False))
-        and int(args.get("resume_train_epoch", -1)) < 0
     )
     should_auto_find_weight = (
         needs_training_weight_init

@@ -3,8 +3,8 @@ from collections.abc import Mapping
 
 
 NAME = "ir_to_rgb_text"
+RESULT_KEYS = ("IR-RGBText",)
 RESULT_KEY = "IR-RGBText"
-IS_LEGACY = False
 TRAIN_TEXT_MODALITIES = ("rgb",)
 QUERY_CAPTION_LOOKUP = None
 GALLERY_CAPTION_LOOKUP = "image"
