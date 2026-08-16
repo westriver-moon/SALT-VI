@@ -52,3 +52,43 @@ def test_builds_one_or_five_deterministic_protocol_views(tmp_path: Path):
         assert len(load_tasks(output)) == views
         pilot = select_pilot_records(records, tmp_path / "pilot.jsonl", count=1)
         assert {record["modality"] for record in pilot} == {"rgb"}
+
+
+def test_include_all_keeps_non_protocol_sources(tmp_path: Path):
+    root = tmp_path / "SYSU-MM01"
+    (root / "exp").mkdir(parents=True)
+    (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
+    (root / "exp" / "val_id.txt").write_text("2", encoding="utf-8")
+    (root / "exp" / "test_id.txt").write_text("3", encoding="utf-8")
+    for identity in ("0001", "9999"):
+        path = root / "cam6" / identity
+        path.mkdir(parents=True)
+        Image.new("RGB", (64, 128), "gray").save(path / "0001.jpg")
+    captions = {
+        "datasets/sysu/cam6/0001/0001.jpg": candidate("0001", 6),
+        "datasets/sysu/cam6/9999/0001.jpg": candidate("9999", 6),
+    }
+    path = tmp_path / "ir.json"
+    path.write_text(json.dumps(captions), encoding="utf-8")
+    output = tmp_path / "records.jsonl"
+    protocol = build_sysu_records(
+        root,
+        {"ir": path},
+        output,
+        seed=17,
+        views_per_source=1,
+        enforce_official_counts=False,
+    )
+    assert len(protocol) == 1
+    assert protocol[0]["identity"] == "0001"
+    full = build_sysu_records(
+        root,
+        {"ir": path},
+        output,
+        seed=17,
+        views_per_source=1,
+        enforce_official_counts=False,
+        include_all=True,
+    )
+    assert len(full) == 2
+    assert {record["split"] for record in full} == {"train", "all"}

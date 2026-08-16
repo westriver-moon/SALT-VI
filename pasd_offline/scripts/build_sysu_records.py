@@ -15,14 +15,21 @@ from pasd_offline.sysu import build_sysu_records, select_pilot_records  # noqa: 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build canonical SYSU PASD records")
     parser.add_argument("--dataset-root", required=True)
-    parser.add_argument("--rgb-candidates", required=True)
+    parser.add_argument("--rgb-candidates")
     parser.add_argument("--ir-candidates")
     parser.add_argument("--output", required=True)
     parser.add_argument("--pilot-output")
     parser.add_argument("--pilot-size", type=int, default=100)
     parser.add_argument("--seed", type=int, default=20_260_808)
     parser.add_argument("--views-per-source", type=int, choices=(1, 5), default=1)
+    parser.add_argument(
+        "--include-all",
+        action="store_true",
+        help="Include every official caption source instead of only protocol-split identities.",
+    )
     args = parser.parse_args()
+    if not args.rgb_candidates and not args.ir_candidates:
+        parser.error("at least one of --rgb-candidates or --ir-candidates is required")
     records = build_sysu_records(
         args.dataset_root,
         {
@@ -33,6 +40,7 @@ def main() -> None:
         args.output,
         seed=args.seed,
         views_per_source=args.views_per_source,
+        include_all=args.include_all,
     )
     pilot = (
         select_pilot_records(records, args.pilot_output, args.pilot_size, args.seed)

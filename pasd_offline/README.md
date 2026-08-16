@@ -18,6 +18,15 @@
 
 其中 RGB 沿用 PASD 输出；IR 不进行语义生成，只以相同的人物比例、模糊背景和目标尺寸进行几何适配。组合数据共有 29,033 个 RGB 和 15,712 个 IR 视图，输出均为 256×512 RGB PNG，完整性报告当前为零错误。
 
+扩展数据链（原文本 caption）：
+
+```text
+/home/lab929/datasets/derived/SYSU-MM01-pasd-ir-x4-blurpad-512x256-1view-v1
+/home/lab929/datasets/derived/RegDB-pasd-rgb-ir-x4-blurpad-512x256-1view-v1
+```
+
+SYSU IR 使用 `SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json` 的原始 caption，按协议身份生成官方 15,712 个 IR 视图；RegDB RGB/IR 使用 `RegDB/Text/Blip_RGB/caption_dict_Blip_RGB.json` 与 `RegDB/Text/Blip_IR/caption_dict_Blip_IR.json` 的原始 caption，生成全部 4,120 RGB 与 4,120 IR 视图。RegDB records 同时写入 trial 1 的 train/test split，供后续训练直接消费。
+
 派生数据必须放在 `/home/lab929/datasets/derived/`，不能写入源码仓库。
 
 ## 结构
@@ -28,6 +37,7 @@ pasd_offline/
 ├── pasd_offline/             # records、geometry、调度、生成与校验
 ├── scripts/
 │   ├── build_sysu_records.py
+│   ├── build_regdb_records.py
 │   ├── generate_dataset.py
 │   ├── build_sysu_geomatched_dataset.py
 │   └── validate_dataset.py
@@ -60,6 +70,27 @@ python scripts/build_sysu_records.py \
   --pilot-output /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/pilot-records.jsonl
 ```
 
+SYSU IR records：
+
+```bash
+python scripts/build_sysu_records.py \
+  --dataset-root /home/cgv841/datasets/SYSU-MM01 \
+  --rgb-candidates /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json \
+  --ir-candidates /home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json \
+  --views-per-source 1 \
+  --output /home/lab929/datasets/derived/SYSU-MM01-pasd-ir-x4-blurpad-512x256-1view-v1/source-records.jsonl
+```
+
+RegDB records：
+
+```bash
+python scripts/build_regdb_records.py \
+  --dataset-root /home/cgv841/datasets/RegDB \
+  --rgb-candidates /home/cgv841/datasets/RegDB/Text/Blip_RGB/caption_dict_Blip_RGB.json \
+  --ir-candidates /home/cgv841/datasets/RegDB/Text/Blip_IR/caption_dict_Blip_IR.json \
+  --output /home/lab929/datasets/derived/RegDB-pasd-rgb-ir-x4-blurpad-512x256-1view-v1/source-records.jsonl
+```
+
 生成：
 
 ```bash
@@ -68,6 +99,8 @@ python scripts/generate_dataset.py \
   --records /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-x4-blurpad-512x256-1view-v1/source-records.jsonl \
   --workers 2
 ```
+
+SYSU IR 使用 `configs/generate_sysu_ir_single.yaml`，RegDB 使用 `configs/generate_regdb_rgb_ir_single.yaml`；两个配置的 `gpu_allowlist` 都是 `[1, 2, 3]`，调度器额外拒绝 GPU 0。
 
 `--workers 1` 前台运行；2 或 3 使用配置中可用的物理 GPU。生成按 source 可恢复，并写出 PNG、source metadata、`build.json`、`manifest.jsonl` 和 `manifest.json`。build fingerprint 绑定配置和 records。
 
