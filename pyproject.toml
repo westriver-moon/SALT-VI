@@ -31,7 +31,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-exclude = ["salt_vi.tests*", "salt_vi.baselines.vision_text.tests*"]
+exclude = ["salt_vi.tests*", "salt_vi.baselines*"]
 
 [tool.setuptools.package-data]
 "salt_vi.data" = ["assets/*.gz"]

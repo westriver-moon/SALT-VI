@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 import torch
 
 from salt_vi.config.validation import validate_runtime_config
@@ -46,6 +47,41 @@ def test_legacy_is_an_explicit_protocol():
     assert protocol.RESULT_KEY == "Fusion"
     assert protocol.train_text_modalities(config) == ("rgb", "ir")
     assert protocol.query_caption_lookup(config) == "identity"
+
+
+def test_legacy_protocol_rejects_invalid_runtime_combinations():
+    protocol = get_retrieval_protocol("legacy")
+    assert protocol.validate(
+        SimpleNamespace(dataset="sysu", test_modality="Fusion")
+    ).test_modality == "Fusion"
+    assert protocol.query_caption_lookup(
+        SimpleNamespace(test_modality="IR")
+    ) is None
+
+    with pytest.raises(ValueError, match="supports only"):
+        protocol.validate(SimpleNamespace(dataset="market1501", test_modality="IR"))
+    with pytest.raises(ValueError, match="non-empty subset"):
+        protocol.validate(SimpleNamespace(dataset="sysu", test_modality="IR-RGBText"))
+    with pytest.raises(ValueError, match="direction"):
+        protocol.validate(
+            SimpleNamespace(
+                dataset="regdb",
+                test_modality="IR",
+                regdb_test_mode="thermal-visible",
+                trial=1,
+                eval_num_regdb=1,
+            )
+        )
+    with pytest.raises(ValueError, match="within 1-10"):
+        protocol.validate(
+            SimpleNamespace(
+                dataset="regdb",
+                test_modality="Fusion",
+                regdb_test_mode="t-v",
+                trial=9,
+                eval_num_regdb=3,
+            )
+        )
 
 
 def test_training_recipe_dispatch_is_owned_by_protocol():

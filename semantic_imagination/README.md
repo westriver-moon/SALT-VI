@@ -2,7 +2,7 @@
 
 该离线插件把一幅模糊行人图像转换为带经验权重的语义假设集合，并将其导出为 PASD source records。它不导入 SALT 训练代码或 PASD 模型代码。
 
-权威数学语义和实现不变量见 [`MATHEMATICAL_SPEC.md`](MATHEMATICAL_SPEC.md)。原单链接机制的实测缺陷、修正算法和剩余限制见 [`KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md`](KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md)。实现可以替换 VLM、扰动、文本嵌入和聚类后端，但不能改变其中定义的概率解释。
+权威数学语义和实现不变量见 [`MATHEMATICAL_SPEC.md`](MATHEMATICAL_SPEC.md)。当前验证契约和剩余限制在本文固定；实现可以替换 VLM、扰动、文本嵌入和聚类后端，但不能改变其中定义的概率解释。
 
 ## 工作流
 
@@ -59,6 +59,20 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 - `pasd.py`：PASD record 适配；
 - `plugin.py`：旧调用方兼容门面。
 
+## 校验契约与剩余限制
+
+- `canonical_state` 提供新增语义，`value` 只提供颜色、大小、材质或外观限定；
+  因此合法 state 不要求在 value 中重复，且已观察到的限定词不会单独否定新增 state。
+- parser 只修复可唯一确定的表面错误和 sentinel 规范化；未知 state、正向
+  state/sentinel 冲突、category/value 明确错配，以及 state/value/location
+  共同重复观察事实时必须拒绝。
+- 每次失败的代码和定向反馈进入下一次确定性重试；重试耗尽记为
+  `validation_failed`，不得伪装成模型主动的 `no_additional_detail`。
+- 完全链接和受控状态只能降低已知链式吞并与误杀，不能证明已接受假设真实；
+  `other_*` 开放词汇仍需抽样审计。
+- 经验生成质量及 Wilson 区间都不是现实后验概率。概率校准、身份保持以及
+  PASD/ReID 收益必须由高清真值、人工标注和独立对照实验验证。
+
 ## 与 PASD/SALT 的接口
 
 - PASD 生成配置使用 `views_per_source: 0` 表示每个源图像具有动态假设数。
@@ -77,6 +91,6 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 当前研究 backend 为本地 InternVL2.5-8B，实验入口为
 `experiments/run_internvl_sampling.py`。它仍是离线生成插件，没有活跃训练 YAML
 自动启用动态视图；当前 geometry-matched Stage-A 数据仍是一视图、权重1。
-旧校验器的原始结果已清理，关键结论保留在
-`KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md`；v3 的设计、N=512 离线重放与真实
-smoke 验收见 `VALIDATOR_V3_AUDIT.md` 和 `reports/20260814_validator_v3_smoke/`。
+旧校验器和一次性 smoke 产物不属于源码主线；当前规范只保留在本 README 与
+`MATHEMATICAL_SPEC.md`。新的采样、审计和 smoke 输出写入 `reports/`，但不提交到
+Git。

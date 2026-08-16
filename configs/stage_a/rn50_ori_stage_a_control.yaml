@@ -9,7 +9,6 @@ loss_names: wrt,id
 llm_aug: false
 Feat_Filter: false
 Fix_Visual: false
-Return_B4_BN: false
 freeze_text_in_image_only: true
 
 test_model_type: IR

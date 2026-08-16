@@ -79,9 +79,9 @@ def validate_runtime_config(config):
     joint_mode = str(_value(config, "joint_mode", "image_only"))
     uses_text = "Text" in training_mode
     attention_backend = validate_attention_backend_runtime(
-        _value(config, "pmt_attention_backend", "legacy")
+        _value(config, "pmt_attention_backend", "manual")
     )
-    if attention_backend != "legacy" and str(
+    if attention_backend != "manual" and str(
         _value(config, "pretrain_choice", "")
     ) != "PMT_VIT":
         raise ValueError(

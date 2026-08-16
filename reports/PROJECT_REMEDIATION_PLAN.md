@@ -1,91 +1,89 @@
-# SALT-VI 受控重整计划
+# SALT-VI 后续修正计划
 
-> 核查基线：`main@e2f39c62d76f1eb6326b7f2a42bdcccf2d74cf61`。指标事实仍只写入
-> `reports/experiment_registry/experiment_registry.csv`；本文只保留尚未完成的工程队列和本轮审查结论。
+> 核查基线：`main@c9cbc1af3b7a5d8fc80f9db02801a89c5f995d09`。
+> 本文只保留仍未完成、且已由当前代码证据确认的问题；已修正事项不再保留，
+> 完成记录由 Git 历史和测试结果承担。
 
 ## 主线边界
 
-当前主线保持不变：geometry-matched PASD RGB/IR 固定 Stage-A 数据契约，保留 RN50 Direct
-Stage-A 最佳初始化，Stage-B 先做 ID+WRT 对齐再做跨模态细化；24+16 epoch、all-pairs 的 r3
-仍是当前组内最佳。PMT-ViT、No-MBPatch、batch128、FlashAttention 是归档对照，Semantic
-Imagination 仍是下一阶段原型。
+当前主线仍是 geometry-matched PASD RGB/IR 的 Stage-A 数据契约、RN50 Direct
+Stage-A 初始化，以及 Stage-B 的 ID+WRT 对齐与跨模态细化。不得修改已经成立的
+网络数学定义、loss、optimizer、同身份 RGB identity caption 协议、reproduction
+快照或实验总表事实。
 
-本轮不修改网络数学定义、loss、optimizer、checkpoint 内容、数据资产、历史指标或总表事实。
+在真实数据 golden evaluation 冻结前，不进行 `train.py`、`build.py`、
+`dataset.py`、`loader.py` 的职责拆分，也不删除仍承载当前检索或 checkpoint
+兼容行为的路径。
 
-## 新审查逐项核对
-
-| 报告问题 | 判定 | 本轮处理 |
-| --- | --- | --- |
-| evaluation caption seed 与训练 seed 绑定 | 属实 | 新增独立 `eval_caption_seed`，query/gallery caption 均只读该字段；默认固定为 0。 |
-| `ProtocolSpec` 不能唯一标识 Fusion/Text/IR | 属实 | identifier 现包含 dataset、search/gallery、trial IDs、方向、backend、test modality、query/gallery modalities、caption lookup/source/seed。 |
-| RegDB 未记录具体 numbered trials | 属实 | 记录连续 `trial_ids`，并校验范围必须位于 1–10。 |
-| `official=True` 语义含混 | 属实 | 改名为 `official_sampling_protocol`，只表达采样协议，不再暗示检索任务本身“官方”。 |
-| 配置未知/失效字段可静默存在 | 属实 | canonical active `configs/stage_a|stage_b` 启用未知键拒绝；reproduction 快照保持历史原样。活跃 YAML 的 TTA/rerank/ensemble/旧 PMT no-op 字段已删除。 |
-| `Return_B4_BN` 是 dead flag | 属实 | 从 CLI、输出命名和 canonical classifier 移除；历史配置设为 true 时明确报错，false 仅为快照兼容。当前正式主线原值为 false，历史结果不受影响。 |
-| 初始化 checkpoint SHA 只记录不核验 | 属实 | 活跃配置必须同时给出 `training_weight_init_sha256`；训练在构造数据和模型前核验文件 SHA-256。 |
-| main/baseline 的 SYSU multi-shot 已漂移 | 属实 | main 在单 camera/ID 少于 10 张时与 baseline 一样使用 replacement；标准 single-shot 结果不受影响。 |
-| `models/model.py` 整体是死代码 | 不属实 | RGB/IR/shared RN50 stem 仍被 `clip_model.py` 调用；只删除其中真正无引用的旧 Classifier/初始化工具，并改为显式导出。 |
-| `engine/build.py::FM_cat` 无调用 | 属实 | 已删除。 |
-| 文档规则与一次性报告并存 | 属实 | 删除已完成清理报告和旧日期型整改报告；本文成为唯一临时整改队列。Semantic Imagination 的有效机制内容暂不误删。 |
-| 顶层 `scripts/` 堆积阶段性实验入口 | 属实 | 已完成的 fusion/adaptive/sampling-mining runner、smoke、summarizer、overnight 脚本迁入对应 `experiments/*/source/`。 |
-| CI 没有静态语法检查 | 属实 | 增加 `compileall`；完整 Ruff/type/dead-code 规则仍列入后续。 |
-| CI 足以证明真实实验正确 | 不属实 | 现有 CPU contract 只能证明接口与小规模行为；真实数据、CUDA、resume 与 golden metrics 仍需单独冻结。 |
-
-同身份 RGB caption 作为 query identity text 是当前明确协议，不按 identity leakage 处理；它现在会在
-`ProtocolSpec` 中完整记录，且其随机选择由独立评估 seed 控制。
-
-## 尚未完成的修正
+## 尚未完成且核查属实的问题
 
 ### 1. 冻结论文候选 golden evaluation
 
-使用保留 checkpoint 进行只读真实数据评估，保存 commit SHA、checkpoint SHA、resolved config hash、
-data manifest hash、完整 `ProtocolSpec`、`eval_caption_seed` 和结构化 metrics。覆盖：
+现有 CPU CI 只能证明接口、语法和小规模逻辑，不能证明真实论文指标没有漂移。
+使用明确选定的保留 checkpoint 做只读评估，并为每次快照保存：
 
-- SYSU all-search/single-shot/10 trials；
-- 至少一个 SYSU multi-shot 边界样例；
-- RegDB 明确 numbered trial IDs；
-- IR、Text、Fusion 与 IR-to-RGBText 协议快照。
+- commit SHA 与 checkpoint SHA-256；
+- resolved config hash 与 data manifest hash；
+- 完整 `ProtocolSpec` 和 `eval_caption_seed`；
+- Rank-1、mAP、mINP 结构化结果。
 
-### 2. 运行身份与 resume 闭环
+最低覆盖 SYSU all-search/single-shot/10 trials、一个 multi-shot 边界样例、
+RegDB 明确 numbered trial，以及 IR、Text、Fusion、IR-to-RGBText。后续重构须在
+同 checkpoint、同协议、同 seed 下满足预先规定的指标容差。
 
-为 fresh run 建立不可覆盖的 run UUID/manifest；checkpoint、events、metrics 共用同一 UUID；resume
-必须核验 manifest、config hash、初始化来源与数据清单后才能追加日志。
+### 2. 建立最小 run manifest 与完整 resume 一致性校验
 
-### 3. 配置 schema 第二阶段
+当前 full-state checkpoint 保存 model、optimizer、scheduler、scaler 和 RNG，
+但仍未绑定 run identity、resolved config、数据清单、初始化来源和协议身份。
 
-当前已阻止活跃 YAML 的未知键和缺失 checkpoint hash。后续补类型/范围 schema、backend 专属字段
-约束，并逐步把 argparse 默认值收敛为“只表达显式覆盖”。不要重写 reproduction 快照。
+先定义可复算的 data manifest 范围，再建立小型 `run_manifest.json`：
 
-### 4. 历史边界与大文件拆分
+- fresh run 生成不可覆盖的 run UUID；
+- manifest 记录 resolved config hash、data manifest hash、初始化 checkpoint
+  SHA、protocol identifier；
+- checkpoint schema 升级后保存 run UUID 和 manifest hash；
+- complete resume 在加载 model/optimizer 前复算并比较，不一致直接失败；
+- events、metrics、checkpoint 必须共享同一 run UUID。
 
-- 将 baseline SYSU protocol 收口为共享实现或增加永久一致性 contract，避免再次漂移；
-- 将 `semantic_imagination/KNOWN_LIMITATIONS_AND_CORRECTED_MECHANISM.md` 的仍有效机制并入
-  `README.md`/`MATHEMATICAL_SPEC.md`，再删除过程性 audit；
-- golden evaluation 固定后，再拆 `entrypoints/train.py`、`engine/build.py`、`dataset.py`、
-  `loader.py`；每一步使用相同 checkpoint 做数值回归。
+不得以只记录路径或部分 YAML 代替数据与最终 resolved config 的内容哈希。
+
+### 3. 将 active retrieval 的模糊 legacy 名称迁移为明确协议
+
+`src/salt_vi/retrieval/legacy.py` 不是死代码；它仍实现 IR、Text 和
+Fusion(IR + same-identity RGB caption) 到 RGB gallery 的当前协议。启动约束已经
+补齐，但命名和上层分支仍待迁移。
+
+完成 golden evaluation 后按同 checkpoint 数值回归：
+
+1. `legacy` 重命名为 `identity_text`，不改变 caption lookup、特征或 metric；
+2. 协议统一声明 result keys，上层遍历结果，不再判断 `IS_LEGACY`；
+3. 删除 `IS_LEGACY`、legacy-specific logging/save 分支和旧 registry 名称；
+4. 保持 `ir_to_rgb_text` 为另一套语义明确的协议。
+
+同身份 RGB caption 是允许的实验协议，不得在迁移中删除。
+
+### 4. 退役历史 model-only resume 与 metric-boost 特殊入口
+
+`resume_train_epoch` 的 model-only 路径和 `metric_boost_resume_epoch` 仍在运行时，
+不能在未盘点旧 checkpoint 前直接删除。处理顺序：
+
+1. 盘点仍需继续训练的旧 checkpoint；
+2. 将需要保留的 checkpoint 转换为新的 full-state/manifest 契约；
+3. 确认 active 配置和论文候选实验不再依赖旧入口；
+4. 删除 model-only resume、`metric_boost_resume_epoch` 及其专用分支。
+
+### 5. 配置 schema 与大文件职责收口
+
+- 为 active config 补类型、范围和 backend 专属字段约束；
+- 逐步使 argparse 默认值只表达显式 CLI 覆盖，避免覆盖 resolved YAML；
+- golden evaluation 固定后再拆大文件，每一步使用相同 checkpoint 做数值回归；
+- reproduction 配置保持只读历史资产，不按当前 schema 重写。
 
 ## 验收门槛
 
-- canonical active YAML 出现未知/no-op 键时启动失败；
-- 训练初始化 checkpoint 与声明 SHA 不同则在数据/模型构造前失败；
-- 改训练 seed 不改变 identity caption；改 `eval_caption_seed` 才改变 prompt 抽样；
-- 协议 identifier 对 query modality、caption seed、RegDB trial 不再碰撞；
-- SYSU multi-shot 在 camera/ID 少于 10 张时可复现且不污染全局 RNG；
-- `scripts/` 不再承载已完成实验的一次性 launcher；
-- CPU tests、compileall、wheel 检查通过；
-- 最终以真实数据 golden evaluation 证明重整前后保留 checkpoint 指标在容差内一致。
-
-## 本轮验证记录
-
-- 19 份非 reproduction 活跃配置通过 extends 后 strict schema 检查；
-- 协议/配置/checkpoint/output-path 针对性测试：33 passed；
-- SALT-VI core + vision-text baseline：77 passed；
-- PASD offline：24 passed；
-- Semantic Imagination：24 passed；
-- 总计 125 个独立测试通过；
-- `compileall` 覆盖 `src/`、`scripts/`、`experiments/`、PASD 与 Semantic Imagination；
-- `scripts/train.py --help` 通过；
-- wheel 构建通过，包含 default config 与 tokenizer，排除 tests；
-- `git diff --check` 通过。
-
-本轮不运行真实训练、真实数据完整评估或 CUDA backward，不把 CPU contract 当作论文指标证明。
+- golden evaluation 证据完整且可由 hash 唯一复现；
+- complete resume 对 run/config/data/init/protocol 任一不一致均在状态加载前失败；
+- `identity_text` 与迁移前当前协议在规定容差内指标一致；
+- active runtime 不再包含 model-only/metric-boost 特殊恢复分支；
+- CPU tests、compileall、active config schema、wheel 边界和 `git diff --check`
+  全部通过。

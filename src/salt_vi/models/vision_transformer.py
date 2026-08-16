@@ -101,7 +101,7 @@ class Attention(nn.Module):
         qk_scale=None,
         attn_drop=0.0,
         proj_drop=0.0,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -146,7 +146,7 @@ class Block(nn.Module):
         drop_path=0.0,
         act_layer=nn.GELU,
         norm_layer=nn.LayerNorm,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -287,7 +287,7 @@ class ViT(nn.Module):
         drop_path_rate=0.0,
         patch_embed_config=None,
         norm_layer=nn.LayerNorm,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         if patch_embed_config:

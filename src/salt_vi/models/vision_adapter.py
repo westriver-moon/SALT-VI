@@ -48,7 +48,7 @@ class PMTViTVisual(nn.Module):
         pretrained_path=None,
         patch_embed_config=None,
         gradient_checkpointing=False,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         self.input_resolution = to_2tuple(input_resolution)

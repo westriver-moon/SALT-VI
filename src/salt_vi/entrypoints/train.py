@@ -261,8 +261,13 @@ def _sha256_file(path, chunk_size=8 * 1024 * 1024):
 def _verify_training_weight_init(config):
     source = getattr(config, "training_weight_init", None)
     expected = getattr(config, "training_weight_init_sha256", None)
-    if not source or not expected:
+    if not source:
         return None
+    if not expected:
+        raise ValueError(
+            "training_weight_init_sha256 is required whenever "
+            "training_weight_init is set"
+        )
     expected = str(expected).lower()
     if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
         raise ValueError(
@@ -272,7 +277,8 @@ def _verify_training_weight_init(config):
     if not os.path.isfile(source):
         raise FileNotFoundError(f"Warm-start checkpoint is missing: {source}")
     cached = getattr(config, "training_weight_init_verified_sha256", None)
-    if cached == expected:
+    cached_source = getattr(config, "training_weight_init_verified_path", None)
+    if cached == expected and cached_source == source:
         return expected
     actual = _sha256_file(source)
     if actual != expected:
@@ -282,6 +288,7 @@ def _verify_training_weight_init(config):
             )
         )
     config.training_weight_init_verified_sha256 = actual
+    config.training_weight_init_verified_path = source
     return actual
 
 
@@ -441,16 +448,16 @@ def _initialize_spatial_backups(model, config):
 
 
 def main(config):
-    validate_runtime_config(config)
-    retrieval_protocol = get_retrieval_protocol(
-        getattr(config, "retrieval_backend", "legacy")
-    )
-    fusion_result_key = retrieval_protocol.RESULT_KEY
     if bool(getattr(config, "DataParallel", False)):
         raise RuntimeError(
             "Legacy DataParallel is unsupported by SALT-VI. Use one process per GPU "
             "or fixed_visual_data_parallel for frozen visual replicas."
         )
+    validate_runtime_config(config)
+    retrieval_protocol = get_retrieval_protocol(
+        getattr(config, "retrieval_backend", "legacy")
+    )
+    fusion_result_key = retrieval_protocol.RESULT_KEY
     os.environ["CUDA_VISIBLE_DEVICES"] = config.CUDA_VISIBLE_DEVICES
     protocol_spec = build_protocol_spec(config, retrieval_protocol)
     device = torch.device(f'cuda:{config.gpu_id}' if torch.cuda.is_available() else "cpu")

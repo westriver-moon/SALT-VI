@@ -126,7 +126,6 @@ prj_output_dim: 768
 qbn_freeze_running_stats_epoch: -1
 regdb_data_path: datasets/regdb
 regdb_test_mode: t-v
-resume_test_model: -1
 resume_train_epoch: -1
 sampler_type: identity_auto_replace
 save_best_per_metric: true

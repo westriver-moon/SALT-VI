@@ -422,7 +422,7 @@ class CLIP(nn.Module):
                  pmt_drop_path_rate: float = 0.1,
                  pmt_patch_embed_config=None,
                  pmt_gradient_checkpointing: bool = False,
-                 pmt_attention_backend: str = "legacy",
+                 pmt_attention_backend: str = "manual",
                  ):
         super().__init__()
 
@@ -844,7 +844,7 @@ def build_CLIP_from_openai_pretrained(name: str, image_size: Union[int, Tuple[in
         'pmt_drop_path_rate': config_dict.get("pmt_drop_path_rate", 0.1),
         'pmt_patch_embed_config': config_dict.get("pmt_patch_embed"),
         'pmt_gradient_checkpointing': config_dict.get("pmt_gradient_checkpointing", False),
-        'pmt_attention_backend': config_dict.get("pmt_attention_backend", "legacy"),
+        'pmt_attention_backend': config_dict.get("pmt_attention_backend", "manual"),
     }
 
 

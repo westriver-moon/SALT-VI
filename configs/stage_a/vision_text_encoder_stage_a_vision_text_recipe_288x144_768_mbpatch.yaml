@@ -38,7 +38,6 @@ loss_names: pmt_recipe
 llm_aug: false
 Feat_Filter: false
 Fix_Visual: false
-Return_B4_BN: false
 freeze_text_in_image_only: true
 
 pmt_recipe: true

@@ -6,7 +6,6 @@ DataParallel: false
 Feat_Filter: false
 Fix_Visual: false
 LOG4TEST: false
-Return_B4_BN: false
 alpha: 0.9
 auto_resume_training_from_lastest_step: false
 batch_size: 32
@@ -95,7 +94,6 @@ prj_output_dim: 2048
 freeze_text_in_image_only: false
 regdb_data_path: datasets/regdb
 regdb_test_mode: t-v
-resume_test_model: -1
 resume_train_epoch: -1
 seed: 1
 stride_size: 16
@@ -112,7 +110,7 @@ pmt_num_heads: 12
 pmt_mlp_ratio: 4.0
 pmt_dropout: 0.03
 pmt_attention_dropout: 0.0
-pmt_attention_backend: legacy
+pmt_attention_backend: manual
 pmt_drop_path_rate: 0.1
 pmt_patch_embed: null
 pmt_recipe: false

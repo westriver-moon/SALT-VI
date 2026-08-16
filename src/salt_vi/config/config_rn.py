@@ -46,7 +46,6 @@ def build_parser():
     parser.add_argument('--test_mode', default='all', type=str, help='all or indoor')
     parser.add_argument('--gall_mode', default='single', type=str, help='single or multi')
     parser.add_argument('--regdb_test_mode', default='t-v', type=str, help='')
-    parser.add_argument('--resume_test_model', type=int, default=-1, help='-1 for no resuming')
     parser.add_argument('--test_model_type', default='Fusion', help='the type of mode for testing["IR","Fusion","Text"]',type=str)
     parser.add_argument('--test_modality', default='Fusion', help='testing retrieval mode ["IR","Fusion","Text"]',type=str)
     parser.add_argument('--training_mode', default='RGB_IR_Text', type=str, help='RGB_IR or RGB_IR_Text')
@@ -135,8 +134,8 @@ def build_parser():
     parser.add_argument("--pmt_attention_dropout", type=float, default=0.0)
     parser.add_argument(
         "--pmt_attention_backend",
-        choices=("legacy", "sdpa", "flash"),
-        default="legacy",
+        choices=("manual", "sdpa", "flash"),
+        default="manual",
     )
     parser.add_argument("--pmt_drop_path_rate", type=float, default=0.1)
     parser.add_argument("--pmt_patch_embed", type=ast.literal_eval, default=None)

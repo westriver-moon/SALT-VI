@@ -263,6 +263,99 @@ def test_training_weight_init_sha256_gate(tmp_path):
     assert train_entry._verify_training_weight_init(config) == expected
 
 
+def test_training_weight_init_requires_hash_after_runtime_overrides(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256=None,
+    )
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry._verify_training_weight_init(config)
+
+
+def test_missing_weight_hash_fails_before_loader_or_model(monkeypatch, tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        DataParallel=False,
+        retrieval_backend="legacy",
+        CUDA_VISIBLE_DEVICES="0",
+        gpu_id="0",
+        mode="train",
+        auto_resume_training_from_lastest_step=False,
+        resume_train_epoch=-1,
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256=None,
+    )
+    protocol = SimpleNamespace(RESULT_KEY="Fusion")
+    monkeypatch.setattr(train_entry, "validate_runtime_config", lambda value: value)
+    monkeypatch.setattr(train_entry, "get_retrieval_protocol", lambda value: protocol)
+    monkeypatch.setattr(train_entry, "build_protocol_spec", lambda *args: None)
+    monkeypatch.setattr(train_entry, "resolve_run_directory", lambda value: str(tmp_path / "run"))
+    monkeypatch.setattr(train_entry, "ensure_fresh_run_directory", lambda value: None)
+    monkeypatch.setattr(
+        train_entry,
+        "Loader",
+        lambda value: pytest.fail("Loader must not be constructed before SHA validation"),
+    )
+    monkeypatch.setattr(
+        train_entry,
+        "build_model",
+        lambda value: pytest.fail("Model must not be constructed before SHA validation"),
+    )
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry.main(config)
+
+
+def test_set_override_cannot_remove_training_weight_init_hash(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    expected = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    selected = tmp_path / "selected.yaml"
+    selected.write_text(
+        f"training_weight_init: {checkpoint}\n"
+        f"training_weight_init_sha256: {expected}\n",
+        encoding="utf-8",
+    )
+    cli = train_entry.get_args(
+        [
+            "--config_select",
+            str(selected),
+            "--set",
+            "training_weight_init_sha256=null",
+        ]
+    )
+    config = train_entry._merge_runtime_config(cli)
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry._verify_training_weight_init(config)
+
+
+def test_cli_checkpoint_override_cannot_reuse_another_files_hash(tmp_path):
+    first = tmp_path / "first.pth"
+    second = tmp_path / "second.pth"
+    first.write_bytes(b"first checkpoint")
+    second.write_bytes(b"second checkpoint")
+    expected = hashlib.sha256(first.read_bytes()).hexdigest()
+    selected = tmp_path / "selected.yaml"
+    selected.write_text(
+        f"training_weight_init: {first}\n"
+        f"training_weight_init_sha256: {expected}\n",
+        encoding="utf-8",
+    )
+    cli = train_entry.get_args(
+        [
+            "--config_select",
+            str(selected),
+            "--training_weight_init",
+            str(second),
+        ]
+    )
+    config = train_entry._merge_runtime_config(cli)
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        train_entry._verify_training_weight_init(config)
+
+
 def test_metric_boost_uses_a_retained_canonical_baseline_config():
     repository_root = Path(__file__).resolve().parents[3]
     config = repository_root / "configs" / "stage_b" / "a3_e4_stageb.yaml"

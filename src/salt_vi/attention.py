@@ -6,11 +6,11 @@ import torch
 import torch.nn.functional as F
 
 
-SUPPORTED_ATTENTION_BACKENDS = ("legacy", "sdpa", "flash")
+SUPPORTED_ATTENTION_BACKENDS = ("manual", "sdpa", "flash")
 
 
 def normalize_attention_backend(value) -> str:
-    backend = str(value or "legacy").strip().lower()
+    backend = str(value or "manual").strip().lower()
     if backend not in SUPPORTED_ATTENTION_BACKENDS:
         raise ValueError(
             f"Unsupported attention backend {backend!r}; expected one of "
@@ -30,7 +30,7 @@ def _sdpa():
 
 def validate_attention_backend_runtime(value) -> str:
     backend = normalize_attention_backend(value)
-    if backend != "legacy":
+    if backend != "manual":
         _sdpa()
     return backend
 
@@ -72,7 +72,7 @@ def run_scaled_dot_product_attention(
     backend = normalize_attention_backend(backend)
     dropout_p = float(dropout_p) if training else 0.0
 
-    if backend == "legacy":
+    if backend == "manual":
         weights = (query @ key.transpose(-2, -1)) * float(scale)
         weights = weights.softmax(dim=-1)
         weights = F.dropout(weights, p=dropout_p, training=training)
