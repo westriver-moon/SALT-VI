@@ -87,6 +87,7 @@ def build_parser():
  
     ######################## eval and log config during training ########################
     parser.add_argument('--test_model_path', type=str, default=None)
+    parser.add_argument('--golden_evaluation_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default='/data0/hzy_log/WORK_2024_LOG/logs/',
                         help='path to save related informations')
     parser.add_argument('--clip_download_root', type=str, default='~/.cache/clip',

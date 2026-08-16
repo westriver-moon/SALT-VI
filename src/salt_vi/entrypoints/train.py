@@ -51,6 +51,7 @@ _BEST_METRIC_NAMES = (
 _TRAINING_CHECKPOINT_SCHEMA_VERSION = 2
 _RUN_MANIFEST_SCHEMA_VERSION = 1
 _RUN_MANIFEST_FILENAME = "run_manifest.json"
+_GOLDEN_EVALUATION_SCHEMA_VERSION = 1
 
 _RUN_MANIFEST_TRANSIENT_KEYS = {
     "_explicit_cli_destinations",
@@ -474,6 +475,46 @@ def _write_run_manifest(config, run_uuid, protocol_spec):
         if os.path.exists(temporary):
             os.remove(temporary)
     return path, _sha256_file(path)
+
+
+def _write_golden_evaluation(config, protocol_spec, result_dict):
+    path = os.path.abspath(os.path.expanduser(str(config.golden_evaluation_path)))
+    if os.path.exists(path):
+        raise FileExistsError(f"Refusing to overwrite golden evaluation: {path}")
+    payload = {
+        "schema_version": _GOLDEN_EVALUATION_SCHEMA_VERSION,
+        "experiment_id": getattr(config, "metric_experiment_id", None),
+        "checkpoint_path": os.path.abspath(
+            os.path.expanduser(str(config.test_model_path))
+        ),
+        "checkpoint_sha256": _sha256_file(config.test_model_path),
+        "resolved_config_sha256": _resolved_config_digest(config),
+        "data_manifest": _data_manifest_digest(config),
+        "protocol_spec": protocol_spec.as_dict(),
+        "eval_caption_seed": protocol_spec.eval_caption_seed,
+        "metrics": {},
+        "run_manifest_path": _run_manifest_path(config),
+        "run_manifest_sha256": config.run_manifest_sha256,
+        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    for mode, (minp, m_ap, cmc) in result_dict.items():
+        payload["metrics"][mode] = {
+            "Rank-1": float(cmc[0]),
+            "mAP": float(m_ap),
+            "mINP": float(minp),
+        }
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    temporary = path + ".tmp"
+    try:
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, sort_keys=True, indent=2)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+    return path
 
 
 def _verify_training_weight_init(config):
@@ -1078,6 +1119,12 @@ def main(config):
                 print('Time: {}; Dataset: {}, Test Mode: {}, \nmINP: {} \nmAP: {} \n Rank: {}\n'.format(time_now(),
                                                                                     config.dataset,"Text_RGB",
                                                                                     mINP_text, mAP_text, cmc_text))
+
+        if getattr(config, "golden_evaluation_path", None):
+            golden_path = _write_golden_evaluation(
+                config, protocol_spec, result_dict
+            )
+            print(f"Wrote golden evaluation: {golden_path}")
 
 
 if __name__ == '__main__':

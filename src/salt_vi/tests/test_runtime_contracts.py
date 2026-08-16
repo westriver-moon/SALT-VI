@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -222,6 +223,7 @@ def test_training_checkpoint_rejects_run_identity_mismatch_before_state_load(tmp
 
 class _ProtocolStub:
     identifier = "stub-protocol"
+    eval_caption_seed = 0
 
     def as_dict(self):
         return {"identifier": self.identifier}
@@ -253,6 +255,37 @@ def test_run_manifest_round_trip_hashes_config_data_and_protocol(tmp_path):
     assert manifest["protocol_identifier"] == "stub-protocol"
     assert manifest_hash == train_entry._sha256_file(path)
     train_entry._validate_run_manifest(config, _ProtocolStub(), manifest)
+
+
+def test_golden_evaluation_writes_structured_metrics(tmp_path):
+    checkpoint = tmp_path / "model_Fusion_epoch_6.pth"
+    checkpoint.write_bytes(b"checkpoint-bytes")
+    output_root = tmp_path / "golden-run"
+    config = SimpleNamespace(
+        output_path=str(output_root),
+        mode="test",
+        test_model_path=str(checkpoint),
+        training_weight_init=None,
+        sysu_sr_view_manifest=None,
+        sysu_sr_data_root=None,
+        dataset="sysu",
+        batch_size=32,
+        seed=1,
+        golden_evaluation_path=str(tmp_path / "golden_evaluation.json"),
+        run_manifest_sha256="manifest-hash",
+        metric_experiment_id="GOLDEN-1",
+    )
+    path = train_entry._write_golden_evaluation(
+        config,
+        _ProtocolStub(),
+        {"Fusion": (0.6862, 0.7960, [0.8293])},
+    )
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert payload["schema_version"] == 1
+    assert payload["checkpoint_sha256"] == train_entry._sha256_file(str(checkpoint))
+    assert payload["metrics"]["Fusion"]["Rank-1"] == 0.8293
+    assert payload["metrics"]["Fusion"]["mAP"] == 0.7960
+    assert payload["metrics"]["Fusion"]["mINP"] == 0.6862
 
 
 def test_training_checkpoint_loader_requests_full_state_when_supported(monkeypatch):

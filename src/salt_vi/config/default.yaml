@@ -64,6 +64,7 @@ visual_forward_chunk_size: 0
 test_batch_size: 128
 metric_events_path: null
 metric_experiment_id: null
+golden_evaluation_path: null
 pa: 0.1
 learnable_pa: false
 pa_init: 0.5
