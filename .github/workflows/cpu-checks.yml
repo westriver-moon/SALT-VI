@@ -30,6 +30,8 @@ jobs:
         run: PYTHONPATH=semantic_imagination python -m pytest semantic_imagination/tests
       - name: Check CLI help
         run: python scripts/train.py --help
+      - name: Compile Python sources
+        run: python -m compileall -q src scripts experiments pasd_offline semantic_imagination
       - name: Build and inspect wheel resources
         run: |
           python -m build --wheel

@@ -31,8 +31,6 @@ def build_experiment_name(config) -> str:
             name += f"_LLM_{config.llm_aug_prob}"
     if config.loss_names:
         name += f"_{config.loss_names}"
-    if config.Return_B4_BN:
-        name += "_Return_B4_BN"
     if config.uni_BN:
         name += "_uni_BN"
     if config.Fix_Visual:

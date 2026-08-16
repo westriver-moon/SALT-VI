@@ -6,8 +6,7 @@ DataParallel: false
 Feat_Filter: false
 Fix_Visual: true
 LOG4TEST: false
-Return_B4_BN: false
-a3_e4_checkpoint_sha256: 7cd15b7b12ba138ccf6590f850dd72a11bfea16d7723a4ce101b98b0a3b1996c
+training_weight_init_sha256: 7cd15b7b12ba138ccf6590f850dd72a11bfea16d7723a4ce101b98b0a3b1996c
 alpha: 0.9
 auto_resume_training_from_lastest_step: false
 batch_size: 32
@@ -29,7 +28,6 @@ cross_modal_pair_weights:
   RGB-Text: 1.0
 cuda: cuda
 dataset: sysu
-ensemble_mode: none
 eval_before_train: true
 eval_epoch: 1
 eval_num_regdb: 1
@@ -94,8 +92,6 @@ pmt_drop_path_rate: 0.1
 pmt_dropout: 0.03
 pmt_embed_dim: 768
 pmt_mlp_ratio: 4.0
-pmt_msct_margin: 0.1
-pmt_msct_weight: 0.25
 pmt_msel_weight: 0.5
 pmt_num_heads: 12
 pmt_patch_embed:
@@ -120,11 +116,9 @@ pmt_pretrained: /home/cgv841/ybj/SALT-VI/pretrained/pmt_sysu/jx_vit_base_p16_224
 pmt_progressive_epoch: 6
 pmt_recipe: false
 pmt_recipe_transforms: true
-pmt_stage_a_loss_plugin: legacy_dcl_v1
 pmt_stride_size:
 - 12
 - 12
-pmt_transition_epochs: 4
 pmt_triplet_margin: 0.1
 pooling: GEM
 power: 0.9
@@ -135,7 +129,6 @@ qbn_freeze_running_stats_epoch: -1
 regdb_data_path: datasets/regdb
 regdb_test_mode: t-v
 retrieval_backend: ir_to_rgb_text
-rerank: false
 resume_test_model: -1
 resume_train_epoch: -1
 sampler_type: identity_auto_replace
@@ -159,14 +152,10 @@ target_lr: 0.0
 target_lr_factor: 0.01
 temperature: 0.07
 test_batch_size: 8
-test_flip_tta: false
 test_modality: IR-RGBText
 test_mode: all
 test_model_path: null
 test_model_type: Fusion
-test_multi_scale:
-- - 512
-  - 256
 text_bias_lr_factor: 2.0
 text_data_root: /home/cgv841/ybj/SALT-VI/datasets/sysu/Text
 text_length: 77

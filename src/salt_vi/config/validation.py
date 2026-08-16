@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from salt_vi.attention import validate_attention_backend_runtime
 from salt_vi.retrieval import get_retrieval_protocol
@@ -28,12 +29,52 @@ def _loss_names(value):
     return {str(item).strip() for item in value if str(item).strip()}
 
 
+def validate_selected_config_schema(selected, defaults, path, project_root):
+    """Reject unknown keys in canonical active configs.
+
+    Reproduction snapshots remain immutable historical evidence and are not
+    silently reinterpreted as current runtime configurations.
+    """
+    try:
+        relative = Path(path).resolve().relative_to(Path(project_root).resolve())
+    except ValueError:
+        return selected
+    parts = relative.parts
+    is_active_config = (
+        len(parts) >= 3
+        and parts[0] == "configs"
+        and parts[1] in {"stage_a", "stage_b"}
+        and "reproduction" not in parts
+    )
+    if not is_active_config:
+        return selected
+    unknown = sorted(set(selected) - set(defaults))
+    if unknown:
+        raise KeyError(
+            "Unknown or unsupported key(s) in active config {}: {}".format(
+                relative, ", ".join(unknown)
+            )
+        )
+    if selected.get("training_weight_init") and not selected.get(
+        "training_weight_init_sha256"
+    ):
+        raise ValueError(
+            "Active config {} sets training_weight_init but omits "
+            "training_weight_init_sha256".format(relative)
+        )
+    return selected
+
+
 def validate_runtime_config(config):
     """Reject unsupported or structurally inconsistent training recipes early.
 
     This intentionally validates only contracts implemented by the canonical
     loader/model.  It does not prescribe research hyperparameters.
     """
+    if bool(_value(config, "Return_B4_BN", False)):
+        raise ValueError(
+            "Return_B4_BN was a no-op and has been removed; normalized BN features are always returned"
+        )
     training_mode = str(_value(config, "training_mode", ""))
     joint_mode = str(_value(config, "joint_mode", "image_only"))
     uses_text = "Text" in training_mode

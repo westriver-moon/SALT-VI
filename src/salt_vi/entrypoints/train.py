@@ -4,6 +4,7 @@ import gc
 import hashlib
 import inspect
 import json
+import re
 import time
 import torch
 import random
@@ -257,6 +258,33 @@ def _sha256_file(path, chunk_size=8 * 1024 * 1024):
     return digest.hexdigest()
 
 
+def _verify_training_weight_init(config):
+    source = getattr(config, "training_weight_init", None)
+    expected = getattr(config, "training_weight_init_sha256", None)
+    if not source or not expected:
+        return None
+    expected = str(expected).lower()
+    if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+        raise ValueError(
+            "training_weight_init_sha256 must be exactly 64 hexadecimal characters"
+        )
+    source = os.path.abspath(str(source))
+    if not os.path.isfile(source):
+        raise FileNotFoundError(f"Warm-start checkpoint is missing: {source}")
+    cached = getattr(config, "training_weight_init_verified_sha256", None)
+    if cached == expected:
+        return expected
+    actual = _sha256_file(source)
+    if actual != expected:
+        raise ValueError(
+            "Warm-start checkpoint SHA-256 mismatch for {}: expected {}, got {}".format(
+                source, expected, actual
+            )
+        )
+    config.training_weight_init_verified_sha256 = actual
+    return actual
+
+
 def _materialize_warm_start_checkpoint(model, config):
     """Persist the exact converted in-memory state evaluated at epoch -1."""
     source = os.path.abspath(str(config.training_weight_init))
@@ -391,6 +419,7 @@ def _load_compatible_state_dict(
 def _load_training_weight_init(model, config, device):
     if not config.training_weight_init:
         return
+    _verify_training_weight_init(config)
     _load_compatible_state_dict(model, config.training_weight_init, device)
     if config.Fix_Visual:
         _initialize_spatial_backups(model, config)
@@ -440,6 +469,11 @@ def main(config):
     print("=================Constructing output dir=================")
     config.output_path = resolve_run_directory(config)
     ensure_fresh_run_directory(config)
+    is_resume = bool(config.auto_resume_training_from_lastest_step) or int(
+        config.resume_train_epoch
+    ) >= 0
+    if config.mode == "train" and not is_resume:
+        _verify_training_weight_init(config)
     if config.DEBUG:
         print(f"Debug [{config.mode}] mode, dir: {config.output_path}")
     elif (config.auto_resume_training_from_lastest_step or config.resume_train_epoch>=0) and config.mode == 'train':

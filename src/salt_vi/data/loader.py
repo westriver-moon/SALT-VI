@@ -234,6 +234,11 @@ class Loader:
             )
         self.num_workers = config.num_workers
         self.seed = int(getattr(config, "seed", 0))
+        self.eval_caption_seed = int(getattr(config, "eval_caption_seed", 0))
+        if not 0 <= self.eval_caption_seed <= 2**32 - 1:
+            raise ValueError(
+                f"eval_caption_seed must be in [0, 2**32 - 1], got {self.eval_caption_seed}"
+            )
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
         self.retrieval_protocol = get_retrieval_protocol(
@@ -372,7 +377,7 @@ class Loader:
                                             sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                             sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                             sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
-                                            source_modality="ir", caption_seed=self.seed)
+                                            source_modality="ir", caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -406,7 +411,8 @@ class Loader:
                                         sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                         sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
-                                        source_modality="rgb")
+                                        source_modality="rgb",
+                                        caption_seed=self.eval_caption_seed)
                 gallery_samples_list.append(gallery_samples)
             return query_samples, gallery_samples_list
         elif self.dataset == 'regdb':
@@ -422,7 +428,7 @@ class Loader:
                                             captioner_name=self.captioner_name, \
                                                 joint_mode=self.joint_mode,gallorquery=f'query[{trial}]',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root, caption_seed=self.seed)
+                                                text_data_root=self.text_data_root, caption_seed=self.eval_caption_seed)
                 query_samples_list.append(query_samples)
 
             gallery_samples_list = []
@@ -452,7 +458,7 @@ class Loader:
                                         captioner_name=self.captioner_name, \
                                             joint_mode=self.joint_mode,gallorquery='query',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root, caption_seed=self.seed)
+                                                text_data_root=self.text_data_root, caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
 

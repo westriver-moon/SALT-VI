@@ -19,6 +19,8 @@ def _config(**overrides):
         "gallery_caption_manifest": None,
         "eval_num_regdb": 1,
         "regdb_test_mode": "t-v",
+        "trial": 1,
+        "eval_caption_seed": 0,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -29,14 +31,22 @@ def test_legacy_protocol_records_identity_text_query():
     spec = build_protocol_spec(
         config, get_retrieval_protocol(config.retrieval_backend)
     )
-    assert spec.identifier == "all-search-single-shot-10-trial-legacy"
-    assert spec.official
+    assert "test_modality=Fusion" in spec.identifier
+    assert "caption_lookup=query:identity" in spec.identifier
+    assert spec.official_sampling_protocol
+    assert spec.trial_ids == tuple(range(10))
     assert spec.query_modalities == (
         "infrared-image",
         "visible-identity-caption",
     )
     assert spec.gallery_modalities == ("visible-image",)
     assert spec.caption_lookup == "query:identity"
+    ir_spec = build_protocol_spec(
+        _config(test_modality="IR"),
+        get_retrieval_protocol(config.retrieval_backend),
+    )
+    assert ir_spec.identifier != spec.identifier
+    assert ir_spec.eval_caption_seed is None
 
 
 def test_ir_to_rgb_text_protocol_records_gallery_caption():
@@ -49,8 +59,9 @@ def test_ir_to_rgb_text_protocol_records_gallery_caption():
     spec = build_protocol_spec(
         config, get_retrieval_protocol(config.retrieval_backend)
     )
-    assert not spec.official
+    assert not spec.official_sampling_protocol
     assert spec.gallery_trials == 3
+    assert spec.eval_caption_seed == 0
     assert spec.query_modalities == ("infrared-image",)
     assert spec.gallery_modalities == (
         "visible-image",
@@ -64,6 +75,7 @@ def test_regdb_reverse_direction_swaps_effective_modalities():
         dataset="regdb",
         regdb_test_mode="v-t",
         eval_num_regdb=3,
+        trial=5,
     )
     spec = build_protocol_spec(
         config, get_retrieval_protocol(config.retrieval_backend)
@@ -73,15 +85,16 @@ def test_regdb_reverse_direction_swaps_effective_modalities():
     assert spec.query_modalities == ("visible-image",)
     assert spec.gallery_modalities == ("infrared-image", "visible-identity-caption")
     assert spec.caption_lookup == "gallery:identity"
+    assert spec.trial_ids == (5, 6, 7)
 
 
-def _make_sysu_gallery(root):
+def _make_sysu_gallery(root, image_count=10):
     (root / "exp").mkdir()
     (root / "exp" / "test_id.txt").write_text("1\n", encoding="utf-8")
     for camera_index, camera in enumerate(("cam1", "cam2"), start=1):
         image_dir = root / camera / "0001"
         image_dir.mkdir(parents=True)
-        for index in range(10):
+        for index in range(image_count):
             (image_dir / "{}_0001_{:08d}".format(camera_index, index)).touch()
 
 
@@ -107,3 +120,12 @@ def test_sysu_gallery_sampling_does_not_mutate_global_rng(tmp_path):
         str(tmp_path), mode="indoor", trial=4, gall_mode="multi"
     )[0]
     assert first == second
+
+
+def test_sysu_multi_shot_samples_with_replacement_when_camera_has_fewer_than_ten(tmp_path):
+    _make_sysu_gallery(tmp_path, image_count=3)
+    gallery_images, gallery_labels, gallery_cams = process_gallery_sysu(
+        str(tmp_path), mode="indoor", trial=2, gall_mode="multi"
+    )
+    assert len(gallery_images) == len(gallery_labels) == len(gallery_cams) == 20
+    assert len(set(gallery_images)) <= 6

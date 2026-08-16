@@ -2,43 +2,6 @@ import torch
 import torchvision
 import torch.nn as nn
 
-class Normalize(nn.Module):
-    def __init__(self, power=2, eps=1e-12):
-        super(Normalize, self).__init__()
-        self.power = power
-        self.eps = float(eps)
-
-    def forward(self, x):
-        norm = x.pow(self.power).sum(1, keepdim=True).pow(1. / self.power).clamp_min(self.eps)
-        out = x.div(norm)
-        return out
-
-def weights_init_kaiming(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_out')
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.0)
-    elif classname.find('Conv') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_in')
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.0)
-    elif classname.find('BatchNorm') != -1:
-        if m.affine:
-            nn.init.constant_(m.weight, 1.0)
-            nn.init.constant_(m.bias, 0.0)
-    elif classname.find('InstanceNorm') != -1:
-        if m.affine:
-            nn.init.constant_(m.weight, 1.0)
-            nn.init.constant_(m.bias, 0.0)
-
-def weights_init_classifier(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
-        nn.init.normal_(m.weight, std=0.001)
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0.0)
-
 class RGB_Model(nn.Module):
     def __init__(self, pretrain_path="default"):
         super(RGB_Model, self).__init__()
@@ -89,27 +52,5 @@ class Shared_Model(nn.Module):
     def forward(self, x):
         features_map = self.resnet_conv(x)
         return features_map
-
-class Classifier(nn.Module):
-    def __init__(self, pid_num, dim=2048):
-        super(Classifier, self, ).__init__()
-        self.pid_num = pid_num
-        # self.GAP = GeneralizedMeanPoolingP()
-        self.BN = nn.BatchNorm1d(dim)
-        self.BN.apply(weights_init_kaiming)
-
-        self.classifier = nn.Linear(dim, self.pid_num, bias=False)
-        self.classifier.apply(weights_init_classifier)
-
-        self.l2_norm = Normalize(2)
-
-    def forward(self, features):
-        # features = self.GAP(features_map)
-        bn_features = self.BN(features.flatten(1))
-        cls_score = self.classifier(bn_features)
-        if self.training:
-            return features, cls_score
-        else:
-            return self.l2_norm(bn_features)
 
 

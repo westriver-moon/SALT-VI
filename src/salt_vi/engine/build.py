@@ -197,11 +197,10 @@ def build_adaptive_gate(input_dim, hidden_dim, output_dim, dropout):
 
 
 class Classifier(nn.Module):
-    def __init__(self, pid_num, dim=512, Return_B4_BN=False, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion'):
+    def __init__(self, pid_num, dim=512, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion'):
         super(Classifier, self, ).__init__()
         self.pid_num = pid_num
         # self.GAP = GeneralizedMeanPoolingP()
-        self.Return_B4_BN = Return_B4_BN
         self.modal = modal
         self.uni_BN = uni_BN
         self.joint_mode = joint_mode
@@ -262,38 +261,8 @@ class Classifier(nn.Module):
         if self.training:
             return features, cls_score
         else:
-            # if self.Return_B4_BN:
-            #     return features
             return self.l2_norm(bn_features)
 
-
-class FM_cat(nn.Module):
-    def __init__(self,in_channels):
-        super(FM_cat, self).__init__()
-
-        self.W = nn.Sequential(
-            nn.Conv2d(in_channels * 2, in_channels,
-                      kernel_size=1, stride=1, padding=0, bias=True),
-            nn.BatchNorm2d(in_channels)
-        )
-        nn.init.normal_(self.W[1].weight.data, 1.0, 0.01)
-        nn.init.zeros_(self.W[1].bias.data)
-
-
-        # self.bottleneck = nn.BatchNorm1d(in_channels)
-        # self.bottleneck.bias.requires_grad_(False)  # no shift
-
-        # nn.init.normal_(self.bottleneck.weight.data, 1.0, 0.01)
-        # nn.init.zeros_(self.bottleneck.bias.data)
-
-    def forward(self,f):
-
-        f = f.view(f.size(0),f.size(1),1,1)
-        f = self.W(f)
-        f = f.view(f.size(0),-1)
-        # f = self.bottleneck(f+feat)
-
-        return f
 
 class CLIP2ReID(nn.Module):
     def __init__(self, args, num_classes=11003):
@@ -315,7 +284,6 @@ class CLIP2ReID(nn.Module):
 
         self._set_task()
 
-        # self.Return_B4_BN = args.Return_B4_BN
         self.base_model, base_cfg = build_CLIP_from_openai_pretrained(
             args.pretrain_choice,
             args.img_size,
@@ -375,7 +343,7 @@ class CLIP2ReID(nn.Module):
             nn.init.normal_(self.cross_attn.out_proj.weight, std=proj_std)
 
         # Loss definition
-        self.classifier = Classifier(self.num_classes,self.embed_dim,args.Return_B4_BN,args.uni_BN,args.joint_mode)
+        self.classifier = Classifier(self.num_classes, self.embed_dim, args.uni_BN, args.joint_mode)
         self.pid_criterion = LabelSmoothingCrossEntropy(getattr(args, "label_smoothing", 0.0))
         self.tri_criterion = TripletLoss_WRT()
         self.pmt_tri_criterion = PMTTripletLoss(

@@ -24,7 +24,6 @@ loss_names: id,wrt
 llm_aug: false
 Feat_Filter: false
 Fix_Visual: true
-Return_B4_BN: false
 freeze_text_in_image_only: true
 pmt_recipe: false
 pmt_recipe_transforms: true
@@ -68,6 +67,7 @@ sampler_type: identity_auto_replace
 temperature: 0.07
 pa: 0.5
 training_weight_init: /home/cgv841/ybj/SALT-VI/checkpoints/stage_a/a3_epoch24_tvilfm_full.pth
+training_weight_init_sha256: dd10bced01e1f250e153d606a974232916ad57e935d4f1de9017c3e8253395c8
 DataParallel: false
 fixed_visual_data_parallel: true
 fixed_visual_device_ids:
@@ -101,19 +101,7 @@ sysu_sr_exact_size: true
 visual_forward_chunk_size: 8
 test_batch_size: 8
 text_data_root: /home/cgv841/datasets/SYSU-MM01/Text
-test_multi_scale:
-- - 512
-  - 256
 visual_unfreeze_last_n_blocks: 0
 save_best_per_metric: false
 metric_events_path: /home/cgv841/ybj/SALT-VI/train_outputs/a3_e4_hpt_l025/e4/events.jsonl
 metric_experiment_id: A3-E4
-# Retained best Stage-B baseline used by read-only metric-boost tooling.  This
-# is provenance metadata, not an initialization override for a fresh run.
-metric_boost_checkpoint: /home/cgv841/ybj/SALT-VI/checkpoints/stage_b/tvi_lfm_reports/a3_e4_hpt_l025/e4/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,wrt_Fix_Visual/models/model_Fusion_21.pth
-metric_boost_source_log: /home/cgv841/ybj/SALT-VI/logs/raw/source_core/reports/a3_e4_hpt_l025/e4/model_output/sysu/FV/Baseline_train[RGB_IR_Text]_joint[uni]_Blip_parameter_add_id,wrt_Fix_Visual/logs/log.log
-metric_boost_best_epoch: 21
-metric_boost_reference_metrics:
-  Rank-1: 0.8212727
-  mAP: 0.7984514782316725
-  mINP: 0.6989697090719730

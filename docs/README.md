@@ -84,11 +84,11 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 | `src/salt_vi/` | 当前实现 |
 | `configs/stage_a/`、`configs/stage_b/` | 活跃阶段配置 |
 | `configs/experiments/reproduction/` | 历史运行配置快照；不能因存在而视为可运行 |
-| `scripts/` | 训练、验证、分析、归档入口 |
+| `scripts/` | 唯一训练入口、通用验证与通用数据工具 |
 | `pasd_offline/` | PASD records、生成、验证和 geometry-matched 构建 |
 | `semantic_imagination/` | 离线语义假设与 PASD record 导出 |
 | `feature_analysis/` | 特征提取和分析 |
-| `experiments/` | 运行元数据与归档材料 |
+| `experiments/` | 运行元数据、归档材料及已完成实验的一次性 `source/` |
 | `reports/experiment_registry/experiment_registry.csv` | 唯一实验总表 |
 | `checkpoints/`、`pretrained/`、`logs/`、`runtime/` | 服务器本地运行资产 |
 | `vendor/` | 上游来源和许可证边界 |
@@ -141,9 +141,11 @@ python scripts/train.py --config_select <config.yaml>
 - `/README.md`：项目入口和状态摘要；
 - `/docs/README.md`：本统一指南；
 - `/pasd_offline/README.md`：PASD 独立模块；
+- `/reports/PROJECT_REMEDIATION_PLAN.md`：本轮受控重整尚未完成的唯一临时队列；
 - `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
 - `/feature_analysis/README.md`：特征分析模块；
 - `/reports/experiment_registry/README.md`：总表字段和维护边界；
 - vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
 
-新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交。
+新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交。整改队列清空后删除
+`reports/PROJECT_REMEDIATION_PLAN.md`，历史过程只留在 Git。

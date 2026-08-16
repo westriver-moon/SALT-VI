@@ -68,6 +68,7 @@ def build_parser():
     # dataset setting 
     parser.add_argument('--Feat_Filter', default=False, action='store_true')
     parser.add_argument('--training_weight_init', default=None, type=str, help='weight path initialization for training')
+    parser.add_argument('--training_weight_init_sha256', default=None, type=str)
     parser.add_argument('--dataset', default='sysu', help='dataset name: regdb or sysu or llcm]')
     parser.add_argument('--sysu_data_path', type=str, default='/data0/hzy_data/SYSU-MM01/')
     parser.add_argument('--regdb_data_path', type=str, default='/data0/hzy_data/RegDB/')
@@ -79,6 +80,7 @@ def build_parser():
     parser.add_argument('--img_w', default=144, type=int, metavar='imgw', help='img width')
     parser.add_argument('--img_h', default=288, type=int, metavar='imgh', help='img height')
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--eval_caption_seed', type=int, default=0)
     parser.add_argument('--pid_num', type=int, default=395)
     parser.add_argument('--num_pos', default=4, type=int,help='num of pos per identity in each modality')
     parser.add_argument('--num_workers', default=8, type=int,help='num of pos per identity in each modality')
@@ -102,7 +104,6 @@ def build_parser():
     ######################## model general settings ########################
     parser.add_argument('--uni_BN', default=False, action='store_true')
     parser.add_argument('--Fix_Visual', default=False, action='store_true')
-    parser.add_argument('--Return_B4_BN', default=False, action='store_true')
     parser.add_argument('--prj_output_dim', type=int, default=2048)
     parser.add_argument("--pooling", default='GEM', type=str, help='["attnpool","GEM"]')
     parser.add_argument("--pretrain_choice", default='RN50_ORI',help='ViT-B/16,RN50,RN50_ORI,PMT_VIT') # whether use pretrained model

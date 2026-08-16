@@ -809,7 +809,8 @@ def process_gallery_sysu(data_path, mode='all', trial=0, relabel=False, gall_mod
                 if gall_mode == 'single':
                     files_rgb.append(py_rng.choice(new_files))
                 if gall_mode == 'multi':
-                    files_rgb.append(np_rng.choice(new_files, 10, replace=False))
+                    replace = len(new_files) < 10
+                    files_rgb.append(np_rng.choice(new_files, 10, replace=replace))
     gall_img = []
     gall_id = []
     gall_cam = []

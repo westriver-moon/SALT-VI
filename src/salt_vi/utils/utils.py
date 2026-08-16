@@ -6,6 +6,7 @@ from pathlib import Path
 
 from easydict import EasyDict as edict
 import yaml
+from salt_vi.config.validation import validate_selected_config_schema
 
 
 AUTO_FIND_PMT_VIT_IMAGE_ONLY_BEST = "AUTO_FIND_PMT_VIT_IMAGE_ONLY_BEST"
@@ -367,6 +368,7 @@ def load_train_configs(path):
     default_path = os.path.join(package_root, 'config', 'default.yaml')
     args = _load_yaml(default_path)
     selected_args = _load_yaml_with_extends(path, project_root)
+    validate_selected_config_schema(selected_args, args, path, project_root)
     if selected_args:
         args.update(selected_args)
     pmt_pretrained = args.get('pmt_pretrained')

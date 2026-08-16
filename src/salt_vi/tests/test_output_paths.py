@@ -23,7 +23,6 @@ def config(**overrides):
         llm_aug=False,
         llm_aug_prob=0.5,
         loss_names="id,cross_modal_hard",
-        Return_B4_BN=False,
         uni_BN=False,
         Fix_Visual=True,
         Feat_Filter=False,

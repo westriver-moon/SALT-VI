@@ -3,12 +3,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from types import SimpleNamespace
+import hashlib
 
 import numpy as np
 import pytest
 import torch
 
-from salt_vi.config.validation import validate_runtime_config
+from salt_vi.config.validation import (
+    validate_runtime_config,
+    validate_selected_config_schema,
+)
 from salt_vi.data.dataset import PIL_LANCZOS, _infer_dataset_name, _resolve_text_dir
 from salt_vi.data.sampler import GenIdx, IdentitySampler, validate_identity_batch_config
 from salt_vi.data.tokenizer import default_bpe
@@ -17,7 +21,6 @@ from salt_vi.engine.train import handle_nonfinite_gradients
 from salt_vi.entrypoints import train as train_entry
 from salt_vi.entrypoints.train import main
 from salt_vi.models.clip_model.clip_model import CLIP
-from salt_vi.models.model import Classifier as LegacyClassifier
 from salt_vi.utils.utils import _expand_environment_values
 
 
@@ -71,13 +74,6 @@ def test_uni_bn_rejects_incomplete_five_group_batch():
         classifier(torch.randn(11, 2))
 
 
-def test_legacy_classifier_preserves_batch_dimension_for_singleton():
-    classifier = LegacyClassifier(pid_num=3, dim=2)
-    classifier.eval()
-    output = classifier(torch.randn(1, 2))
-    assert output.shape == (1, 2)
-
-
 def test_packaged_bpe_resource_exists_in_source_tree():
     assert Path(default_bpe()).is_file()
 
@@ -103,6 +99,13 @@ def test_runtime_validation_rejects_qbn_id_woir_combo():
                 "uni_BN": True,
                 "loss_names": "id_woir",
             }
+        )
+
+
+def test_runtime_validation_rejects_removed_return_before_bn_flag():
+    with pytest.raises(ValueError, match="Return_B4_BN was a no-op"):
+        validate_runtime_config(
+            {"training_mode": "RGB_IR", "joint_mode": "image_only", "Return_B4_BN": True}
         )
 
 
@@ -220,10 +223,51 @@ def test_config_environment_placeholders_expand_recursively(monkeypatch):
     }
 
 
+def test_active_config_schema_rejects_unknown_keys(tmp_path):
+    project_root = tmp_path
+    config_path = project_root / "configs" / "stage_b" / "bad.yaml"
+    config_path.parent.mkdir(parents=True)
+    with pytest.raises(KeyError, match="typo_field"):
+        validate_selected_config_schema(
+            {"dataset": "sysu", "typo_field": True},
+            {"dataset": "sysu"},
+            config_path,
+            project_root,
+        )
+
+
+def test_active_config_schema_requires_checkpoint_hash(tmp_path):
+    project_root = tmp_path
+    config_path = project_root / "configs" / "stage_b" / "missing_hash.yaml"
+    config_path.parent.mkdir(parents=True)
+    with pytest.raises(ValueError, match="training_weight_init_sha256"):
+        validate_selected_config_schema(
+            {"training_weight_init": "warm-start.pth"},
+            {"training_weight_init": None, "training_weight_init_sha256": None},
+            config_path,
+            project_root,
+        )
+
+
+def test_training_weight_init_sha256_gate(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256="0" * 64,
+    )
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        train_entry._verify_training_weight_init(config)
+    expected = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    config.training_weight_init_sha256 = expected
+    assert train_entry._verify_training_weight_init(config) == expected
+
+
 def test_metric_boost_uses_a_retained_canonical_baseline_config():
     repository_root = Path(__file__).resolve().parents[3]
     config = repository_root / "configs" / "stage_b" / "a3_e4_stageb.yaml"
     assert config.is_file()
     payload = config.read_text(encoding="utf-8")
-    assert "metric_boost_checkpoint:" in payload
+    assert "training_weight_init_sha256:" in payload
+    assert "metric_boost_" not in payload
     assert "vit_source_core_sysu_no_sff_parameter_add_pa05.yaml" not in payload
