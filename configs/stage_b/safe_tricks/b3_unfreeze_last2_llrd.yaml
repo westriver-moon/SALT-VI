@@ -1,0 +1,9 @@
+extends: b2_unfreeze_last2.yaml
+
+config_select: configs/stage_b/safe_tricks/b3_unfreeze_last2_llrd.yaml
+metric_experiment_id: SAFE-B3-UNFREEZE-LAST2-LLRD
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b3_unfreeze_last2_llrd/events.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b3_unfreeze_last2_llrd/model_output
+visual_layer_decay: 0.85
+optimizer_no_weight_decay: true
+

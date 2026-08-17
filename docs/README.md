@@ -105,6 +105,19 @@ PYTHONPATH=. python -m pytest -q pasd_plugin/tests
 python -m pytest semantic_imagination/tests
 ```
 
+### 合规 trick 候选管线
+
+`configs/pipelines/sysu_safe_tricks.yaml` 固定了不含 TTA、re-ranking、query expansion 和测试指标选模的 SYSU 两阶段候选管线。Stage-A 使用 512×256 bridge；Stage-B 的 `b1`–`b6` 分别只改变 CLS+GeM、末两层解冻、LLRD/no-weight-decay、QBN、hard-loss ramp 和 RGB 双视图一致性。`b3` 只与 `b2` 比较，其余变体只与 `b0` 比较，不自动叠加胜出项。
+
+```bash
+python scripts/experiments/run_safe_tricks_pipeline.py list
+python scripts/experiments/run_safe_tricks_pipeline.py stage-a --execute
+python scripts/experiments/run_safe_tricks_pipeline.py stage-b \
+  --variant b1 --stage-a-checkpoint /absolute/path/to/stage_a.pth --execute
+```
+
+不加 `--execute` 时只解析配置并打印运行计划。Stage-B 启动器会把 Stage-A checkpoint 的绝对路径和 SHA-256 注入配置，输出统一写到仓库外的 `/home/lab929/ybj/experiments/SALT-VI-safe-tricks/`。
+
 训练统一使用显式 YAML：
 
 ```bash

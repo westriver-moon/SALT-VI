@@ -103,6 +103,8 @@ def _validate_numeric_ranges(config):
         "visual_unfreeze_last_n_blocks": (0, None),
         "visual_unfreeze_start_epoch": (0, None),
         "qbn_freeze_running_stats_epoch": (-1, None),
+        "cross_modal_hard_start_epoch": (0, None),
+        "cross_modal_hard_ramp_epochs": (0, None),
     }
     for name, (minimum, maximum) in integer_fields.items():
         _require_integer(
@@ -126,6 +128,7 @@ def _validate_numeric_ranges(config):
         ("classifier_lr_factor", 0.0, None, False, False),
         ("power", 0.0, None, True, False),
         ("cross_modal_hard_weight", 0.0, None, False, False),
+        ("rgb_consistency_weight", 0.0, None, False, False),
         ("ir_rgb_text_pair_weight", 0.0, None, False, False),
         ("ir_rgb_aux_weight", 0.0, None, False, False),
         ("cmm_loss_weight", 0.0, None, False, False),
@@ -136,6 +139,7 @@ def _validate_numeric_ranges(config):
         ("pmt_mlp_ratio", 0.0, None, True, False),
         ("pmt_triplet_margin", 0.0, None, False, False),
         ("pmt_backbone_lr_factor", 0.0, None, False, False),
+        ("visual_layer_decay", 0.0, 1.0, True, False),
     )
     for name, minimum, maximum, exclusive_min, exclusive_max in real_fields:
         _require_real(

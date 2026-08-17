@@ -1,0 +1,6 @@
+extends: ../source_baseline_a3_512x256_mbpatch_bridge.yaml
+
+config_select: configs/stage_a/safe_tricks/a0_resolution_aligned_512.yaml
+metric_experiment_id: SAFE-A0-PMT-512
+output_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a0_resolution_aligned_512
+

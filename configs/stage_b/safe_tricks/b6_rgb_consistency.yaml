@@ -1,0 +1,8 @@
+extends: b0_baseline.yaml
+
+config_select: configs/stage_b/safe_tricks/b6_rgb_consistency.yaml
+metric_experiment_id: SAFE-B6-RGB-CONSISTENCY
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b6_rgb_consistency/events.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b6_rgb_consistency/model_output
+rgb_consistency_weight: 0.1
+

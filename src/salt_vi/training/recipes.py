@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import torch
+import torch.nn.functional as F
 
 import salt_vi.models.clip_model.objectives as objectives
 from salt_vi.data.loader import validate_rgb_ir_text_batch_dict
@@ -27,6 +28,16 @@ class EncodedBatch:
 
 def _loss_names(model):
     return [name.strip() for name in model.args.loss_names.split(",") if name.strip()]
+
+
+def cross_modal_hard_weight(args, current_epoch):
+    target = float(getattr(args, "cross_modal_hard_weight", 1.0))
+    start = int(getattr(args, "cross_modal_hard_start_epoch", 0))
+    ramp_epochs = int(getattr(args, "cross_modal_hard_ramp_epochs", 0))
+    if current_epoch is None or ramp_epochs <= 1:
+        return target if current_epoch is None or int(current_epoch) >= start else 0.0
+    progress = (int(current_epoch) - start) / float(ramp_epochs - 1)
+    return target * min(1.0, max(0.0, progress))
 
 
 def _encode_batch(model, batch, mode):
@@ -266,6 +277,13 @@ class IdentityTextRGBIRTextRecipe:
                 raise ValueError("IMTA requires aligned RGB/IR identity labels")
             text_ir_feats = model.encode_text_feat(batch["text_ir"]).float()
         rgb_mean = (original_rgb + augmented_rgb) * 0.5
+        consistency_weight = float(
+            getattr(model.args, "rgb_consistency_weight", 0.0)
+        )
+        if consistency_weight > 0:
+            result["rgb_consistency_loss"] = (
+                1.0 - F.cosine_similarity(original_rgb, augmented_rgb, dim=-1)
+            ).mean() * consistency_weight
         if "imta_proto" in losses:
             result["imta_proto_loss"] = objectives.imta_prototype_loss(
                 text_feats,
@@ -292,6 +310,7 @@ class IdentityTextRGBIRTextRecipe:
             ) * float(getattr(model.args, "imta_relation_weight", 0.10))
 
         if "cross_modal_hard" in losses:
+            effective_weight = cross_modal_hard_weight(model.args, current_epoch)
             if (
                 context.label_rgb.shape != context.label_ir.shape
                 or not torch.equal(context.label_rgb, context.label_ir)
@@ -320,9 +339,7 @@ class IdentityTextRGBIRTextRecipe:
             )
             if not torch.isfinite(cross_modal_loss):
                 raise FloatingPointError("Stage B cross-modal hard loss is not finite")
-            result["cross_modal_hard_loss"] = cross_modal_loss * float(
-                getattr(model.args, "cross_modal_hard_weight", 1.0)
-            )
+            result["cross_modal_hard_loss"] = cross_modal_loss * effective_weight
         if "orth" in losses:
             result["uni_orth_loss"] = objectives.orthogonal_loss(
                 context.ir_feats, text_feats, text_filter_feats

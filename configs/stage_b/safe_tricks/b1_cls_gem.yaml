@@ -1,0 +1,11 @@
+extends: b0_baseline.yaml
+
+config_select: configs/stage_b/safe_tricks/b1_cls_gem.yaml
+metric_experiment_id: SAFE-B1-CLS-GEM
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b1_cls_gem/events.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b1_cls_gem/model_output
+visual_pooling: cls_gem
+patch_gem_p: 3.0
+patch_gem_learnable: true
+patch_pool_gamma_init: 0.0
+

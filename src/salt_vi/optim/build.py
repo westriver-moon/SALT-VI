@@ -82,8 +82,38 @@ class AdamWSkipEmptyGrad(torch.optim.AdamW):
         return loss
 
 
+def pmt_visual_layer_id(name, depth):
+    prefix = "base_model.visual.vit.blocks."
+    if name.startswith(prefix):
+        return int(name[len(prefix) :].split(".", 1)[0]) + 1
+    if name.startswith((
+        "base_model.visual.vit.patch_embed",
+        "base_model.visual.vit.pos_embed",
+        "base_model.visual.vit.cls_token",
+    )):
+        return 0
+    if name.startswith((
+        "base_model.visual.vit.norm",
+        "base_model.visual.projection",
+    )):
+        return int(depth) + 1
+    return None
+
+
+def no_weight_decay_parameter(name, parameter):
+    return parameter.ndim <= 1 or name.rsplit(".", 1)[-1] in {
+        "pos_embed",
+        "cls_token",
+        "class_embedding",
+        "positional_embedding",
+    }
+
+
 def build_optimizer(args, model):
     params = []
+    visual_layer_decay = float(getattr(args, "visual_layer_decay", 1.0))
+    visual_depth = int(getattr(args, "pmt_depth", 12))
+    use_no_weight_decay = bool(getattr(args, "optimizer_no_weight_decay", False))
 
     print(f'Using {args.lr_factor} times learning rate for random init module ')
 
@@ -149,7 +179,21 @@ def build_optimizer(args, model):
                 # use large learning rate for random initialized cross modal module
                 lr =  args.lr_visual * args.lr_factor # default 5.0
 
-        group = {"params": [value], "lr": lr, "weight_decay": weight_decay}
+        layer_id = pmt_visual_layer_id(key, visual_depth) if is_visual_param(key) else None
+        lr_scale = 1.0
+        if layer_id is not None:
+            lr_scale = visual_layer_decay ** (visual_depth + 1 - layer_id)
+            lr *= lr_scale
+        if use_no_weight_decay and no_weight_decay_parameter(key, value):
+            weight_decay = 0.0
+
+        group = {
+            "params": [value],
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "layer_id": layer_id,
+            "lr_scale": lr_scale,
+        }
         if metric_boost_role is None:
             metric_boost_role = "scheduled_visual" if scheduled_visual else "standard"
         group["metric_boost_role"] = metric_boost_role

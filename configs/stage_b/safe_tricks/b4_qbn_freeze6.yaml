@@ -1,0 +1,9 @@
+extends: b0_baseline.yaml
+
+config_select: configs/stage_b/safe_tricks/b4_qbn_freeze6.yaml
+metric_experiment_id: SAFE-B4-QBN-FREEZE6
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b4_qbn_freeze6/events.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b4_qbn_freeze6/model_output
+uni_BN: true
+qbn_freeze_running_stats_epoch: 6
+

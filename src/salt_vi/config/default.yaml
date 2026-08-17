@@ -70,6 +70,8 @@ learnable_pa: false
 pa_init: 0.5
 label_smoothing: 0.0
 cross_modal_hard_weight: 1.0
+cross_modal_hard_start_epoch: 0
+cross_modal_hard_ramp_epochs: 0
 cross_modal_pair_weights:
   RGB-IR: 1.0
   RGB-Fusion: 1.0
@@ -81,6 +83,7 @@ visual_unfreeze_last_n_blocks: 0
 visual_unfreeze_start_epoch: 3
 visual_lr: 1.0e-06
 gradient_clip_norm: 0.0
+rgb_consistency_weight: 0.0
 visual_pooling: cls
 patch_gem_p: 3.0
 patch_gem_learnable: true
@@ -121,6 +124,8 @@ pmt_triplet_margin: 0.1
 pmt_msel_weight: 0.5
 pmt_dcl_weight: 0.5
 pmt_backbone_lr_factor: 0.5
+visual_layer_decay: 1.0
+optimizer_no_weight_decay: false
 pmt_assert_batch_layout: true
 pmt_gradient_checkpointing: false
 sysu_source_size: null
