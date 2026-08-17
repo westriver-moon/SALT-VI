@@ -6,4 +6,3 @@ metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b0_baseline/events.jsonl
 output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b0_baseline/model_output
 training_weight_init: ${SALT_STAGE_A_CHECKPOINT}
 training_weight_init_sha256: ${SALT_STAGE_A_SHA256}
-

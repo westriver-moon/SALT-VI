@@ -6,4 +6,3 @@ metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b5_hard_loss_ramp/events.jso
 output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b5_hard_loss_ramp/model_output
 cross_modal_hard_start_epoch: 3
 cross_modal_hard_ramp_epochs: 5
-

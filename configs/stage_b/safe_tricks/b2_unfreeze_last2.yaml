@@ -8,4 +8,3 @@ visual_unfreeze_last_n_blocks: 2
 visual_unfreeze_start_epoch: 3
 visual_lr: 1.0e-6
 gradient_clip_norm: 1.0
-

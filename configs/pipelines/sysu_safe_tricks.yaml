@@ -28,4 +28,3 @@ comparisons:
 promotion:
   automatic: false
   rule: report every preregistered raw single-shot result; do not tune or select on test metrics
-

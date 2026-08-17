@@ -6,4 +6,3 @@ metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b3_unfreeze_last2_llrd/event
 output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b3_unfreeze_last2_llrd/model_output
 visual_layer_decay: 0.85
 optimizer_no_weight_decay: true
-
