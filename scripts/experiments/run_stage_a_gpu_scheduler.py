@@ -30,10 +30,18 @@ def write_state(path, state):
     temporary.replace(path)
 
 
+def available_gpus(gpus, running, jobs_per_gpu):
+    gpu_loads = {gpu: 0 for gpu in gpus}
+    for item in running.values():
+        gpu_loads[item["gpu"]] += 1
+    return [gpu for gpu in gpus if gpu_loads[gpu] < jobs_per_gpu]
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--gpus", nargs="+", type=int, default=(1, 2, 3))
+    parser.add_argument("--jobs-per-gpu", type=int, default=1)
     parser.add_argument("--variants", nargs="+", default=DEFAULT_VARIANTS)
     parser.add_argument("--python", default=sys.executable)
     args = parser.parse_args(argv)
@@ -45,6 +53,8 @@ def main(argv=None):
         parser.error(f"unknown Stage-A variants: {unknown}")
     if len(set(args.gpus)) != len(args.gpus):
         parser.error("GPU indices must be unique")
+    if args.jobs_per_gpu < 1:
+        parser.error("jobs per GPU must be at least 1")
 
     output_root = args.output_root.resolve()
     scheduler_dir = output_root / "scheduler"
@@ -54,6 +64,8 @@ def main(argv=None):
         "status": "running",
         "started_at": now(),
         "output_root": str(output_root),
+        "gpus": list(args.gpus),
+        "jobs_per_gpu": args.jobs_per_gpu,
         "pending": list(args.variants),
         "running": {},
         "completed": [],
@@ -68,8 +80,7 @@ def main(argv=None):
     pending = list(args.variants)
 
     while pending or running:
-        busy_gpus = {item["gpu"] for item in running.values()}
-        for gpu in (candidate for candidate in args.gpus if candidate not in busy_gpus):
+        for gpu in available_gpus(args.gpus, running, args.jobs_per_gpu):
             if not pending:
                 break
             variant = pending.pop(0)
