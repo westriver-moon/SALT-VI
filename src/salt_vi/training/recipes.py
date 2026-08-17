@@ -199,7 +199,7 @@ class PMTRecipe:
         acc_visible = (score_visible.argmax(dim=1) == label_rgb).float().mean()
         acc_ir = (score_ir.argmax(dim=1) == label_ir).float().mean()
         result.update(
-            metric_loss=metric_loss,
+            metric_objective=metric_loss,
             triplet_mining=mining,
             acc=(acc_visible + acc_ir) / 2,
             pmt_stage=stage,
