@@ -2,6 +2,6 @@ extends: a0_resolution_aligned_512.yaml
 
 config_select: configs/stage_a/safe_tricks/a1_ema.yaml
 metric_experiment_id: SAFE-A1-PMT-EMA
-output_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a1_ema
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a1_ema
 ema_enabled: true
 ema_decay: 0.999

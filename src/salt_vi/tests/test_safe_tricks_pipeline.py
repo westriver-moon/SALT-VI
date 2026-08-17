@@ -69,6 +69,9 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
     for config in configs.values():
         validate_runtime_config(config)
     assert configs["a0_resolution_aligned_512"].ema_enabled is False
+    assert configs["a0_resolution_aligned_512"].output_root == str(
+        tmp_path / "outputs" / "a0_resolution_aligned_512"
+    )
     assert configs["a1_ema"].ema_enabled is True
     assert configs["a2_camera_diverse"].sampler_type == "identity_camera_diverse"
     assert configs["a3_hetero_center"].pmt_metric_loss == "hetero_center"
