@@ -14,7 +14,12 @@ def _eval_image_feature(base, visual_output, mode="RGB", use_backup=False):
 
 def test(base, loader, config, device):
     protocol = get_retrieval_protocol(getattr(config, "retrieval_backend", "identity_text"))
-    return protocol.evaluate(base, loader, config, device)
+    if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+        autocast = torch.amp.autocast("cuda", enabled=device.type == "cuda")
+    else:
+        autocast = torch.cuda.amp.autocast(enabled=device.type == "cuda")
+    with autocast:
+        return protocol.evaluate(base, loader, config, device)
 
 
 def _append(features, name, value):

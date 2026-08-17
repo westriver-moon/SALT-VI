@@ -2,5 +2,6 @@ extends: a0_resolution_aligned_512.yaml
 
 config_select: configs/stage_a/safe_tricks/a2_camera_diverse.yaml
 metric_experiment_id: SAFE-A2-PMT-CAMERA-DIVERSE
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/a2.jsonl
 output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a2_camera_diverse
 sampler_type: identity_camera_diverse
