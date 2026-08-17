@@ -106,9 +106,19 @@ class PluginConfig:
     def validate_assets(self) -> None:
         files = {
             "sd_text_encoder": self.pretrained_model_path / "text_encoder/model.safetensors",
+            "sd_text_encoder_config": self.pretrained_model_path / "text_encoder/config.json",
             "sd_vae": self.pretrained_model_path / "vae/diffusion_pytorch_model.safetensors",
+            "sd_vae_config": self.pretrained_model_path / "vae/config.json",
+            "sd_scheduler_config": self.pretrained_model_path / "scheduler/scheduler_config.json",
+            "sd_tokenizer_vocab": self.pretrained_model_path / "tokenizer/vocab.json",
+            "sd_tokenizer_merges": self.pretrained_model_path / "tokenizer/merges.txt",
+            "sd_tokenizer_config": self.pretrained_model_path / "tokenizer/tokenizer_config.json",
+            "sd_tokenizer_special_tokens": self.pretrained_model_path / "tokenizer/special_tokens_map.json",
+            "sd_feature_extractor_config": self.pretrained_model_path / "feature_extractor/preprocessor_config.json",
             "pasd_unet": self.pasd_model_path / "unet/diffusion_pytorch_model.safetensors",
+            "pasd_unet_config": self.pasd_model_path / "unet/config.json",
             "pasd_controlnet": self.pasd_model_path / "controlnet/diffusion_pytorch_model.safetensors",
+            "pasd_controlnet_config": self.pasd_model_path / "controlnet/config.json",
             "person_detector": self.person_detector_model,
         }
         unknown = set(self.asset_sha256).difference(files)

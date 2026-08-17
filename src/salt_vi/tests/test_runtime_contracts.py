@@ -120,6 +120,22 @@ def test_runtime_validation_rejects_non_positive_temperature():
         validate_runtime_config({"temperature": 0.0})
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("temperature", float("nan")),
+        ("target_lr", float("inf")),
+        ("seed", 2**32),
+        ("llm_aug_prob", -0.01),
+        ("llm_aug_prob", 1.01),
+        ("target_lr_factor", -0.01),
+    ),
+)
+def test_runtime_validation_rejects_nonfinite_or_out_of_range_values(field, value):
+    with pytest.raises(ValueError, match=field):
+        validate_runtime_config({field: value})
+
+
 def test_runtime_validation_rejects_invalid_image_size_pair():
     with pytest.raises(ValueError, match="img_size must be a pair"):
         validate_runtime_config({"img_size": (288, 0)})

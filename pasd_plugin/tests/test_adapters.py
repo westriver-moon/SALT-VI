@@ -71,6 +71,29 @@ def test_regdb_adapter_deduplicates_sources_and_keeps_all_trials(tmp_path: Path)
     assert records[0].protocol["regdb"]["trials"] == {str(index): "train" for index in range(1, 11)}
 
 
+def test_regdb_adapter_rejects_visible_thermal_modality_swap(tmp_path: Path) -> None:
+    root = tmp_path / "RegDB"
+    (root / "idx").mkdir(parents=True)
+    rgb_key = "Visible/0001/a.jpg"
+    ir_key = "Thermal/0001/b.jpg"
+    _image(root / rgb_key)
+    _image(root / ir_key)
+    for trial in range(1, 11):
+        (root / "idx" / f"train_visible_{trial}.txt").write_text(
+            f"{ir_key} 0\n", encoding="utf-8"
+        )
+        (root / "idx" / f"test_visible_{trial}.txt").write_text("", encoding="utf-8")
+        (root / "idx" / f"train_thermal_{trial}.txt").write_text(
+            f"{rgb_key} 0\n", encoding="utf-8"
+        )
+        (root / "idx" / f"test_thermal_{trial}.txt").write_text("", encoding="utf-8")
+    rgb = _captions(tmp_path / "rgb.json", {f"datasets/regdb/{rgb_key}": "rgb"})
+    ir = _captions(tmp_path / "ir.json", {f"datasets/regdb/{ir_key}": "ir"})
+
+    with pytest.raises(ValueError, match="must reference Visible"):
+        build_records(_config(tmp_path, "regdb", root, rgb, ir))
+
+
 def test_llcm_adapter_preserves_index_labels_and_train_test_membership(tmp_path: Path) -> None:
     root = tmp_path / "LLCM"
     (root / "idx").mkdir(parents=True)

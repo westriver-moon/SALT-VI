@@ -40,7 +40,6 @@ def query_gpu_status() -> dict[int, GPUStatus]:
 def eligible(status: GPUStatus, config: PluginConfig) -> bool:
     return (
         status.index in config.gpu_allowlist
-        and status.index != 0
         and status.free_memory_mib >= int(config.min_free_memory_gib * 1024)
         and status.utilization_percent <= config.max_gpu_utilization
     )

@@ -911,16 +911,6 @@ def main(config):
     complete_resume = bool(
         getattr(config, "auto_resume_training_from_lastest_step", False)
     )
-    if int(getattr(config, "resume_train_epoch", -1)) >= 0:
-        raise RuntimeError(
-            "model-only resume via resume_train_epoch is retired; convert the "
-            "checkpoint to the run-manifest full-state schema before resuming"
-        )
-    if int(getattr(config, "metric_boost_resume_epoch", 0)) > 0:
-        raise RuntimeError(
-            "metric_boost_resume_epoch is retired; start a fresh run or use "
-            "complete run-manifest resume"
-        )
     is_resume = complete_resume
     if config.mode == "train" and not complete_resume:
         _verify_training_weight_init(config)

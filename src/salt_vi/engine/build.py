@@ -789,10 +789,7 @@ class CLIP2ReID(nn.Module):
             raise ValueError("saving mode must be in ['Fusion', 'IR', 'Text']")
         if is_best:
             model_file_path = os.path.join(self.save_model_path, f'model_{mode}_{save_epoch}.pth')
-            if self.args.DataParallel:
-                torch.save(self.module.state_dict(), model_file_path)
-            else:
-                torch.save(self.state_dict(), model_file_path)
+            torch.save(self.state_dict(), model_file_path)
 
         if self.max_save_model_num > 0:
             root, _, files = os_walk(self.save_model_path)
@@ -814,10 +811,7 @@ class CLIP2ReID(nn.Module):
             return dict(self._metric_checkpoint_paths)
         model_file_path = os.path.join(self.save_model_path, f'model_{mode}_epoch_{save_epoch}.pth')
         if not os.path.isfile(model_file_path):
-            if self.args.DataParallel:
-                torch.save(self.module.state_dict(), model_file_path)
-            else:
-                torch.save(self.state_dict(), model_file_path)
+            torch.save(self.state_dict(), model_file_path)
         for metric in improved_metrics:
             if metric not in ('Rank-1', 'mAP', 'mINP'):
                 raise ValueError(f'Unsupported selection metric: {metric}')
@@ -831,48 +825,6 @@ class CLIP2ReID(nn.Module):
                 if candidate not in referenced:
                     os.remove(candidate)
         return dict(self._metric_checkpoint_paths)
-
-
-    def resume_last_model(self,mode='Fusion'):
-        if mode not in ('Fusion', 'IR', 'Text'):
-            raise ValueError("mode must be in ['Fusion', 'IR', 'Text']")
-        root, _, files = os_walk(self.save_model_path)
-        valid_epochs = sorted(
-            {
-                epoch
-                for file in files
-                for epoch in [_checkpoint_epoch(file, mode)]
-                if epoch is not None
-            }
-        )
-        if not valid_epochs:
-            return 0
-        latest_epoch = valid_epochs[-1]
-        self.resume_model(latest_epoch, mode)
-        return latest_epoch
-
-    def resume_model(self, resume_epoch, mode='Fusion'):
-        candidates = (
-            os.path.join(self.save_model_path, f'model_{mode}_epoch_{resume_epoch}.pth'),
-            os.path.join(self.save_model_path, f'model_{mode}_{resume_epoch}.pth'),
-        )
-        model_path = next((path for path in candidates if os.path.isfile(path)), None)
-        if model_path is None:
-            raise FileNotFoundError(
-                f"No {mode} checkpoint for epoch {resume_epoch}; checked {list(candidates)}"
-            )
-        print('Resume model from {}'.format(model_path))
-        checkpoint = torch.load(model_path, map_location=self.device)
-        if isinstance(checkpoint, dict) and "model" in checkpoint:
-            checkpoint = checkpoint["model"]
-        elif isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-            checkpoint = checkpoint["model_state_dict"]
-        # A resume checkpoint was produced by this model and must be complete.
-        # Historical/warm-start migrations use the audited compatibility loader
-        # in main.py instead of silently accepting partial resume state here.
-        self.load_state_dict(checkpoint, strict=True)
-        print('Successfully resume model from {}'.format(model_path))
-
 
     def _set_task(self):
         loss_names = self.args.loss_names

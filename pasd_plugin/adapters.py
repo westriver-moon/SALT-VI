@@ -73,10 +73,15 @@ def _sysu_sources(root: Path) -> Iterable[dict[str, Any]]:
 
 
 def _regdb_index(path: Path, split: str, modality: str) -> Iterable[tuple[str, str, str]]:
+    expected_directory = "Visible" if modality == "rgb" else "Thermal"
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         value = line.split()[0].replace("\\", "/").lstrip("./")
+        if value.split("/", 1)[0].lower() != expected_directory.lower():
+            raise ValueError(
+                f"RegDB {modality} index must reference {expected_directory}/ paths: {value}"
+            )
         yield value, split, modality
 
 
