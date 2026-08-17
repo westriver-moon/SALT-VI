@@ -18,7 +18,7 @@ def handle_nonfinite_gradients(scaler, optimizer, nonfinite_gradients):
     return previous_scale, float(scaler.get_scale())
 
 
-def train(base, loaders, scaler, config, optimizer, current_epoch=None):
+def train(base, loaders, scaler, config, optimizer, current_epoch=None, ema=None):
     base.set_train()
     base.configure_qbn_running_stats(current_epoch)
     meter = MultiItemAverageMeter()
@@ -106,6 +106,8 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
             torch.nn.utils.clip_grad_norm_(base.parameters(), clip_norm)
         scaler.step(optimizer)
         scaler.update()
+        if ema is not None:
+            ema.update(base)
 
         # update meter
         acc_sign = False

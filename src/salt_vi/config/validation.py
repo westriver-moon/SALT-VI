@@ -140,6 +140,12 @@ def _validate_numeric_ranges(config):
         ("pmt_triplet_margin", 0.0, None, False, False),
         ("pmt_backbone_lr_factor", 0.0, None, False, False),
         ("visual_layer_decay", 0.0, 1.0, True, False),
+        ("hetero_center_margin", 0.0, None, False, False),
+        ("hetero_center_weight", 0.0, None, False, False),
+        ("rfa_probability", 0.0, 1.0, False, False),
+        ("rfa_gaussian_sigma", 0.0, None, True, False),
+        ("ema_decay", 0.0, 1.0, True, True),
+        ("cosine_softmax_scale", 0.0, None, True, False),
     )
     for name, minimum, maximum, exclusive_min, exclusive_max in real_fields:
         _require_real(
@@ -239,6 +245,21 @@ def validate_runtime_config(config):
     training_mode = str(_value(config, "training_mode", ""))
     joint_mode = str(_value(config, "joint_mode", "image_only"))
     uses_text = "Text" in training_mode
+    metric_loss = str(_value(config, "pmt_metric_loss", "legacy"))
+    if metric_loss not in {"legacy", "hetero_center"}:
+        raise ValueError(f"Unsupported pmt_metric_loss {metric_loss!r}")
+    sampler_type = str(_value(config, "sampler_type", "identity_current_replace"))
+    supported_samplers = {
+        "identity_current_replace",
+        "identity_auto_replace",
+        "identity_camera_diverse",
+    }
+    if sampler_type not in supported_samplers:
+        raise ValueError(f"Unsupported sampler_type {sampler_type!r}")
+    if sampler_type == "identity_camera_diverse" and str(
+        _value(config, "dataset", "")
+    ).lower() != "sysu":
+        raise ValueError("identity_camera_diverse sampler requires dataset='sysu'")
     attention_backend = validate_attention_backend_runtime(
         _value(config, "pmt_attention_backend", "manual")
     )

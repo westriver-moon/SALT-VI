@@ -52,7 +52,7 @@ def main(argv=None):
     manifest = load_manifest()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("list", "stage-a", "stage-b"))
-    parser.add_argument("--variant", choices=tuple(manifest["stage_b"]["variants"]))
+    parser.add_argument("--variant")
     parser.add_argument("--stage-a-checkpoint", type=Path)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--execute", action="store_true")
@@ -65,10 +65,15 @@ def main(argv=None):
     env = dict(os.environ)
     env["SALT_SAFE_TRICKS_OUTPUT_ROOT"] = str(args.output_root.resolve())
     if args.action == "stage-a":
-        config_path = PROJECT_ROOT / manifest["stage_a"]
+        variant = args.variant or manifest["stage_a"]["baseline"]
+        if variant not in manifest["stage_a"]["variants"]:
+            parser.error(f"unknown Stage-A variant: {variant}")
+        config_path = PROJECT_ROOT / manifest["stage_a"]["variants"][variant]
     else:
         if not args.variant or not args.stage_a_checkpoint:
             parser.error("stage-b requires --variant and --stage-a-checkpoint")
+        if args.variant not in manifest["stage_b"]["variants"]:
+            parser.error(f"unknown Stage-B variant: {args.variant}")
         checkpoint = args.stage_a_checkpoint.resolve()
         if not checkpoint.is_file():
             parser.error(f"Stage-A checkpoint does not exist: {checkpoint}")

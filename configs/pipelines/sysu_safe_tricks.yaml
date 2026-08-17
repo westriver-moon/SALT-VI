@@ -7,7 +7,16 @@ excluded:
   - query_expansion
   - test_metric_checkpoint_selection
   - test_or_gallery_label_access
-stage_a: configs/stage_a/safe_tricks/a0_resolution_aligned_512.yaml
+stage_a:
+  baseline: a0
+  variants:
+    a0: configs/stage_a/safe_tricks/a0_resolution_aligned_512.yaml
+    a1: configs/stage_a/safe_tricks/a1_ema.yaml
+    a2: configs/stage_a/safe_tricks/a2_camera_diverse.yaml
+    a3: configs/stage_a/safe_tricks/a3_hetero_center.yaml
+    a4: configs/stage_a/safe_tricks/a4_rfa.yaml
+    a5: configs/stage_a/safe_tricks/a5_cosine_softmax.yaml
+    a6: configs/stage_a/safe_tricks/a6_p1_combined.yaml
 stage_b:
   baseline: b0
   variants:
@@ -19,6 +28,12 @@ stage_b:
     b5: configs/stage_b/safe_tricks/b5_hard_loss_ramp.yaml
     b6: configs/stage_b/safe_tricks/b6_rgb_consistency.yaml
 comparisons:
+  - [a0, a1]
+  - [a0, a2]
+  - [a0, a3]
+  - [a0, a4]
+  - [a0, a5]
+  - [a0, a6]
   - [b0, b1]
   - [b0, b2]
   - [b2, b3]

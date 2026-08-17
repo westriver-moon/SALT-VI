@@ -6,8 +6,12 @@ import torch
 from torch import nn
 
 from salt_vi.config.validation import validate_runtime_config
+from salt_vi.data.sampler import CameraDiverseIdentitySampler, GenIdx
+from salt_vi.engine.build import Classifier
+from salt_vi.engine.ema import ModelEMA
 from salt_vi.optim.build import build_optimizer, pmt_visual_layer_id
-from salt_vi.training.recipes import cross_modal_hard_weight
+from salt_vi.training.recipes import cross_modal_hard_weight, random_frequency_augmentation
+from salt_vi.utils.loss import HeteroCenterTripletLoss
 from salt_vi.utils.utils import load_train_configs
 
 
@@ -44,6 +48,92 @@ def test_safe_trick_configs_are_isolated_and_valid(monkeypatch, tmp_path):
     assert configs["b4_qbn_freeze6"].uni_BN is True
     assert configs["b5_hard_loss_ramp"].cross_modal_hard_start_epoch == 3
     assert configs["b6_rgb_consistency"].rgb_consistency_weight == 0.1
+
+
+def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path):
+    monkeypatch.setenv("SALT_SAFE_TRICKS_OUTPUT_ROOT", str(tmp_path / "outputs"))
+    configs = {
+        name: load_train_configs(
+            str(PROJECT_ROOT / f"configs/stage_a/safe_tricks/{name}.yaml")
+        )
+        for name in (
+            "a0_resolution_aligned_512",
+            "a1_ema",
+            "a2_camera_diverse",
+            "a3_hetero_center",
+            "a4_rfa",
+            "a5_cosine_softmax",
+            "a6_p1_combined",
+        )
+    }
+    for config in configs.values():
+        validate_runtime_config(config)
+    assert configs["a0_resolution_aligned_512"].ema_enabled is False
+    assert configs["a1_ema"].ema_enabled is True
+    assert configs["a2_camera_diverse"].sampler_type == "identity_camera_diverse"
+    assert configs["a3_hetero_center"].pmt_metric_loss == "hetero_center"
+    assert configs["a4_rfa"].rfa_probability == pytest.approx(0.5)
+    assert configs["a5_cosine_softmax"].normalized_classifier is True
+    assert configs["a6_p1_combined"].ema_enabled is True
+
+
+def test_camera_diverse_sampler_covers_available_cameras_per_identity():
+    labels = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1]).numpy()
+    positions, _ = GenIdx(labels, labels)
+    cameras = torch.tensor([1, 2, 3, 4, 1, 2, 3, 4]).numpy()
+    sampler = CameraDiverseIdentitySampler(
+        labels, labels, positions, positions, 4, 2, cameras, cameras
+    )
+    for offset in range(0, len(sampler.index1), 4):
+        assert len(set(cameras[sampler.index1[offset : offset + 4]])) == 4
+
+
+def test_hetero_center_triplet_uses_modality_centers():
+    visible = torch.tensor([[0.0], [0.2], [3.0], [3.2]])
+    infrared = torch.tensor([[0.1], [0.3], [3.1], [3.3]])
+    labels = torch.tensor([0, 0, 1, 1])
+    loss = HeteroCenterTripletLoss(margin=0.3)(visible, infrared, labels, labels)
+    assert loss == pytest.approx(0.0)
+
+
+def test_rfa_preserves_shape_and_finite_values():
+    torch.manual_seed(4)
+    mean = torch.tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
+    std = torch.tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
+    visible = (torch.rand(3, 3, 16, 8) - mean) / std
+    infrared = (torch.rand(3, 3, 16, 8) - mean) / std
+    augmented_visible, augmented_ir = random_frequency_augmentation(
+        visible, infrared, 1.0, 0.1
+    )
+    assert augmented_visible.shape == visible.shape
+    assert augmented_ir.shape == infrared.shape
+    assert torch.isfinite(augmented_visible).all()
+    assert not torch.equal(augmented_visible, visible)
+
+
+def test_cosine_classifier_normalizes_features_and_weights():
+    classifier = Classifier(2, dim=2, joint_mode="image_only", normalized=True, scale=2.0)
+    classifier.train()
+    classifier.BN.eval()
+    with torch.no_grad():
+        classifier.BN.weight.fill_(1.0)
+        classifier.BN.bias.zero_()
+        classifier.classifier.weight.copy_(torch.eye(2))
+    _, logits = classifier(torch.tensor([[2.0, 0.0], [0.0, 3.0]]))
+    assert logits.diag().tolist() == pytest.approx([2.0, 2.0], abs=1e-4)
+
+
+def test_ema_updates_and_temporarily_swaps_model_weights():
+    model = nn.Linear(1, 1, bias=False)
+    with torch.no_grad():
+        model.weight.fill_(1.0)
+    ema = ModelEMA(model, decay=0.5)
+    with torch.no_grad():
+        model.weight.fill_(3.0)
+    ema.update(model)
+    with ema.average_parameters(model):
+        assert model.weight.item() == pytest.approx(2.0)
+    assert model.weight.item() == pytest.approx(3.0)
 
 
 @pytest.mark.parametrize(

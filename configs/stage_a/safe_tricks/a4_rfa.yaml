@@ -1,0 +1,7 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/a4_rfa.yaml
+metric_experiment_id: SAFE-A4-PMT-RFA
+output_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a4_rfa
+rfa_probability: 0.5
+rfa_gaussian_sigma: 0.1
