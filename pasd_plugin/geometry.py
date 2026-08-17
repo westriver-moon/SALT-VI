@@ -154,13 +154,27 @@ def prepare_control_image(
     return control, geometry
 
 
-def restore_blurred_background(output: Image.Image, geometry: dict) -> Image.Image:
-    """Keep PASD detail only in the complete, aspect-preserved foreground frame."""
+def restore_blurred_background(
+    output: Image.Image,
+    geometry: dict,
+    source_background: Image.Image | None = None,
+) -> Image.Image:
+    """Keep PASD detail only in the aspect-preserved foreground frame.
+
+    When provided, ``source_background`` is the 256×512 control canvas made
+    from the same source image.  Consequently the final padded region cannot
+    inherit PASD-hallucinated background content.
+    """
 
     output = output.convert("RGB")
-    background = output.filter(
-        ImageFilter.GaussianBlur(float(geometry["background_blur_radius"]))
-    )
+    if source_background is None:
+        background = output.filter(
+            ImageFilter.GaussianBlur(float(geometry["background_blur_radius"]))
+        )
+    else:
+        background = source_background.convert("RGB")
+        if background.size != output.size:
+            raise ValueError("source background size does not match PASD output")
     box = tuple(int(value) for value in geometry["foreground_box"])
     foreground = output.crop(box)
     foreground_layer = background.copy()

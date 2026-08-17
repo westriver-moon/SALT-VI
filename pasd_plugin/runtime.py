@@ -10,11 +10,11 @@ from diffusers import AutoencoderKL, UniPCMultistepScheduler
 from PIL import Image
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
-from .config import GenerationConfig
+from .config import PluginConfig
 from .geometry import PersonDetector, prepare_control_image, restore_blurred_background
 
 
-MODULE_ROOT = Path(__file__).resolve().parents[1]
+MODULE_ROOT = Path(__file__).resolve().parent
 VENDOR_ROOT = MODULE_ROOT / "vendor"
 if str(VENDOR_ROOT) not in sys.path:
     sys.path.insert(0, str(VENDOR_ROOT))
@@ -26,7 +26,7 @@ from pasd.pipelines.pipeline_pasd import StableDiffusionControlNetPipeline  # no
 
 
 class PASDGenerator:
-    def __init__(self, config: GenerationConfig):
+    def __init__(self, config: PluginConfig):
         self.config = config
         config.validate_assets()
         self.device = torch.device(config.device)
@@ -36,7 +36,7 @@ class PASDGenerator:
             "fp32": torch.float32,
         }[config.mixed_precision]
         if config.num_inference_steps != 20:
-            raise ValueError("the SYSU five-view contract requires exactly 20 PASD steps")
+            raise ValueError("the unified PASD protocol requires exactly 20 inference steps")
         self.detector = PersonDetector(
             config.person_detector_model, config.person_detector_confidence
         )
@@ -86,7 +86,7 @@ class PASDGenerator:
         height = int(height * scale) // 8 * 8
         return image.resize((width, height), Image.Resampling.BILINEAR)
 
-    def prepare(self, image_path: str | Path) -> tuple[Image.Image, dict]:
+    def prepare(self, image_path: str | Path) -> tuple[Image.Image, Image.Image, dict]:
         with Image.open(image_path) as image:
             source = image.convert("RGB")
         detection = self.detector.detect(source)
@@ -98,7 +98,7 @@ class PASDGenerator:
             background_blur_radius=self.config.background_blur_radius,
             foreground_feather_radius=self.config.foreground_feather_radius,
         )
-        return self._working_image(control), geometry
+        return self._working_image(control), control, geometry
 
     def generate_views(
         self,
@@ -112,7 +112,7 @@ class PASDGenerator:
             raise ValueError("captions and seeds must be non-empty lists of equal length")
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
-        working, geometry = self.prepare(image_path)
+        working, source_background, geometry = self.prepare(image_path)
         args = SimpleNamespace(
             init_latent_with_noise=self.config.init_latent_with_noise,
             offset_noise_scale=self.config.offset_noise_scale,
@@ -151,7 +151,7 @@ class PASDGenerator:
                     (self.config.target_width, self.config.target_height),
                     Image.Resampling.LANCZOS,
                 )
-                image = restore_blurred_background(image, geometry)
+                image = restore_blurred_background(image, geometry, source_background)
                 if modality.lower() == "ir":
                     image = image.convert("L").convert("RGB")
                 results.append(image)

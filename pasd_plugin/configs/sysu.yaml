@@ -1,0 +1,14 @@
+dataset: sysu
+dataset_root: /home/cgv841/datasets/SYSU-MM01
+captions:
+  rgb: /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json
+  ir: /home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json
+output_root: /home/lab929/datasets/derived/PASD-v2/SYSU-MM01-rgb-ir-512x256-1view
+pretrained_model_path: ../checkpoints/stable-diffusion-v1-5
+pasd_model_path: ../checkpoints/pasd/checkpoint-100000
+person_detector_model: ../checkpoints/yolov8n.pt
+device: cuda:0
+gpu_allowlist: [2, 3]
+views_per_source: 1
+target_width: 256
+target_height: 512

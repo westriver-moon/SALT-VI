@@ -4,21 +4,21 @@
 
 ## 1. 当前研究主线
 
-当前工作的核心不是继续堆叠 Stage-B 文本融合模块，而是先修复其上游视觉域：PASD 生成后的 RGB 与原始 IR 在分辨率、人物尺度和背景布局上不一致，会把预处理偏差混入跨模态差异。
+统一 PASD 插件负责生成跨模态的派生图像，而不改变既有训练加载器。它覆盖 SYSU-MM01、RegDB 与 LLCM，显式保留各自官方索引和评估归属，避免把评估协议混入训练数据。
 
 当前数据集为：
 
 ```text
-/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+/home/lab929/datasets/derived/PASD-v2/<dataset>-rgb-ir-512x256-1view
 ```
 
 数据契约：
 
-- 共 44,745 个源图像视图：RGB 29,033，IR 15,712。
-- RGB 使用单视图 PASD 输出；IR 不做语义生成。
-- 两种模态均保持人物比例，以相同的 blurred-background 几何方式适配到 256×512。
-- `manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 共同固定来源、大小、校验和与完整性；当前校验错误数为 0。
-- 训练配置使用 `sysu_sr_backend: pasd_multiview`、`sysu_sr_modalities: [rgb, ir]`、`sysu_sr_view_sampling: paired` 和 `sysu_sr_exact_size: true`。
+- 覆盖 SYSU-MM01、RegDB、LLCM 的官方训练与评估索引；RegDB 每张源图只生成一次，并记录全部 10 个 trial 归属。
+- RGB 与 IR/NIR 均使用单视图 PASD；IR/NIR 输出在生成后转换为三通道灰度图。
+- 两种模态均以保持比例的 `fit` 几何适配到 256×512，空白区域使用同源 cover-crop 模糊背景填充。
+- `records.jsonl`、`manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 固定来源、大小、校验和、几何参数和协议归属。
+- 本轮只生成与验证派生产物；训练加载器保持不变，后续接入必须只消费 `train` 归属。
 
 RN50 Direct 已完成并保留最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。两条路线同时改变初始化、batch size、学习率和调度，因此只是工程路线比较，不是严格单因素消融。PMT-ViT、No-MBPatch 的已完成结果也已登记；精确指标、选择 epoch、配置和 checkpoint 身份只查实验总表。
 
@@ -47,7 +47,7 @@ python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.y
 ```text
 原始 SYSU 图像与 captions
         │
-        ├─ pasd_offline/ ──> PASD RGB / geometry-only IR manifests
+        ├─ pasd_plugin/ ──> SYSU/RegDB/LLCM 的 PASD RGB+IR/NIR manifests
         │
         ├─ semantic_imagination/ ──> 动态加权语义假设（尚未进入活跃配置）
         │
@@ -69,7 +69,7 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 - `src/salt_vi/training/`：活跃训练 recipe。
 - `src/salt_vi/retrieval/`：活跃检索后端；未登记别名不作为入口。
 - `src/salt_vi/entrypoints/train.py`：唯一训练入口实现；外部使用 `scripts/train.py`。
-- `pasd_offline/` 与 `semantic_imagination/` 是离线包，不导入训练包。
+- `pasd_plugin/` 与 `semantic_imagination/` 是离线包，不导入训练包。
 
 ## 4. Semantic Imagination 的当前边界
 
@@ -85,7 +85,7 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 | `configs/stage_a/`、`configs/stage_b/` | 活跃阶段配置 |
 | `configs/experiments/reproduction/` | 历史运行配置快照；不能因存在而视为可运行 |
 | `scripts/` | 唯一训练入口、通用验证与通用数据工具 |
-| `pasd_offline/` | PASD records、生成、验证和 geometry-matched 构建 |
+| `pasd_plugin/` | 统一 PASD records、生成、验证与免拉伸几何构建 |
 | `semantic_imagination/` | 离线语义假设与 PASD record 导出 |
 | `feature_analysis/` | 特征提取和分析 |
 | `experiments/` | 运行元数据、归档材料及已完成实验的一次性 `source/` |
@@ -100,7 +100,7 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest src/salt_vi/tests
-PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
+PYTHONPATH=. python -m pytest -q pasd_plugin/tests
 python -m pytest semantic_imagination/tests
 ```
 
@@ -140,7 +140,7 @@ python scripts/train.py --config_select <config.yaml>
 
 - `/README.md`：项目入口和状态摘要；
 - `/docs/README.md`：本统一指南；
-- `/pasd_offline/README.md`：PASD 独立模块；
+- `/pasd_plugin/README.md`：统一 PASD 插件接口；
 - `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
 - `/feature_analysis/README.md`：特征分析模块；
 - `/reports/experiment_registry/README.md`：总表字段和维护边界；

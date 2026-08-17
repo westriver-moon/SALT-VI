@@ -17,13 +17,13 @@ SALT-VI 是可见光—红外行人重识别研究仓库。当前实现包含两
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest src/salt_vi/tests
-PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
+PYTHONPATH=. python -m pytest -q pasd_plugin/tests
 python scripts/train.py --config_select <config.yaml>
 ```
 
 - `src/salt_vi/`：训练、模型、数据和评估的唯一实现。
 - `configs/`：活跃配置与复现实验快照。
-- `pasd_offline/`：独立 PASD 数据生成器，见 [`pasd_offline/README.md`](pasd_offline/README.md)。
+- `pasd_plugin/`：统一 PASD 数据生成、验证插件（SYSU-MM01、RegDB、LLCM），见 [`pasd_plugin/README.md`](pasd_plugin/README.md)。
 - `semantic_imagination/`：加权语义假设插件，见 [`semantic_imagination/README.md`](semantic_imagination/README.md)。
 - `feature_analysis/`：特征分析工具，见 [`feature_analysis/README.md`](feature_analysis/README.md)。
 - `reports/experiment_registry/`：实验总表及其字段说明。
