@@ -145,6 +145,7 @@ python scripts/train.py --config_select <config.yaml>
 - `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
 - `/feature_analysis/README.md`：特征分析模块；
 - `/reports/experiment_registry/README.md`：总表字段和维护边界；
+- `/reports/PROJECT_REMEDIATION_PLAN.md`：本轮用户要求保留的带时间审查与修复计划；
 - vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
 
 新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交，历史过程只留在 Git。
