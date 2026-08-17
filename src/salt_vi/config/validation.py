@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from numbers import Integral, Real
 from pathlib import Path
@@ -57,6 +58,8 @@ def _require_real(
         return
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
     if minimum is not None:
         if (exclusive_minimum and value <= minimum) or value < minimum:
             comparison = ">" if exclusive_minimum else ">="
@@ -85,7 +88,7 @@ def _validate_numeric_ranges(config):
         "eval_start_epoch": (0, None),
         "eval_num_regdb": (1, 10),
         "trial": (1, 10),
-        "seed": (0, None),
+        "seed": (0, 2**32 - 1),
         "eval_caption_seed": (0, 2**32 - 1),
         "gallery_trials": (1, None),
         "max_save_model_num": (0, None),
@@ -115,6 +118,8 @@ def _validate_numeric_ranges(config):
         ("pa", 0.0, 1.0, False, False),
         ("warmup_factor", 0.0, 1.0, False, False),
         ("target_lr", 0.0, None, False, False),
+        ("target_lr_factor", 0.0, None, False, False),
+        ("llm_aug_prob", 0.0, 1.0, False, False),
         ("lr_visual", 0.0, None, False, False),
         ("lr_txt", 0.0, None, False, False),
         ("lr_factor", 0.0, None, False, False),

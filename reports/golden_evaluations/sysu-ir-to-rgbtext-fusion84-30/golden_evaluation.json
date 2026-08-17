@@ -51,7 +51,7 @@
     ]
   },
   "resolved_config_sha256": "4bab7bbeb243db524bd9353686851bb5f0dce8c462bf436b0ea0c5add2966703",
-  "run_manifest_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-ir-to-rgbtext-fusion84-30/run_manifest.json",
+  "run_manifest_path": "reports/golden_evaluations/sysu-ir-to-rgbtext-fusion84-30/run_manifest.json",
   "run_manifest_sha256": "5792a151a3faead1babfa12d55c6409622af688c9ed305c9708a7f8d89b843d2",
   "schema_version": 1
 }

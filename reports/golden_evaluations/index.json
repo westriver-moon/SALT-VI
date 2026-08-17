@@ -2,14 +2,19 @@
   "schema_version": 1,
   "results": [
     {
+      "id": "sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text",
+      "status": "completed",
+      "golden_evaluation_path": "reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text/golden_evaluation.json"
+    },
+    {
       "id": "sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot",
       "status": "completed",
-      "golden_evaluation_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot/golden_evaluation.json"
+      "golden_evaluation_path": "reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot/golden_evaluation.json"
     },
     {
       "id": "sysu-ir-to-rgbtext-fusion84-30",
       "status": "completed",
-      "golden_evaluation_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-ir-to-rgbtext-fusion84-30/golden_evaluation.json"
+      "golden_evaluation_path": "reports/golden_evaluations/sysu-ir-to-rgbtext-fusion84-30/golden_evaluation.json"
     }
   ]
 }

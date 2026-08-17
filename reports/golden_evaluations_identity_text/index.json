@@ -2,6 +2,11 @@
   "schema_version": 1,
   "results": [
     {
+      "id": "sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text",
+      "status": "completed",
+      "golden_evaluation_path": "reports/golden_evaluations_identity_text/sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text/golden_evaluation.json"
+    },
+    {
       "id": "sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot",
       "status": "completed",
       "golden_evaluation_path": "reports/golden_evaluations_identity_text/sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot/golden_evaluation.json"

@@ -137,3 +137,29 @@ def test_validation_rejects_contract_and_artifact_failures(tmp_path: Path) -> No
     source.unlink()
     assert not consolidate_manifest(config, [record])["complete"]
     assert not validate_dataset(config, [record])["complete"]
+
+
+def test_runtime_asset_change_invalidates_build_fingerprint(tmp_path: Path) -> None:
+    scheduler = tmp_path / "sd" / "scheduler" / "scheduler_config.json"
+    scheduler.parent.mkdir(parents=True)
+    scheduler.write_text('{"steps": 20}', encoding="utf-8")
+    config = PluginConfig(
+        dataset="llcm",
+        dataset_root=tmp_path,
+        captions={"rgb": tmp_path / "rgb.json", "ir": tmp_path / "ir.json"},
+        output_root=tmp_path / "output",
+        pretrained_model_path=tmp_path / "sd",
+        pasd_model_path=tmp_path / "pasd",
+        asset_sha256={"sd_scheduler_config": sha256_file(scheduler)},
+    )
+    records_path = tmp_path / "records.jsonl"
+    records_path.write_text("", encoding="utf-8")
+    config.validate_assets()
+    prepare_build(config, records_path)
+
+    scheduler.write_text('{"steps": 21}', encoding="utf-8")
+    with pytest.raises(ValueError, match="asset SHA-256 mismatch"):
+        config.validate_assets()
+    config.asset_sha256["sd_scheduler_config"] = sha256_file(scheduler)
+    with pytest.raises(ValueError, match="different build"):
+        prepare_build(config, records_path)

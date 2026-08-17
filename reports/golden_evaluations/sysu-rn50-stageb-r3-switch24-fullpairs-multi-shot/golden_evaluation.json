@@ -42,7 +42,7 @@
     ]
   },
   "resolved_config_sha256": "cee5eddde86bda5bacdd64a3f7a2879082059df7e6e41c6505364d3722b91f6e",
-  "run_manifest_path": "/home/lab929/ybj/.codex-worktrees/remediation-queue-20260816/reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot/run_manifest.json",
+  "run_manifest_path": "reports/golden_evaluations/sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot/run_manifest.json",
   "run_manifest_sha256": "5d4e4a5f8793427cf3b89de715230edc1ee0847675ef65642911400fe233da77",
   "schema_version": 1
 }

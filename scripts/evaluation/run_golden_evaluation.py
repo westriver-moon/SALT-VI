@@ -79,33 +79,37 @@ def _build_command(entry):
     return command
 
 
+def _relative_path(path):
+    return Path(os.path.relpath(path, REPO_ROOT)).as_posix()
+
+
 def main(argv=None):
     args = _parse_args(argv)
     manifest = _load_manifest(args.manifest)
     output_root = args.output_root or REPO_ROOT / "reports" / "golden_evaluations"
     output_root.mkdir(parents=True, exist_ok=True)
-    entries = [
+    manifest_entries = [
         _validate_entry(entry, index, output_root)
         for index, entry in enumerate(manifest["evaluations"])
     ]
+    entries = manifest_entries
     if args.only:
         selected = set(args.only)
         entries = [entry for entry in entries if entry["id"] in selected]
-    index_path = output_root / "index.json"
-    results = []
+    run_results = []
     for entry in entries:
         golden_path = Path(entry["run_dir"]) / "golden_evaluation.json"
         if golden_path.exists() and not args.dry_run:
-            results.append(
+            run_results.append(
                 {
                     "id": entry["id"],
                     "status": "already_exists",
-                    "golden_evaluation_path": str(golden_path),
+                    "golden_evaluation_path": _relative_path(golden_path),
                 }
             )
             continue
         if args.dry_run:
-            results.append(
+            run_results.append(
                 {
                     "id": entry["id"],
                     "status": "dry_run",
@@ -127,7 +131,7 @@ def main(argv=None):
                 "returncode": process.returncode,
                 "command": command,
             }
-            results.append(result)
+            run_results.append(result)
             if args.fail_fast:
                 break
         else:
@@ -136,15 +140,34 @@ def main(argv=None):
                 "status": "completed",
                 "golden_evaluation_path": str(golden_path),
             }
-            results.append(result)
+            run_results.append(result)
+
+    run_by_id = {result["id"]: result for result in run_results}
+    results = []
+    for entry in manifest_entries:
+        golden_path = Path(entry["run_dir"]) / "golden_evaluation.json"
+        if golden_path.is_file():
+            results.append(
+                {
+                    "id": entry["id"],
+                    "status": "completed",
+                    "golden_evaluation_path": _relative_path(golden_path),
+                }
+            )
+        elif entry["id"] in run_by_id:
+            results.append(run_by_id[entry["id"]])
+        else:
+            results.append({"id": entry["id"], "status": "missing"})
+
+    index_path = output_root / "index.json"
     index_path.write_text(
-        json.dumps({"schema_version": 1, "results": results}, indent=2),
+        json.dumps({"schema_version": 1, "results": results}, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote golden evaluation index: {index_path}")
     return 0 if all(
         item["status"] in {"completed", "already_exists", "dry_run"}
-        for item in results
+        for item in run_results
     ) else 1
 
 

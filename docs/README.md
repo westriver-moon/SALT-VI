@@ -40,7 +40,7 @@ python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.y
 
 `SALT_R_TEXT_VISUAL` 冻结视觉分支，使用离线 RGB+IR SwinIR x2 输入、RGB-IR/RGB-Text/IR-Text direct pair loss、双分支 patch embedding 和 learnable PatchGeM，不启用 LLM caption augmentation。其保留结果来自 SYSU-MM01 all-search、single-shot、10 gallery trials、单 seed；精确指标和选择 epoch 只查实验总表。
 
-它仍是历史结果引用和 Stage-B 复现默认。新的 PASD-RN50 衔接实验用于验证 geometry-matched 上游视觉初始化，没有替代该默认；两者精确结果统一查实验总表。
+它只用于历史结果引用。当前 Stage-B 主线是 PASD-RN50 衔接方案；可运行候选配置位于 `configs/stage_b/` 根目录，已完成运行的精确快照位于 `configs/experiments/reproduction/archived_configs/`，两者的结果统一查实验总表。
 
 ## 3. 系统架构
 
@@ -82,9 +82,10 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 | 路径 | 作用 |
 | --- | --- |
 | `src/salt_vi/` | 当前实现 |
-| `configs/stage_a/`、`configs/stage_b/` | 活跃阶段配置 |
-| `configs/experiments/reproduction/` | 历史运行配置快照；不能因存在而视为可运行 |
-| `scripts/` | 唯一训练入口、通用验证与通用数据工具 |
+| `configs/stage_a/`、`configs/stage_b/`、`configs/super_resolution/` | 当前可运行配置；配置根目录是主线入口 |
+| 配置目录内的 `reproduction/`、`configs/experiments/reproduction/` | 历史运行的解析配置与证据快照；不作为新实验入口 |
+| `scripts/train.py` | SALT-VI 两阶段训练入口 |
+| `scripts/vision_text/super_resolution/` | 当前独立视觉超分消融的预检与启动入口 |
 | `pasd_plugin/` | 统一 PASD records、生成、验证与免拉伸几何构建 |
 | `semantic_imagination/` | 离线语义假设与 PASD record 导出 |
 | `feature_analysis/` | 特征提取和分析 |
