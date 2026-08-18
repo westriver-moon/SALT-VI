@@ -17,6 +17,9 @@ stage_a:
     a4: configs/stage_a/safe_tricks/a4_rfa.yaml
     a5: configs/stage_a/safe_tricks/a5_cosine_softmax.yaml
     a6: configs/stage_a/safe_tricks/a6_p1_combined.yaml
+    c1: configs/stage_a/safe_tricks/c1_ema_cosine.yaml
+    c2: configs/stage_a/safe_tricks/c2_ema_camera_diverse.yaml
+    c3: configs/stage_a/safe_tricks/c3_camera_diverse_cosine.yaml
 stage_b:
   baseline: b0
   variants:
@@ -34,6 +37,12 @@ comparisons:
   - [a0, a4]
   - [a0, a5]
   - [a0, a6]
+  - [a1, c1]
+  - [a5, c1]
+  - [a1, c2]
+  - [a2, c2]
+  - [a2, c3]
+  - [a5, c3]
   - [b0, b1]
   - [b0, b2]
   - [b2, b3]

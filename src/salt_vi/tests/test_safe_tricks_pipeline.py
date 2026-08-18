@@ -64,6 +64,9 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
             "a4_rfa",
             "a5_cosine_softmax",
             "a6_p1_combined",
+            "c1_ema_cosine",
+            "c2_ema_camera_diverse",
+            "c3_camera_diverse_cosine",
         )
     }
     for config in configs.values():
@@ -78,6 +81,12 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
     assert configs["a4_rfa"].rfa_probability == pytest.approx(0.5)
     assert configs["a5_cosine_softmax"].normalized_classifier is True
     assert configs["a6_p1_combined"].ema_enabled is True
+    assert configs["c1_ema_cosine"].ema_enabled is True
+    assert configs["c1_ema_cosine"].normalized_classifier is True
+    assert configs["c2_ema_camera_diverse"].ema_enabled is True
+    assert configs["c2_ema_camera_diverse"].sampler_type == "identity_camera_diverse"
+    assert configs["c3_camera_diverse_cosine"].sampler_type == "identity_camera_diverse"
+    assert configs["c3_camera_diverse_cosine"].normalized_classifier is True
 
 
 def test_camera_diverse_sampler_covers_available_cameras_per_identity():
