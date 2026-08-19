@@ -255,7 +255,7 @@ class LlamaServerQwenReasoner:
             instruction,
             seed=seed,
             temperature=0.75,
-            max_tokens=1024,
+            max_tokens=2048,
         )
         selected: dict[str, Candidate] = {}
         for raw in result.get("assignments", []):
@@ -307,7 +307,7 @@ class LlamaServerQwenReasoner:
             + json.dumps(worlds, ensure_ascii=False, separators=(",", ":"))
         )
         result = self._complete(
-            _image_content(lr, swin, regions), instruction, seed=0, temperature=0.1, max_tokens=2048
+            _image_content(lr, swin, regions), instruction, seed=0, temperature=0.1, max_tokens=4096
         )
         checked: list[dict[str, dict[str, Any]]] = [dict() for _ in assignments]
         for item in result.get("worlds", []):
