@@ -213,7 +213,9 @@ class RegionalImaginationPipeline:
             "failure": {
                 "type": type(error).__name__,
                 "message": str(error),
-                "traceback": "".join(traceback.format_exception(error))[-8000:],
+                "traceback": "".join(
+                    traceback.format_exception(type(error), error, error.__traceback__)
+                )[-8000:],
             },
         }
 
