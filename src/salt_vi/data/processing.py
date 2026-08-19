@@ -3,29 +3,6 @@ from __future__ import absolute_import
 import random
 import math
 
-class ChannelAdap(object):
-
-    def __init__(self, probability=0.5):
-        self.probability = probability
-
-    def __call__(self, img):
-
-        idx = random.randint(0, 3)
-
-        if idx == 0:
-            img[1, :, :] = img[0, :, :]
-            img[2, :, :] = img[0, :, :]
-        elif idx == 1:
-            img[0, :, :] = img[1, :, :]
-            img[2, :, :] = img[1, :, :]
-        elif idx == 2:
-            img[0, :, :] = img[2, :, :]
-            img[1, :, :] = img[2, :, :]
-        else:
-            img = img
-
-        return img
-
 
 class ChannelAdapGray(object):
 

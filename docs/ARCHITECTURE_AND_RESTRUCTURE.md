@@ -9,8 +9,8 @@
 本仓库是 SALT-VI 的源码、配置和可追溯实验索引。数据集、预训练权重、训练
 checkpoint、原始日志和 PASD 模型资产属于服务器运行资产，不作为源码树的一部分。
 
-当前受 Git 管理的规模为 418 个文件，其中 Python 233 个、YAML/YML 133 个、Markdown
-14 个。仓库外的运行资产约 37 GB，其中 checkpoint 约 30 GB、PASD 运行资产约 6.3 GB；
+当前受 Git 管理的规模为 419 个文件，其中 Python 233 个、YAML/YML 133 个、Markdown
+15 个。仓库外的运行资产约 37 GB，其中 checkpoint 约 30 GB、PASD 运行资产约 6.3 GB；
 这些资产本轮不删除。
 
 ## 2. Mermaid 框架图
@@ -72,6 +72,7 @@ configs/pipelines/sysu_safe_tricks.yaml 是变体注册表。调度器根据 --v
 | `pasd_plugin/` | 当前离线 PASD 入口；`pasd_plugin/vendor/pasd` 被 `runtime.py` 直接导入 | 保留 |
 | `semantic_imagination/` | 独立包，有实验入口和测试，不被训练主线自动启用 | 保留，继续保持离线边界 |
 | `feature_analysis/` | 独立分析包，有 CLI 和测试，不修改训练代码 | 保留，继续保持离线边界 |
+| src/salt_vi/data/processing.py:ChannelAdap | 仅在基线中存在、仓库与配置/测试均无引用，功能由 ChannelAdapGray/ChannelExchange 覆盖 | 已移除 23 行重复旧增强实现 |
 | `vendor/legacy_code/` | 未纳入 Git、无当前代码导入、无运行进程引用的旧 baseline/source_core | 已迁移至仓库外日期归档 |
 | `experiments/*/source/` | 历史运行 entrypoint 快照，供实验 provenance 使用；不是当前入口 | 保留，后续可在 registry 稳定后迁出源码树 |
 
@@ -95,7 +96,8 @@ metric/retrieval alias、旧 checkpoint 文件名识别和历史数据属性兼�
    `/home/lab929/ybj/archive/salt-vi-legacy-code-20260819`。未删除，可恢复。
 3. `.gitignore` 中针对已迁出目录的失效规则已移除，避免旧树静默回流。
 4. CI 中已经删除的 `pasd_offline` 引用已改为当前 `pasd_plugin`，包括测试和
-   `compileall` 目标。
+   compileall 目标。
+5. AST/全文引用复核确认 ChannelAdap 为孤儿类，已移除；_parse_best_ir_records 不删除，因为仍由 Stage-A checkpoint 选择路径调用。
 
 ### 保留理由
 
@@ -137,6 +139,7 @@ Markdown。为可运行配置增加 `${SALT_VI_ROOT}` 等路径变量，归档�
 - CPU CI 不再引用 `pasd_offline`；`pasd_plugin`、核心 SALT 和 semantic-imagination
   测试可独立运行。
 - `python -m compileall -q src scripts experiments pasd_plugin semantic_imagination feature_analysis` 通过。
+- 本轮全量测试结果：163 passed；scripts/train.py --help 与 safe-tricks pipeline list 均成功。
 - 当前 C3 batch=96 训练进程仍只运行在独立 worktree/GPU1；Stage-A 输出、checkpoint、
   日志和实验总表未被清理动作改写。
 - 主工作树不再含 `vendor/legacy_code`、Python/pytest 缓存；归档目录存在且约 68 MB。
