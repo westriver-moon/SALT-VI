@@ -50,7 +50,9 @@ def validate_base_completion(path: str | Path, final_epoch: int) -> dict:
     return {"events": str(path), "final_epoch": final_epoch, "event": completed[-1]}
 
 
-def validate_manifest(data_root: Path, relative: str, expected_plugin: str) -> dict:
+def validate_manifest(
+    data_root: Path, relative: str, expected_plugin: str | None = None
+) -> dict:
     path = (data_root / relative).resolve()
     summary_path = path.with_suffix(".json")
     if not path.is_file() or not summary_path.is_file():
@@ -60,7 +62,7 @@ def validate_manifest(data_root: Path, relative: str, expected_plugin: str) -> d
         raise ValueError(
             f"QRI manifest does not satisfy the dynamic complete contract: {summary_path}"
         )
-    if summary.get("plugin") != expected_plugin:
+    if expected_plugin is not None and summary.get("plugin") != expected_plugin:
         raise ValueError(
             f"QRI manifest plugin {summary.get('plugin')} != registry {expected_plugin}"
         )
