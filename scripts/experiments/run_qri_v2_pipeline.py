@@ -2,8 +2,12 @@
 """Launch the preregistered, isolated QRI-v2 imagination-first Stage-A variants."""
 
 from pathlib import Path
+import sys
 
-from qri_pipeline_runner import run_registry
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from qri_pipeline_runner import run_registry  # noqa: E402
 
 
 REGISTRY = Path(__file__).resolve().parents[2] / "configs/pipelines/sysu_qri_v2.yaml"
