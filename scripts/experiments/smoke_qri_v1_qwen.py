@@ -7,7 +7,23 @@ import argparse
 import base64
 import json
 from pathlib import Path
+import re
 import urllib.request
+
+
+def _json_object(text: str) -> dict:
+    text = str(text).strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fenced:
+        text = fenced.group(1)
+    else:
+        start, end = text.find("{"), text.rfind("}")
+        if start >= 0 and end > start:
+            text = text[start : end + 1]
+    value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError("visual smoke response is not one JSON object")
+    return value
 
 
 def main(argv=None) -> int:
@@ -63,7 +79,17 @@ def main(argv=None) -> int:
     with urllib.request.urlopen(request, timeout=300) as response:
         document = json.loads(response.read().decode("utf-8"))
     message = document["choices"][0]["message"]
-    content = json.loads(message["content"])
+    content = None
+    for field in ("content", "reasoning_content"):
+        if not message.get(field):
+            continue
+        try:
+            content = _json_object(message[field])
+            break
+        except (json.JSONDecodeError, ValueError):
+            continue
+    if content is None:
+        raise ValueError("visual smoke response contains no parseable final JSON object")
     if set(content) != {"person_visible", "modality", "observations"}:
         raise ValueError(f"unexpected visual smoke response: {content}")
     print(json.dumps(content, ensure_ascii=False, indent=2))

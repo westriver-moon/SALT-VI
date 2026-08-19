@@ -147,8 +147,20 @@ class LlamaServerQwenReasoner:
         )
         with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
             document = json.loads(response.read().decode("utf-8"))
-        message = document["choices"][0]["message"]["content"]
-        return _json_object(message)
+        message = document["choices"][0]["message"]
+        errors = []
+        for field in ("content", "reasoning_content"):
+            text = message.get(field)
+            if not text:
+                continue
+            try:
+                return _json_object(str(text))
+            except (json.JSONDecodeError, ValueError) as error:
+                errors.append(f"{field}={type(error).__name__}")
+        raise ValueError(
+            "Qwen response did not contain a parseable final JSON object "
+            f"({', '.join(errors) or 'empty response'})"
+        )
 
     def propose(
         self, lr: Image.Image, swin: Image.Image, regions: list[Region]
