@@ -196,6 +196,8 @@ def _qwen_server_command(config: RegionalConfig) -> list[str]:
         "q8_0",
         "--cache-type-v",
         "q8_0",
+        "--reasoning-budget",
+        str(int(config.qwen.get("reasoning_budget", 1024))),
         "--flash-attn",
         "on",
         "--jinja",

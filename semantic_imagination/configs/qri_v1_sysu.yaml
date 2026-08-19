@@ -69,6 +69,7 @@ qwen:
   timeout_seconds: 180
   thinking_mode: true
   reasoning_effort: high
+  reasoning_budget: 1024
   internal_reasoning_persisted: false
 
 pasd:

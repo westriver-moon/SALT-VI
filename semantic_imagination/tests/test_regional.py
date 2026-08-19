@@ -229,6 +229,7 @@ def test_qwen_server_command_always_loads_projector_and_quantized_cache(tmp_path
     assert command[command.index("--mmproj") + 1].endswith("mmproj.gguf")
     assert command[command.index("--cache-type-k") + 1] == "q8_0"
     assert command[command.index("--cache-type-v") + 1] == "q8_0"
+    assert command[command.index("--reasoning-budget") + 1] == "1024"
     assert command[command.index("--flash-attn") + 1] == "on"
     assert command[command.index("--parallel") + 1] == "1"
 
