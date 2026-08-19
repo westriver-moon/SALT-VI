@@ -21,7 +21,9 @@ class PersonDetector:
     """Small YOLO wrapper with a full-frame, identity-safe fallback."""
 
     def __init__(self, model_path: str | Path | None, confidence: float = 0.25):
-        self.model_path = Path(model_path).expanduser().resolve() if model_path else None
+        self.model_path = (
+            Path(model_path).expanduser().resolve() if model_path else None
+        )
         self.confidence = float(confidence)
         self._model = None
 
@@ -29,7 +31,9 @@ class PersonDetector:
         if self.model_path is None:
             return None
         if not self.model_path.is_file():
-            raise FileNotFoundError(f"missing person detector weight: {self.model_path}")
+            raise FileNotFoundError(
+                f"missing person detector weight: {self.model_path}"
+            )
         if self._model is None:
             from ultralytics import YOLO
 
@@ -40,9 +44,13 @@ class PersonDetector:
         width, height = image.size
         model = self._load()
         if model is None:
-            return PersonDetection((0.0, 0.0, float(width), float(height)), 0.0, "full_frame")
+            return PersonDetection(
+                (0.0, 0.0, float(width), float(height)), 0.0, "full_frame"
+            )
         try:
-            results = model.predict(image, imgsz=640, device="cpu", verbose=False, save=False)
+            results = model.predict(
+                image, imgsz=640, device="cpu", verbose=False, save=False
+            )
             candidates: list[tuple[float, Sequence[float]]] = []
             for result in results[:1]:
                 for cls, conf, box in zip(
@@ -61,7 +69,9 @@ class PersonDetector:
             # conservative fallback preserves the full image instead of
             # guessing a crop.
             pass
-        return PersonDetection((0.0, 0.0, float(width), float(height)), 0.0, "full_frame")
+        return PersonDetection(
+            (0.0, 0.0, float(width), float(height)), 0.0, "full_frame"
+        )
 
 
 def _expanded_bbox(
@@ -140,7 +150,9 @@ def prepare_control_image(
     }
 
     if control.size != (target_width, target_height):
-        raise AssertionError(f"adaptive geometry produced {control.size}, expected {target_size}")
+        raise AssertionError(
+            f"adaptive geometry produced {control.size}, expected {target_size}"
+        )
     geometry.update(
         {
             "source_size": [width, height],
@@ -148,10 +160,49 @@ def prepare_control_image(
             "person_detection": asdict(detection),
             "expanded_person_bbox": list(bbox),
             "person_margin": float(margin),
-            "source_was_larger_than_target": width > target_width or height > target_height,
+            "source_was_larger_than_target": width > target_width
+            or height > target_height,
         }
     )
     return control, geometry
+
+
+def prepare_direct_rewrite(
+    source: Image.Image,
+    target_size: tuple[int, int] = (256, 512),
+) -> tuple[Image.Image, dict]:
+    """Accept an already canonical control canvas without geometric adaptation.
+
+    QRI produces SwinIR, ROI masks and PASD controls in one 256x512 coordinate
+    system.  A direct rewrite must therefore reject non-canonical inputs instead
+    of silently stretching, letterboxing, detecting a person, or restoring a
+    different background transform.
+    """
+
+    source = source.convert("RGB")
+    target_width, target_height = (int(value) for value in target_size)
+    if source.size != (target_width, target_height):
+        raise ValueError(
+            f"direct PASD rewrite requires canonical input {(target_width, target_height)}, "
+            f"got {source.size}"
+        )
+    geometry = {
+        "mode": "direct_rewrite",
+        "source_size": [source.width, source.height],
+        "target_size": [target_width, target_height],
+        "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+        },
+        "resized_size": [source.width, source.height],
+        "padding": [0, 0, 0, 0],
+        "crop_box": None,
+        "person_detection": None,
+        "background_restoration": False,
+    }
+    return source, geometry
 
 
 def restore_blurred_background(

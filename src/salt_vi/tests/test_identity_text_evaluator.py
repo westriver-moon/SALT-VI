@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from importlib import import_module
 from types import SimpleNamespace
 
@@ -5,6 +6,28 @@ import numpy as np
 import torch
 
 evaluator = import_module("salt_vi.engine.test")
+
+
+def test_entrypoint_enables_cuda_autocast(monkeypatch):
+    observed = {}
+
+    @contextmanager
+    def fake_autocast(device_type, enabled):
+        observed["autocast"] = (device_type, enabled)
+        yield
+
+    class Protocol:
+        def evaluate(self, base, loader, config, device):
+            observed["evaluated"] = True
+            return {"IR": "ok"}
+
+    monkeypatch.setattr(evaluator.torch.amp, "autocast", fake_autocast)
+    monkeypatch.setattr(evaluator, "get_retrieval_protocol", lambda name: Protocol())
+    result = evaluator.test(
+        object(), object(), SimpleNamespace(retrieval_backend="identity_text"), torch.device("cuda")
+    )
+    assert observed == {"autocast": ("cuda", True), "evaluated": True}
+    assert result == {"IR": "ok"}
 
 
 class Model:

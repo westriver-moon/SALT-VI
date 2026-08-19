@@ -9,8 +9,10 @@ from salt_vi.data.sampler import (
     GenIdx,
     IdentitySampler,
     AutoReplaceIdentitySampler,
+    CameraDiverseIdentitySampler,
     validate_identity_batch_config,
 )
+from salt_vi.data.sysu_sources import load_train_source_records
 from salt_vi.retrieval import get_retrieval_protocol
 import torch.utils.data as data
 
@@ -267,6 +269,8 @@ class Loader:
         self.sysu_sr_views_per_image = int(getattr(config, "sysu_sr_views_per_image", 1))
         self.sysu_sr_view_sampling = getattr(config, "sysu_sr_view_sampling", "independent")
         self.sysu_sr_eval_view_index = int(getattr(config, "sysu_sr_eval_view_index", 0))
+        self.sysu_sr_eval_mode = str(getattr(config, "sysu_sr_eval_mode", "fixed"))
+        self.sysu_sr_eval_top_k = int(getattr(config, "sysu_sr_eval_top_k", 5))
         self.llm_aug = config.llm_aug
         self.llm_aug_prob = config.llm_aug_prob
         if "Text" in config.training_mode:
@@ -294,6 +298,15 @@ class Loader:
                                                         sysu_sr_view_sampling=self.sysu_sr_view_sampling,
                                                         text_modalities=self.train_text_modalities)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
+                if self.sampler_type == "identity_camera_diverse":
+                    rgb_records = load_train_source_records(self.sysu_data_path, "rgb")
+                    ir_records = load_train_source_records(self.sysu_data_path, "ir")
+                    if [record.label for record in rgb_records] != samples.train_color_label.tolist():
+                        raise ValueError("SYSU RGB camera manifest does not match training labels")
+                    if [record.label for record in ir_records] != samples.train_thermal_label.tolist():
+                        raise ValueError("SYSU IR camera manifest does not match training labels")
+                    self.color_cameras = [record.camera for record in rgb_records]
+                    self.thermal_cameras = [record.camera for record in ir_records]
                 self.samples = samples
 
             # test sysu data simples
@@ -377,6 +390,8 @@ class Loader:
                                             sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                             sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                             sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
+                                            sysu_sr_eval_mode=self.sysu_sr_eval_mode,
+                                            sysu_sr_eval_top_k=self.sysu_sr_eval_top_k,
                                             source_modality="ir", caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
@@ -411,6 +426,8 @@ class Loader:
                                         sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                         sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
+                                        sysu_sr_eval_mode=self.sysu_sr_eval_mode,
+                                        sysu_sr_eval_top_k=self.sysu_sr_eval_top_k,
                                         source_modality="rgb",
                                         caption_seed=self.eval_caption_seed)
                 gallery_samples_list.append(gallery_samples)
@@ -492,20 +509,27 @@ class Loader:
             sampler_cls = IdentitySampler
         elif self.sampler_type == "identity_auto_replace":
             sampler_cls = AutoReplaceIdentitySampler
+        elif self.sampler_type == "identity_camera_diverse":
+            if self.dataset != "sysu":
+                raise ValueError("camera-diverse sampling is currently defined only for SYSU")
+            sampler_cls = CameraDiverseIdentitySampler
         else:
             raise ValueError(f"Unsupported sampler_type: {self.sampler_type}")
 
         identities_per_batch = validate_identity_batch_config(
             self.batch_size, self.num_pos, len(self.color_pos)
         )
-        sampler = sampler_cls(
+        sampler_args = [
             self.samples.train_color_label,
             self.samples.train_thermal_label,
             self.color_pos,
             self.thermal_pos,
             self.num_pos,
             identities_per_batch,
-        )
+        ]
+        if sampler_cls is CameraDiverseIdentitySampler:
+            sampler_args.extend((self.color_cameras, self.thermal_cameras))
+        sampler = sampler_cls(*sampler_args)
         self.samples.cIndex = sampler.index1
         self.samples.tIndex = sampler.index2
         train_loader = data.DataLoader(self.samples, batch_size=self.batch_size,

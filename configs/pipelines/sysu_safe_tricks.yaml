@@ -1,0 +1,56 @@
+schema_version: 1
+baseline_commit: 7c8fe90cb3315cdacc050b39467cd6c94cbc2dbc
+dataset: sysu
+excluded:
+  - test_time_augmentation
+  - re_ranking
+  - query_expansion
+  - test_metric_checkpoint_selection
+  - test_or_gallery_label_access
+stage_a:
+  baseline: a0
+  variants:
+    a0: configs/stage_a/safe_tricks/a0_resolution_aligned_512.yaml
+    a1: configs/stage_a/safe_tricks/a1_ema.yaml
+    a2: configs/stage_a/safe_tricks/a2_camera_diverse.yaml
+    a3: configs/stage_a/safe_tricks/a3_hetero_center.yaml
+    a4: configs/stage_a/safe_tricks/a4_rfa.yaml
+    a5: configs/stage_a/safe_tricks/a5_cosine_softmax.yaml
+    a6: configs/stage_a/safe_tricks/a6_p1_combined.yaml
+    c1: configs/stage_a/safe_tricks/c1_ema_cosine.yaml
+    c2: configs/stage_a/safe_tricks/c2_ema_camera_diverse.yaml
+    c3: configs/stage_a/safe_tricks/c3_camera_diverse_cosine.yaml
+    c3_b96: configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+stage_b:
+  baseline: b0
+  variants:
+    b0: configs/stage_b/safe_tricks/b0_baseline.yaml
+    b1: configs/stage_b/safe_tricks/b1_cls_gem.yaml
+    b2: configs/stage_b/safe_tricks/b2_unfreeze_last2.yaml
+    b3: configs/stage_b/safe_tricks/b3_unfreeze_last2_llrd.yaml
+    b4: configs/stage_b/safe_tricks/b4_qbn_freeze6.yaml
+    b5: configs/stage_b/safe_tricks/b5_hard_loss_ramp.yaml
+    b6: configs/stage_b/safe_tricks/b6_rgb_consistency.yaml
+comparisons:
+  - [a0, a1]
+  - [a0, a2]
+  - [a0, a3]
+  - [a0, a4]
+  - [a0, a5]
+  - [a0, a6]
+  - [a1, c1]
+  - [a5, c1]
+  - [a1, c2]
+  - [a2, c2]
+  - [a2, c3]
+  - [a5, c3]
+  - [c3, c3_b96]
+  - [b0, b1]
+  - [b0, b2]
+  - [b2, b3]
+  - [b0, b4]
+  - [b0, b5]
+  - [b0, b6]
+promotion:
+  automatic: false
+  rule: report every preregistered raw single-shot result; do not tune or select on test metrics

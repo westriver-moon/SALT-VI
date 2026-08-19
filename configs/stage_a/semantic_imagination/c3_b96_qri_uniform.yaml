@@ -1,0 +1,6 @@
+extends: qri_v1_common.yaml
+
+config_select: configs/stage_a/semantic_imagination/c3_b96_qri_uniform.yaml
+metric_experiment_id: C3-B96-QRI-UNIFORM
+metric_events_path: ${SALT_QRI_EXPERIMENT_ROOT}/events/c3_b96_qri_uniform.jsonl
+output_root: ${SALT_QRI_EXPERIMENT_ROOT}/c3_b96_qri_uniform

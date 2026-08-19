@@ -70,6 +70,8 @@ learnable_pa: false
 pa_init: 0.5
 label_smoothing: 0.0
 cross_modal_hard_weight: 1.0
+cross_modal_hard_start_epoch: 0
+cross_modal_hard_ramp_epochs: 0
 cross_modal_pair_weights:
   RGB-IR: 1.0
   RGB-Fusion: 1.0
@@ -81,6 +83,7 @@ visual_unfreeze_last_n_blocks: 0
 visual_unfreeze_start_epoch: 3
 visual_lr: 1.0e-06
 gradient_clip_norm: 0.0
+rgb_consistency_weight: 0.0
 visual_pooling: cls
 patch_gem_p: 3.0
 patch_gem_learnable: true
@@ -120,7 +123,18 @@ pmt_progressive_epoch: 6
 pmt_triplet_margin: 0.1
 pmt_msel_weight: 0.5
 pmt_dcl_weight: 0.5
+pmt_metric_loss: legacy
+hetero_center_margin: 0.1
+hetero_center_weight: 1.0
+rfa_probability: 0.0
+rfa_gaussian_sigma: 0.1
 pmt_backbone_lr_factor: 0.5
+visual_layer_decay: 1.0
+optimizer_no_weight_decay: false
+ema_enabled: false
+ema_decay: 0.999
+normalized_classifier: false
+cosine_softmax_scale: 30.0
 pmt_assert_batch_layout: true
 pmt_gradient_checkpointing: false
 sysu_source_size: null
@@ -133,6 +147,8 @@ sysu_sr_view_manifest: null
 sysu_sr_views_per_image: 1
 sysu_sr_view_sampling: independent
 sysu_sr_eval_view_index: 0
+sysu_sr_eval_mode: fixed
+sysu_sr_eval_top_k: 5
 retrieval_backend: identity_text
 gallery_caption_manifest: null
 gallery_text_dropout: 0.0

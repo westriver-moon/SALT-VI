@@ -1,0 +1,9 @@
+extends: c3_camera_diverse_cosine.yaml
+
+config_select: configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+metric_experiment_id: SAFE-C3-B96-PMT-CAMERA-DIVERSE-COSINE
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/c3_b96.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/c3_b96_camera_diverse_cosine
+
+# 48 RGB + 48 IR = 96 modality samples per optimizer step.
+batch_size: 48

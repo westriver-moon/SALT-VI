@@ -207,6 +207,40 @@ class CrossModalPMTTripletLoss(nn.Module):
         }
 
 
+class HeteroCenterTripletLoss(nn.Module):
+    """Batch-hard triplet loss over per-identity RGB and IR centers."""
+
+    def __init__(self, margin=0.1):
+        super().__init__()
+        self.ranking_loss = nn.MarginRankingLoss(margin=float(margin))
+
+    def forward(self, visible_feats, ir_feats, visible_labels, ir_labels):
+        identities = torch.unique(visible_labels, sorted=True)
+        if not torch.equal(identities, torch.unique(ir_labels, sorted=True)):
+            raise ValueError("Hetero-center loss requires matching RGB/IR identities")
+        if identities.numel() < 2:
+            raise ValueError("Hetero-center loss requires at least two identities")
+        centers = torch.cat(
+            [
+                torch.stack([visible_feats[visible_labels == pid].mean(0) for pid in identities]),
+                torch.stack([ir_feats[ir_labels == pid].mean(0) for pid in identities]),
+            ],
+            dim=0,
+        )
+        center_labels = identities.repeat(2)
+        center_modalities = torch.cat(
+            (torch.zeros_like(identities), torch.ones_like(identities))
+        )
+        distances = pdist_torch(centers, centers)
+        positive = center_labels[:, None].eq(center_labels[None, :]) & center_modalities[
+            :, None
+        ].ne(center_modalities[None, :])
+        negative = center_labels[:, None].ne(center_labels[None, :])
+        dist_ap = distances.masked_fill(~positive, -float("inf")).max(1).values
+        dist_an = distances.masked_fill(~negative, float("inf")).min(1).values
+        return self.ranking_loss(dist_an, dist_ap, dist_an.new_ones(dist_an.shape))
+
+
 class SupervisedCrossModalContrastiveLoss(nn.Module):
     def __init__(self, temperature=0.07):
         super().__init__()

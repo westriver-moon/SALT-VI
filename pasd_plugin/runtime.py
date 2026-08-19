@@ -11,7 +11,12 @@ from PIL import Image
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from .config import PluginConfig
-from .geometry import PersonDetector, prepare_control_image, restore_blurred_background
+from .geometry import (
+    PersonDetector,
+    prepare_control_image,
+    prepare_direct_rewrite,
+    restore_blurred_background,
+)
 
 
 MODULE_ROOT = Path(__file__).resolve().parent
@@ -36,9 +41,15 @@ class PASDGenerator:
             "fp32": torch.float32,
         }[config.mixed_precision]
         if config.num_inference_steps != 20:
-            raise ValueError("the unified PASD protocol requires exactly 20 inference steps")
-        self.detector = PersonDetector(
-            config.person_detector_model, config.person_detector_confidence
+            raise ValueError(
+                "the unified PASD protocol requires exactly 20 inference steps"
+            )
+        self.detector = (
+            PersonDetector(
+                config.person_detector_model, config.person_detector_confidence
+            )
+            if config.geometry_mode == "person_fit_blurred_background"
+            else None
         )
         self.pipeline = self._load_pipeline()
 
@@ -49,7 +60,9 @@ class PASDGenerator:
         tokenizer = CLIPTokenizer.from_pretrained(base, subfolder="tokenizer")
         text_encoder = CLIPTextModel.from_pretrained(base, subfolder="text_encoder")
         vae = AutoencoderKL.from_pretrained(base, subfolder="vae")
-        feature_extractor = CLIPImageProcessor.from_pretrained(f"{base}/feature_extractor")
+        feature_extractor = CLIPImageProcessor.from_pretrained(
+            f"{base}/feature_extractor"
+        )
         unet = UNet2DConditionModel.from_pretrained(model, subfolder="unet")
         controlnet = ControlNetModel.from_pretrained(model, subfolder="controlnet")
 
@@ -89,16 +102,24 @@ class PASDGenerator:
     def prepare(self, image_path: str | Path) -> tuple[Image.Image, Image.Image, dict]:
         with Image.open(image_path) as image:
             source = image.convert("RGB")
-        detection = self.detector.detect(source)
-        control, geometry = prepare_control_image(
-            source,
-            detection,
-            target_size=(self.config.target_width, self.config.target_height),
-            margin=self.config.person_margin,
-            background_blur_radius=self.config.background_blur_radius,
-            foreground_feather_radius=self.config.foreground_feather_radius,
-        )
-        return self._working_image(control), control, geometry
+        target = (self.config.target_width, self.config.target_height)
+        if self.config.geometry_mode == "direct_rewrite":
+            control, geometry = prepare_direct_rewrite(source, target_size=target)
+        else:
+            if self.detector is None:
+                raise RuntimeError("person-fit PASD mode requires a detector wrapper")
+            detection = self.detector.detect(source)
+            control, geometry = prepare_control_image(
+                source,
+                detection,
+                target_size=target,
+                margin=self.config.person_margin,
+                background_blur_radius=self.config.background_blur_radius,
+                foreground_feather_radius=self.config.foreground_feather_radius,
+            )
+        working = self._working_image(control)
+        geometry["working_size"] = list(working.size)
+        return working, control, geometry
 
     def generate_views(
         self,
@@ -109,7 +130,9 @@ class PASDGenerator:
         batch_size: int = 1,
     ) -> tuple[list[Image.Image], dict]:
         if len(captions) != len(seeds) or not captions:
-            raise ValueError("captions and seeds must be non-empty lists of equal length")
+            raise ValueError(
+                "captions and seeds must be non-empty lists of equal length"
+            )
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
         working, source_background, geometry = self.prepare(image_path)
@@ -134,7 +157,8 @@ class PASDGenerator:
                 for caption in caption_batch
             ]
             generators = [
-                torch.Generator(device=self.device).manual_seed(int(seed)) for seed in seed_batch
+                torch.Generator(device=self.device).manual_seed(int(seed))
+                for seed in seed_batch
             ]
             generated = self.pipeline(
                 args,
@@ -151,7 +175,14 @@ class PASDGenerator:
                     (self.config.target_width, self.config.target_height),
                     Image.Resampling.LANCZOS,
                 )
-                image = restore_blurred_background(image, geometry, source_background)
+                if geometry["mode"] == "person_fit_blurred_background":
+                    image = restore_blurred_background(
+                        image, geometry, source_background
+                    )
+                elif geometry["mode"] != "direct_rewrite":
+                    raise ValueError(
+                        f"unsupported PASD geometry mode: {geometry['mode']}"
+                    )
                 if modality.lower() == "ir":
                     image = image.convert("L").convert("RGB")
                 results.append(image)

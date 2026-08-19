@@ -1,6 +1,15 @@
 from PIL import Image
 
-from pasd_plugin.geometry import PersonDetection, prepare_control_image, restore_blurred_background
+import pytest
+
+from pasd_plugin.config import PluginConfig
+from pasd_plugin.geometry import (
+    PersonDetection,
+    prepare_control_image,
+    prepare_direct_rewrite,
+    restore_blurred_background,
+)
+from pasd_plugin.validation import validate_geometry
 
 
 def test_geometry_uniformly_scales_without_stretching() -> None:
@@ -27,3 +36,26 @@ def test_restore_keeps_same_source_canvas_outside_foreground() -> None:
     restored = restore_blurred_background(generated, geometry, source_canvas)
     assert restored.getpixel((0, 256)) == (0, 0, 255)
     assert restored.getpixel((128, 256)) == (255, 0, 0)
+
+
+def test_direct_rewrite_is_an_identity_coordinate_contract(tmp_path) -> None:
+    source = Image.new("RGB", (256, 512), "white")
+    control, geometry = prepare_direct_rewrite(source)
+    config = PluginConfig(
+        dataset="sysu",
+        dataset_root=tmp_path,
+        captions={"rgb": tmp_path / "rgb.json", "ir": tmp_path / "ir.json"},
+        output_root=tmp_path / "output",
+        pretrained_model_path=tmp_path / "sd",
+        pasd_model_path=tmp_path / "pasd",
+        geometry_mode="direct_rewrite",
+    )
+    assert control.tobytes() == source.tobytes()
+    assert geometry["mode"] == "direct_rewrite"
+    assert geometry["background_restoration"] is False
+    validate_geometry(geometry, config)
+
+
+def test_direct_rewrite_rejects_noncanonical_input_instead_of_stretching() -> None:
+    with pytest.raises(ValueError, match="canonical input"):
+        prepare_direct_rewrite(Image.new("RGB", (128, 256), "white"))

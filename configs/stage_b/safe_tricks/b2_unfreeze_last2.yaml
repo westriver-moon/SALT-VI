@@ -1,0 +1,10 @@
+extends: b0_baseline.yaml
+
+config_select: configs/stage_b/safe_tricks/b2_unfreeze_last2.yaml
+metric_experiment_id: SAFE-B2-UNFREEZE-LAST2
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b2_unfreeze_last2/events.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/b2_unfreeze_last2/model_output
+visual_unfreeze_last_n_blocks: 2
+visual_unfreeze_start_epoch: 3
+visual_lr: 1.0e-6
+gradient_clip_norm: 1.0

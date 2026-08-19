@@ -10,9 +10,10 @@ from PIL import Image
 
 from salt_vi.config.validation import validate_runtime_config
 from salt_vi.data.dataset import SYSU_Tri_Data, Test_Tri_Data as SysuEvalDataset
-from salt_vi.data.pasd_multiview import PASDTrainViewStore, eval_view_path
+from salt_vi.data.pasd_multiview import PASDTrainViewStore, eval_view_path, eval_views
 from salt_vi.data.sources import MultiviewVisualSource
 from salt_vi.data import loader as loader_module
+from salt_vi.engine.test import _marginalized_image_feature
 
 
 def write_record(
@@ -136,6 +137,84 @@ def test_weighted_visual_sampling_uses_manifest_mass(tmp_path: Path, monkeypatch
     _, view = MultiviewVisualSource(store, 0).sample(0)
     assert captured["weights"] == pytest.approx([0.75, 0.25])
     assert view == 1
+
+
+def test_eval_views_rank_and_pad_dynamic_worlds(tmp_path: Path):
+    root = tmp_path / "SYSU-MM01"
+    (root / "exp").mkdir(parents=True)
+    (root / "exp" / "train_id.txt").write_text("1", encoding="utf-8")
+    (root / "exp" / "val_id.txt").write_text("", encoding="utf-8")
+    output_root = tmp_path / "derived"
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1, 3)
+    weights = (0.2, 0.7, 0.1)
+    for view, weight in zip(record["views"], weights):
+        view["hypothesis_weight"] = weight
+    manifest = write_manifest(output_root, [record], declared_views=0)
+
+    paths, selected = eval_views(
+        root / "cam1/0001/0001.jpg", root, output_root, manifest, 5, 0
+    )
+
+    assert paths[0].endswith("view_01.png")
+    assert paths[1].endswith("view_00.png")
+    assert selected == pytest.approx([0.7, 0.2, 0.1, 0.0, 0.0])
+
+
+def test_feature_marginalization_normalizes_worlds_and_final_sum():
+    import torch
+
+    class Base:
+        def encode_image_featmap(self, image, modality):
+            return image.mean(dim=(-2, -1))
+
+        def extract_global_feat(self, visual):
+            return visual
+
+        def classifier(self, feature, mode):
+            return feature
+
+    images = torch.tensor([[[[[3.0]], [[0.0]]], [[[0.0]], [[4.0]]]]])
+    weights = torch.tensor([[0.25, 0.75]])
+    result = _marginalized_image_feature(
+        Base(), images, weights, modality="ir", mode="IR"
+    )
+    expected = torch.nn.functional.normalize(torch.tensor([[0.25, 0.75]]), dim=1)
+    assert torch.allclose(result, expected)
+
+
+def test_eval_dataset_returns_fixed_top5_tensor_for_dynamic_worlds(tmp_path: Path):
+    import torch
+
+    root = tmp_path / "SYSU-MM01"
+    source_path = root / "cam1" / "0001" / "0001.jpg"
+    source_path.parent.mkdir(parents=True)
+    Image.new("RGB", (64, 128), "gray").save(source_path)
+    output_root = tmp_path / "derived"
+    record = write_record(root, output_root, "cam1/0001/0001.jpg", "rgb", 1, 2)
+    record["views"][0]["hypothesis_weight"] = 0.8
+    record["views"][1]["hypothesis_weight"] = 0.2
+    manifest = write_manifest(output_root, [record], declared_views=0)
+
+    dataset = SysuEvalDataset(
+        [str(source_path)],
+        np.asarray([0]),
+        data_path=str(root),
+        transform=lambda image: torch.from_numpy(np.asarray(image).copy()).permute(2, 0, 1),
+        img_size=(256, 512),
+        load_text=False,
+        sysu_sr_data_root=str(output_root),
+        sysu_sr_modalities=["rgb"],
+        source_modality="rgb",
+        sysu_sr_exact_size=True,
+        sysu_sr_backend="pasd_multiview",
+        sysu_sr_view_manifest=str(manifest),
+        sysu_sr_views_per_image=0,
+        sysu_sr_eval_mode="marginalize",
+        sysu_sr_eval_top_k=5,
+    )
+    item = dataset[0]
+    assert item["img"].shape == (5, 3, 512, 256)
+    assert item["view_weights"].tolist() == pytest.approx([0.8, 0.2, 0.0, 0.0, 0.0])
 
 
 def test_train_store_requires_complete_validated_manifest(tmp_path: Path):

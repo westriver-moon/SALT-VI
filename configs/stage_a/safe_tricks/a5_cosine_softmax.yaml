@@ -1,0 +1,8 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/a5_cosine_softmax.yaml
+metric_experiment_id: SAFE-A5-PMT-COSINE-SOFTMAX
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/a5.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a5_cosine_softmax
+normalized_classifier: true
+cosine_softmax_scale: 30.0

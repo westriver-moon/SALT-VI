@@ -103,6 +103,8 @@ def _validate_numeric_ranges(config):
         "visual_unfreeze_last_n_blocks": (0, None),
         "visual_unfreeze_start_epoch": (0, None),
         "qbn_freeze_running_stats_epoch": (-1, None),
+        "cross_modal_hard_start_epoch": (0, None),
+        "cross_modal_hard_ramp_epochs": (0, None),
     }
     for name, (minimum, maximum) in integer_fields.items():
         _require_integer(
@@ -126,6 +128,7 @@ def _validate_numeric_ranges(config):
         ("classifier_lr_factor", 0.0, None, False, False),
         ("power", 0.0, None, True, False),
         ("cross_modal_hard_weight", 0.0, None, False, False),
+        ("rgb_consistency_weight", 0.0, None, False, False),
         ("ir_rgb_text_pair_weight", 0.0, None, False, False),
         ("ir_rgb_aux_weight", 0.0, None, False, False),
         ("cmm_loss_weight", 0.0, None, False, False),
@@ -136,6 +139,13 @@ def _validate_numeric_ranges(config):
         ("pmt_mlp_ratio", 0.0, None, True, False),
         ("pmt_triplet_margin", 0.0, None, False, False),
         ("pmt_backbone_lr_factor", 0.0, None, False, False),
+        ("visual_layer_decay", 0.0, 1.0, True, False),
+        ("hetero_center_margin", 0.0, None, False, False),
+        ("hetero_center_weight", 0.0, None, False, False),
+        ("rfa_probability", 0.0, 1.0, False, False),
+        ("rfa_gaussian_sigma", 0.0, None, True, False),
+        ("ema_decay", 0.0, 1.0, True, True),
+        ("cosine_softmax_scale", 0.0, None, True, False),
     )
     for name, minimum, maximum, exclusive_min, exclusive_max in real_fields:
         _require_real(
@@ -235,6 +245,21 @@ def validate_runtime_config(config):
     training_mode = str(_value(config, "training_mode", ""))
     joint_mode = str(_value(config, "joint_mode", "image_only"))
     uses_text = "Text" in training_mode
+    metric_loss = str(_value(config, "pmt_metric_loss", "legacy"))
+    if metric_loss not in {"legacy", "hetero_center"}:
+        raise ValueError(f"Unsupported pmt_metric_loss {metric_loss!r}")
+    sampler_type = str(_value(config, "sampler_type", "identity_current_replace"))
+    supported_samplers = {
+        "identity_current_replace",
+        "identity_auto_replace",
+        "identity_camera_diverse",
+    }
+    if sampler_type not in supported_samplers:
+        raise ValueError(f"Unsupported sampler_type {sampler_type!r}")
+    if sampler_type == "identity_camera_diverse" and str(
+        _value(config, "dataset", "")
+    ).lower() != "sysu":
+        raise ValueError("identity_camera_diverse sampler requires dataset='sysu'")
     attention_backend = validate_attention_backend_runtime(
         _value(config, "pmt_attention_backend", "manual")
     )
@@ -302,6 +327,24 @@ def validate_runtime_config(config):
         eval_index = int(_value(config, "sysu_sr_eval_view_index", 0))
         if eval_index < 0 or (views and eval_index >= views):
             raise ValueError(f"sysu_sr_eval_view_index must be in [0, {views - 1}]")
+        eval_mode = str(_value(config, "sysu_sr_eval_mode", "fixed")).lower()
+        if eval_mode not in ("fixed", "marginalize"):
+            raise ValueError("sysu_sr_eval_mode must be fixed or marginalize")
+        eval_top_k = int(_value(config, "sysu_sr_eval_top_k", 5))
+        if not 1 <= eval_top_k <= 5:
+            raise ValueError("sysu_sr_eval_top_k must be in [1, 5]")
+        if eval_mode == "marginalize" and str(
+            _value(config, "retrieval_backend", "identity_text")
+        ) != "identity_text":
+            raise ValueError(
+                "SYSU QRI feature marginalization currently requires identity_text retrieval"
+            )
+        if eval_mode == "marginalize" and "Fusion" in str(
+            _value(config, "test_modality", "")
+        ):
+            raise ValueError(
+                "SYSU QRI feature marginalization supports image retrieval features only"
+            )
         if (int(_value(config, "img_h", 0)), int(_value(config, "img_w", 0))) != (512, 256):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
 

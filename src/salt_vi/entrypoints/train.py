@@ -13,7 +13,7 @@ import numpy as np
 import yaml
 from pathlib import Path
 from salt_vi.data.loader import Loader
-from salt_vi.engine import train, test, build_model
+from salt_vi.engine import train, test, build_model, ModelEMA
 from salt_vi.utils import make_dirs, Logger
 from salt_vi.optim import build_optimizer, build_lr_scheduler
 from salt_vi.config.config_rn import get_args
@@ -339,6 +339,7 @@ def _save_training_checkpoint(
     *,
     run_uuid=None,
     run_manifest_sha256=None,
+    ema=None,
 ):
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -351,6 +352,7 @@ def _save_training_checkpoint(
         "optimizer": optimizer.state_dict(),
         "scheduler": scheduler.state_dict(),
         "scaler": scaler.state_dict(),
+        "ema": ema.state_dict() if ema is not None else None,
         "experiment_state": {
             "best_metrics": _best_metric_state(),
             "metric_checkpoint_paths": dict(
@@ -407,6 +409,7 @@ def _load_training_checkpoint(
     *,
     expected_run_uuid=None,
     expected_run_manifest_sha256=None,
+    ema=None,
 ):
     # Keep RNG byte tensors on CPU; load_state_dict moves model and optimizer
     # tensors to their owning parameter devices.
@@ -439,6 +442,10 @@ def _load_training_checkpoint(
     optimizer.load_state_dict(checkpoint["optimizer"])
     scheduler.load_state_dict(checkpoint["scheduler"])
     scaler.load_state_dict(checkpoint["scaler"])
+    if ema is not None:
+        if checkpoint.get("ema") is None:
+            raise ValueError("EMA-enabled run cannot resume from a checkpoint without EMA state")
+        ema.load_state_dict(checkpoint["ema"], model)
     experiment_state = checkpoint["experiment_state"]
     _restore_best_metric_state(experiment_state["best_metrics"])
     model._metric_checkpoint_paths = dict(
@@ -979,6 +986,11 @@ def main(config):
 
         optimizer = build_optimizer(config, model)
         scheduler = build_lr_scheduler(config, optimizer)
+        ema = (
+            ModelEMA(model, getattr(config, "ema_decay", 0.999))
+            if bool(getattr(config, "ema_enabled", False))
+            else None
+        )
         if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
             scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
         else:
@@ -999,6 +1011,7 @@ def main(config):
                 device,
                 expected_run_uuid=config.run_uuid,
                 expected_run_manifest_sha256=config.run_manifest_sha256,
+                ema=ema,
             )
             print(f"Resuming complete training state from epoch {start_train_epoch}")
 
@@ -1007,7 +1020,8 @@ def main(config):
         model.configure_fixed_visual_data_parallel()
 
         if bool(getattr(config, "eval_before_train", False)) and start_train_epoch == 0:
-            result_dict = test(model, loaders, config, device)
+            with ema.average_parameters(model) if ema is not None else torch.no_grad():
+                result_dict = test(model, loaders, config, device)
             if fusion_result_key not in result_dict:
                 raise RuntimeError(
                     f"eval_before_train requires {fusion_result_key} retrieval metrics"
@@ -1067,7 +1081,15 @@ def main(config):
                 logger(f"Visual unfreeze summary: {unfreeze_summary}")
             scheduler.step(current_epoch)
 
-            result_vals, result = train(model, loaders, scaler, config, optimizer, current_epoch=current_epoch)
+            result_vals, result = train(
+                model,
+                loaders,
+                scaler,
+                config,
+                optimizer,
+                current_epoch=current_epoch,
+                ema=ema,
+            )
             # visual log
             for key, value in zip(*result_vals):
                 loss_writer.add_scalar(key, value, current_epoch)
@@ -1092,17 +1114,18 @@ def main(config):
 
             # testing while training
             if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
-                result_dict = test(model, loaders, config, device)
-                _record_eval_epoch(
-                    config,
-                    model,
-                    result_dict,
-                    retrieval_protocol,
-                    protocol_spec,
-                    current_epoch,
-                    performance_writer,
-                    logger,
-                )
+                with ema.average_parameters(model) if ema is not None else torch.no_grad():
+                    result_dict = test(model, loaders, config, device)
+                    _record_eval_epoch(
+                        config,
+                        model,
+                        result_dict,
+                        retrieval_protocol,
+                        protocol_spec,
+                        current_epoch,
+                        performance_writer,
+                        logger,
+                    )
 
                 gc.collect()
                 if torch.cuda.is_available():
@@ -1122,6 +1145,7 @@ def main(config):
                     scaler,
                     run_uuid=config.run_uuid,
                     run_manifest_sha256=config.run_manifest_sha256,
+                    ema=ema,
                 )
                 logger(f"Saved complete training checkpoint: {saved_checkpoint}")
 

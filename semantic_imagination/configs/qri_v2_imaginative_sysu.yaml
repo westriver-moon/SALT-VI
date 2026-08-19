@@ -1,0 +1,86 @@
+schema_version: 2
+plugin_version: qri-v2
+dataset_root: /home/cgv841/datasets/SYSU-MM01
+output_root: ${QRI_V2_OUTPUT_ROOT}
+modalities: [rgb, ir]
+source_size_hw: [256, 128]
+output_size_hw: [512, 256]
+
+tta_count: 12
+qwen_sample_count: 16
+selected_region_count: 3
+max_worlds: 5
+proposal_rounds: 3
+coverage_sampling: true
+ensure_editing_world_per_region: true
+roi_board_size_px: 512
+mask_dilation_px: 4
+mask_feather_px: 3.0
+calibration_alpha: 1.0
+calibration_beta: 8.0
+calibration_gamma: 4.0
+calibration_delta: 16.0
+seed: 20260819
+
+assets:
+  qwen_model:
+    path: /home/lab929/ybj/models/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf
+    sha256: bee238bbeb3dc0a34bde4d0dedbaee1f98c009e8bb4226f03070054c12fb1372
+  qwen_mmproj:
+    path: /home/lab929/ybj/models/qwen3.8-27b-gguf/mmproj-F16.gguf
+    sha256: cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e
+  swinir_model:
+    path: /home/cgv841/weights/001_classicalSR_DF2K_s64w8_SwinIR-M_x2.pth
+    sha256: 2032ebf8f401dd3ce2fae5f3852117cb72101ec6ed8358faa64c2a3fa09ed4ac
+  identity_checkpoint:
+    path: /home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth
+    sha256: 00c581ff6965a93088ac4c807c5937db270378336702d16f38720949693e8171
+  yolo_pose:
+    path: /home/lab929/ybj/models/qri-v1/checkpoints/yolov8x-pose.pt
+    sha256: 7a9bf952c2fc1c07d4a1da00dbb4cfab5ed71f89cbe8824d51a8f7a61cee5825
+  schp_lip:
+    path: /home/lab929/ybj/models/qri-v1/checkpoints/schp_lip.pth
+    sha256: 24fa3254ceeb74c8435458994a64b522fb439a3635b7b86ff470457e0413da00
+  sam_vit_b:
+    path: /home/lab929/ybj/models/qri-v1/checkpoints/sam_vit_b_01ec64.pth
+    sha256: ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912
+
+swinir:
+  root: /home/cgv841/third_party/SwinIR-official-6545850-v2
+  revision: 6545850fbf8df298df73d81f3e8cba638787c8bd
+  network_sha256: 9e143898679ebeebc5d2fc94ad1b89c38aa4a4d43da4e0fcba0f93e476994913
+
+roi:
+  device: cuda:1
+  schp_root: /home/lab929/ybj/models/qri-v1/sources/Self-Correction-Human-Parsing
+  schp_revision: eb84c432cc697f494d99662a05f2335eb2f26095
+  sam_root: /home/lab929/ybj/models/qri-v1/sources/segment-anything
+  sam_revision: dca509fe793f601edb92606367a655c15ac00fdf
+  category_stats_path: null
+
+qwen:
+  model_id: third-party-qwen3.8-27b-ud-q4-k-xl
+  llama_root: /home/lab929/ybj/models/qri-v1/sources/llama.cpp
+  llama_revision: 8ef78e644f559db4e8716b59bf76b8e11619337d
+  server_binary: /home/lab929/ybj/models/qri-v1/sources/llama.cpp/build/bin/llama-server
+  server_sha256: db4c6950ae60f569f9fa5c4d6e0d60e9f220fa747853371900a64f43de4a8164
+  gpu: 3
+  host: 127.0.0.1
+  port: 8080
+  context_size: 8192
+  endpoint: http://127.0.0.1:8080/v1/chat/completions
+  health_endpoint: http://127.0.0.1:8080/health
+  timeout_seconds: 180
+  thinking_mode: true
+  reasoning_effort: high
+  reasoning_budget: 1024
+  internal_reasoning_persisted: false
+
+pasd:
+  config_path: semantic_imagination/configs/pasd_sysu_qri_v2.yaml
+  device: cuda:1
+  realization: direct-rewrite-then-soft-mask-composite
+
+identity:
+  config_path: configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+  device: cuda:1

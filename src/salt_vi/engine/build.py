@@ -24,6 +24,7 @@ from salt_vi.utils import (
     CrossModalPMTTripletLoss,
     PMTMSEL,
     PMTDCL,
+    HeteroCenterTripletLoss,
     LabelSmoothingCrossEntropy,
 )
 
@@ -197,13 +198,15 @@ def build_adaptive_gate(input_dim, hidden_dim, output_dim, dropout):
 
 
 class Classifier(nn.Module):
-    def __init__(self, pid_num, dim=512, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion'):
+    def __init__(self, pid_num, dim=512, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion', normalized=False, scale=30.0):
         super(Classifier, self, ).__init__()
         self.pid_num = pid_num
         # self.GAP = GeneralizedMeanPoolingP()
         self.modal = modal
         self.uni_BN = uni_BN
         self.joint_mode = joint_mode
+        self.normalized = bool(normalized)
+        self.scale = float(scale)
         if uni_BN:
             assert joint_mode == 'uni'
             if joint_mode == 'uni':
@@ -256,7 +259,13 @@ class Classifier(nn.Module):
         else:
             bn_features = self.BN(bn_input)
 
-        cls_score = self.classifier(bn_features)
+        if self.normalized:
+            cls_score = self.scale * F.linear(
+                F.normalize(bn_features, dim=1),
+                F.normalize(self.classifier.weight, dim=1),
+            )
+        else:
+            cls_score = self.classifier(bn_features)
 
         if self.training:
             return features, cls_score
@@ -343,7 +352,14 @@ class CLIP2ReID(nn.Module):
             nn.init.normal_(self.cross_attn.out_proj.weight, std=proj_std)
 
         # Loss definition
-        self.classifier = Classifier(self.num_classes, self.embed_dim, args.uni_BN, args.joint_mode)
+        self.classifier = Classifier(
+            self.num_classes,
+            self.embed_dim,
+            args.uni_BN,
+            args.joint_mode,
+            normalized=getattr(args, "normalized_classifier", False),
+            scale=getattr(args, "cosine_softmax_scale", 30.0),
+        )
         self.pid_criterion = LabelSmoothingCrossEntropy(getattr(args, "label_smoothing", 0.0))
         self.tri_criterion = TripletLoss_WRT()
         self.pmt_tri_criterion = PMTTripletLoss(
@@ -356,6 +372,9 @@ class CLIP2ReID(nn.Module):
         )
         self.pmt_msel_criterion = PMTMSEL(getattr(args, "num_pos", 4), feat_norm="no")
         self.pmt_dcl_criterion = PMTDCL(getattr(args, "num_pos", 4), feat_norm="no")
+        self.hetero_center_criterion = HeteroCenterTripletLoss(
+            margin=getattr(args, "hetero_center_margin", 0.1)
+        )
         self.adaptive_alpha = None
         self.adaptive_gate = None
         self.raw_pa = None

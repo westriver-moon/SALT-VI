@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import torch
+import torch.nn.functional as F
 
 import salt_vi.models.clip_model.objectives as objectives
 from salt_vi.data.loader import validate_rgb_ir_text_batch_dict
@@ -27,6 +28,16 @@ class EncodedBatch:
 
 def _loss_names(model):
     return [name.strip() for name in model.args.loss_names.split(",") if name.strip()]
+
+
+def cross_modal_hard_weight(args, current_epoch):
+    target = float(getattr(args, "cross_modal_hard_weight", 1.0))
+    start = int(getattr(args, "cross_modal_hard_start_epoch", 0))
+    ramp_epochs = int(getattr(args, "cross_modal_hard_ramp_epochs", 0))
+    if current_epoch is None or ramp_epochs <= 1:
+        return target if current_epoch is None or int(current_epoch) >= start else 0.0
+    progress = (int(current_epoch) - start) / float(ramp_epochs - 1)
+    return target * min(1.0, max(0.0, progress))
 
 
 def _encode_batch(model, batch, mode):
@@ -56,6 +67,40 @@ def _base_result(context):
     return {"temperature": 1 / context.logit_scale}
 
 
+def random_frequency_augmentation(visible, infrared, probability, sigma):
+    """Swap Gaussian low-frequency amplitudes across random RGB/IR batch peers."""
+    if probability <= 0:
+        return visible, infrared
+    mean = visible.new_tensor((0.485, 0.456, 0.406)).view(1, 3, 1, 1)
+    std = visible.new_tensor((0.229, 0.224, 0.225)).view(1, 3, 1, 1)
+    images = torch.cat((visible, infrared), dim=0).float() * std.float() + mean.float()
+    spectra = torch.fft.fftshift(torch.fft.fft2(images, dim=(-2, -1)), dim=(-2, -1))
+    amplitude, phase = spectra.abs(), torch.angle(spectra)
+    height, width = images.shape[-2:]
+    y = torch.arange(height, device=images.device, dtype=images.dtype) - (height // 2)
+    x = torch.arange(width, device=images.device, dtype=images.dtype) - (width // 2)
+    yy, xx = torch.meshgrid(y, x, indexing="ij")
+    sigma_pixels = float(sigma) * min(height, width)
+    low_pass = torch.exp(-(xx.square() + yy.square()) / (2.0 * sigma_pixels**2))
+    low_pass = low_pass.view(1, 1, height, width)
+    batch_size = visible.size(0)
+    peers = torch.cat(
+        (
+            torch.randperm(batch_size, device=images.device) + batch_size,
+            torch.randperm(batch_size, device=images.device),
+        )
+    )
+    swapped = amplitude * (1.0 - low_pass) + amplitude[peers] * low_pass
+    apply = torch.rand(2 * batch_size, 1, 1, 1, device=images.device) < probability
+    mixed_amplitude = torch.where(apply, swapped, amplitude)
+    reconstructed = torch.fft.ifft2(
+        torch.fft.ifftshift(torch.polar(mixed_amplitude, phase), dim=(-2, -1)),
+        dim=(-2, -1),
+    ).real.clamp_(0.0, 1.0)
+    reconstructed = (reconstructed - mean.float()) / std.float()
+    return reconstructed[:batch_size], reconstructed[batch_size:]
+
+
 class PMTRecipe:
     name = "pmt"
 
@@ -74,6 +119,12 @@ class PMTRecipe:
         epoch = 0 if current_epoch is None else int(current_epoch)
         gray_stage = epoch < int(getattr(model.args, "pmt_progressive_epoch", 6))
         visible_images = gray_images if gray_stage else rgb_images
+        visible_images, ir_images = random_frequency_augmentation(
+            visible_images,
+            ir_images,
+            float(getattr(model.args, "rfa_probability", 0.0)),
+            float(getattr(model.args, "rfa_gaussian_sigma", 0.1)),
+        )
         stage = "gray_ir" if gray_stage else "rgb_ir"
         images = torch.cat((visible_images, ir_images), dim=0)
         if model.args.Fix_Visual and not model._visual_unfrozen:
@@ -101,10 +152,21 @@ class PMTRecipe:
             )
             * model.args.id_loss_weight,
         }
+        metric_loss = str(getattr(model.args, "pmt_metric_loss", "legacy"))
         mining = getattr(model.args, "triplet_mining", "pmt_hard")
         if mining not in {"pmt_hard", "wrt", "pmt_cross_modal_hard"}:
             raise ValueError(f"Unsupported triplet_mining: {mining}")
-        if gray_stage:
+        if metric_loss == "hetero_center":
+            result.update(
+                hetero_center_loss=model.hetero_center_criterion(
+                    visible_feats, ir_feats, label_rgb, label_ir
+                ) * float(getattr(model.args, "hetero_center_weight", 1.0)),
+                msel_loss=features.new_zeros(()),
+                dcl_loss=features.new_zeros(()),
+            )
+        elif metric_loss != "legacy":
+            raise ValueError(f"Unsupported pmt_metric_loss: {metric_loss}")
+        elif gray_stage:
             if mining == "wrt":
                 tri_loss = model.tri_criterion(visible_feats, label_rgb) + model.tri_criterion(
                     ir_feats, label_ir
@@ -136,7 +198,12 @@ class PMTRecipe:
             )
         acc_visible = (score_visible.argmax(dim=1) == label_rgb).float().mean()
         acc_ir = (score_ir.argmax(dim=1) == label_ir).float().mean()
-        result.update(triplet_mining=mining, acc=(acc_visible + acc_ir) / 2, pmt_stage=stage)
+        result.update(
+            metric_objective=metric_loss,
+            triplet_mining=mining,
+            acc=(acc_visible + acc_ir) / 2,
+            pmt_stage=stage,
+        )
         return result
 
 
@@ -266,6 +333,13 @@ class IdentityTextRGBIRTextRecipe:
                 raise ValueError("IMTA requires aligned RGB/IR identity labels")
             text_ir_feats = model.encode_text_feat(batch["text_ir"]).float()
         rgb_mean = (original_rgb + augmented_rgb) * 0.5
+        consistency_weight = float(
+            getattr(model.args, "rgb_consistency_weight", 0.0)
+        )
+        if consistency_weight > 0:
+            result["rgb_consistency_loss"] = (
+                1.0 - F.cosine_similarity(original_rgb, augmented_rgb, dim=-1)
+            ).mean() * consistency_weight
         if "imta_proto" in losses:
             result["imta_proto_loss"] = objectives.imta_prototype_loss(
                 text_feats,
@@ -292,6 +366,7 @@ class IdentityTextRGBIRTextRecipe:
             ) * float(getattr(model.args, "imta_relation_weight", 0.10))
 
         if "cross_modal_hard" in losses:
+            effective_weight = cross_modal_hard_weight(model.args, current_epoch)
             if (
                 context.label_rgb.shape != context.label_ir.shape
                 or not torch.equal(context.label_rgb, context.label_ir)
@@ -320,9 +395,7 @@ class IdentityTextRGBIRTextRecipe:
             )
             if not torch.isfinite(cross_modal_loss):
                 raise FloatingPointError("Stage B cross-modal hard loss is not finite")
-            result["cross_modal_hard_loss"] = cross_modal_loss * float(
-                getattr(model.args, "cross_modal_hard_weight", 1.0)
-            )
+            result["cross_modal_hard_loss"] = cross_modal_loss * effective_weight
         if "orth" in losses:
             result["uni_orth_loss"] = objectives.orthogonal_loss(
                 context.ir_feats, text_feats, text_filter_feats

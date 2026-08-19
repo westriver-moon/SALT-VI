@@ -33,6 +33,18 @@ def read_train_identities(data_root: str | Path) -> list[str]:
     return sorted(set(identities))
 
 
+def read_test_identities(data_root: str | Path) -> list[str]:
+    root = Path(data_root).expanduser().resolve()
+    text = (root / "exp" / "test_id.txt").read_text(encoding="utf-8")
+    return sorted(
+        {
+            token.strip().zfill(4)
+            for token in text.replace("\n", ",").split(",")
+            if token.strip()
+        }
+    )
+
+
 def collect_train_source_records(
     data_root: str | Path, modality: str
 ) -> list[SYSUTrainSource]:
@@ -41,6 +53,35 @@ def collect_train_source_records(
     if modality not in CAMERAS:
         raise ValueError(f"Unsupported SYSU modality: {modality}")
     identities = read_train_identities(root)
+    label_by_identity = {identity: index for index, identity in enumerate(identities)}
+    records = []
+    for identity in identities:
+        for camera in CAMERAS[modality]:
+            directory = root / camera / identity
+            if not directory.is_dir():
+                continue
+            for path in sorted(item for item in directory.iterdir() if item.is_file()):
+                records.append(
+                    SYSUTrainSource(
+                        index=len(records),
+                        source_key=path.relative_to(root).as_posix(),
+                        identity=identity,
+                        camera=camera,
+                        label=label_by_identity[identity],
+                    )
+                )
+    return records
+
+
+def collect_test_source_records(
+    data_root: str | Path, modality: str
+) -> list[SYSUTrainSource]:
+    """Collect every test-ID image, including all possible single-shot galleries."""
+    root = Path(data_root).expanduser().resolve()
+    modality = str(modality).lower()
+    if modality not in CAMERAS:
+        raise ValueError(f"Unsupported SYSU modality: {modality}")
+    identities = read_test_identities(root)
     label_by_identity = {identity: index for index, identity in enumerate(identities)}
     records = []
     for identity in identities:

@@ -1,0 +1,38 @@
+schema_version: 1
+dataset: sysu
+stage: stage_a
+base_variant: c3_b96
+base_config: configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+base_final_epoch: 23
+environment:
+  data_root: SALT_QRI_DATA_ROOT
+  view_manifest: SALT_QRI_VIEW_MANIFEST
+  experiment_root: SALT_QRI_EXPERIMENT_ROOT
+generation:
+  plugin: qwen-regional-imagination-v1
+  config: semantic_imagination/configs/qri_v1_sysu.yaml
+  smoke_source_count: 32
+  pilot_source_count: 512
+  modalities: [rgb, ir]
+  region_selection: top-3-by-normalized-U_swin-no-hard-gate
+  qwen_samples: 16
+  max_worlds: 5
+  failure_policy: one-SwinIR-world-weight-1
+variants:
+  uniform:
+    config: configs/stage_a/semantic_imagination/c3_b96_qri_uniform.yaml
+    manifest: manifests/manifest.uniform.jsonl
+  proposal:
+    config: configs/stage_a/semantic_imagination/c3_b96_qri_proposal.yaml
+    manifest: manifests/manifest.proposal.jsonl
+  posterior:
+    config: configs/stage_a/semantic_imagination/c3_b96_qri_posterior.yaml
+    manifest: manifests/manifest.posterior.jsonl
+evaluation:
+  protocol: SYSU all-search single-shot 10 gallery trials
+  mode: probability-weighted-feature-marginalization
+  top_k: 5
+  selection_epoch: 23
+promotion:
+  automatic: false
+  rule: report fixed final epoch 23; never select or promote on benchmark test metrics
