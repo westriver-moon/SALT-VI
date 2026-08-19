@@ -23,11 +23,34 @@ from semantic_imagination.regional.qwen import (
 from semantic_imagination.regional.qwen_v2 import ImaginativeQwenReasoner
 from semantic_imagination.regional.runtime import (
     PASDGeneration,
+    _autocast_context,
     validate_qri_pasd_generation,
 )
 from semantic_imagination.regional.schema import Candidate, Region, SourceItem, World
 from semantic_imagination.regional.tta import qri_tta_specs
 from semantic_imagination.regional.visual_context import roi_comparison_board
+
+
+def test_identity_runtime_enables_autocast_only_for_cuda():
+    calls = []
+    sentinel = object()
+
+    class Amp:
+        @staticmethod
+        def autocast(device_type, *, enabled):
+            calls.append((device_type, enabled))
+            return sentinel
+
+    class Torch:
+        amp = Amp()
+
+    class Device:
+        def __init__(self, device_type):
+            self.type = device_type
+
+    assert _autocast_context(Torch(), Device("cuda")) is sentinel
+    assert _autocast_context(Torch(), Device("cpu")) is sentinel
+    assert calls == [("cuda", True), ("cuda", False)]
 
 
 class FakeSwin:

@@ -11,6 +11,13 @@ from PIL import Image
 from .config import RegionalConfig
 
 
+def _autocast_context(torch, device):
+    enabled = device.type == "cuda"
+    if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
+        return torch.amp.autocast("cuda", enabled=enabled)
+    return torch.cuda.amp.autocast(enabled=enabled)
+
+
 @dataclass
 class PASDGeneration:
     images: list[Image.Image]
@@ -189,7 +196,7 @@ class SALTIdentityBackend:
         tensor = torch.from_numpy(array).permute(2, 0, 1).unsqueeze(0).to(self.device)
         tensor = (tensor - self.mean) / self.std
         mode = "IR" if modality.lower() == "ir" else "RGB"
-        with torch.no_grad():
+        with torch.no_grad(), _autocast_context(torch, self.device):
             visual = self.model.encode_image_featmap(tensor, modality.lower())
             feature = self.model.classifier(
                 self.model.extract_global_feat(visual), mode
