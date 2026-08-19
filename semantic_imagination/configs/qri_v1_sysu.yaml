@@ -72,7 +72,7 @@ qwen:
   internal_reasoning_persisted: false
 
 pasd:
-  config_path: pasd_plugin/configs/sysu.yaml
+  config_path: semantic_imagination/configs/pasd_sysu_qri_v1.yaml
   device: cuda:1
   realization: full-image-then-soft-mask-composite
 

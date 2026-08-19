@@ -45,6 +45,7 @@ flowchart TD
 
 - `semantic_imagination/regional/`：区域插件实现；重依赖均为惰性加载。
 - `configs/qri_v1_sysu.yaml`：生成期唯一正式配置。
+- `configs/pasd_sysu_qri_v1.yaml`：QRI 专用 PASD adapter 配置，使用绝对共享 checkpoint 路径与既有资产哈希，不依赖当前 Git worktree 的位置。
 - `../configs/stage_a/semantic_imagination/`：三个彼此隔离的 C3-b96 训练配置。
 - `../configs/pipelines/sysu_qri_v1.yaml`：预注册的 smoke、pilot、训练和测试契约。
 - `../scripts/experiments/run_qri_v1_pipeline.py`：只读计划/预检/显式训练入口；正式训练必须提供含 `train_epoch=23` 的 C3-b96 event stream。
