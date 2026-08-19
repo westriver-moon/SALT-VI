@@ -1,0 +1,7 @@
+extends: qri_v1_common.yaml
+
+config_select: configs/stage_a/semantic_imagination/c3_b96_qri_proposal.yaml
+metric_experiment_id: C3-B96-QRI-PROPOSAL
+metric_events_path: ${SALT_QRI_EXPERIMENT_ROOT}/events/c3_b96_qri_proposal.jsonl
+output_root: ${SALT_QRI_EXPERIMENT_ROOT}/c3_b96_qri_proposal
+

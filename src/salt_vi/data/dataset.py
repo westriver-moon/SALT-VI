@@ -9,6 +9,7 @@ from .tokenizer import SimpleTokenizer
 from .pasd_multiview import (
     PASDTrainViewStore,
     eval_view_path,
+    eval_views,
     normalize_backend,
     normalize_sampling,
 )
@@ -184,6 +185,45 @@ def _sysu_eval_image_path(
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Missing SYSU {modality} super-resolution evaluation image: {path}")
     return path
+
+
+def _sysu_eval_image_paths(
+    image_path,
+    data_path,
+    sr_data_root,
+    sr_modalities,
+    modality,
+    sr_backend,
+    sr_view_manifest,
+    sr_views_per_image,
+    sr_eval_mode,
+    sr_eval_top_k,
+    sr_eval_view_index,
+):
+    if str(sr_eval_mode).lower() != "marginalize":
+        return [
+            _sysu_eval_image_path(
+                image_path,
+                data_path,
+                sr_data_root,
+                sr_modalities,
+                modality,
+                sr_backend=sr_backend,
+                sr_view_manifest=sr_view_manifest,
+                sr_views_per_image=sr_views_per_image,
+                sr_eval_view_index=sr_eval_view_index,
+            )
+        ], [1.0]
+    if modality not in sr_modalities or normalize_backend(sr_backend) != "pasd_multiview":
+        return [image_path], [1.0]
+    return eval_views(
+        image_path,
+        data_path,
+        sr_data_root,
+        sr_view_manifest,
+        sr_eval_top_k,
+        sr_views_per_image,
+    )
 
 def _build_sysu_visual_source(
     data_dir,
@@ -606,6 +646,7 @@ class Test_Tri_Data(data.Dataset):
                             sysu_sr_exact_size=False, sysu_sr_backend="array",
                             sysu_sr_view_manifest=None, sysu_sr_views_per_image=1,
                             sysu_sr_eval_view_index=0,
+                            sysu_sr_eval_mode="fixed", sysu_sr_eval_top_k=5,
                             caption_lookup="identity", caption_manifest=None,
                             caption_seed=0): # include Feat_Filter=False
         self.tokenizer = SimpleTokenizer() if load_text else None
@@ -649,6 +690,7 @@ class Test_Tri_Data(data.Dataset):
             raise ValueError("SYSU super-resolution inputs may only be used with SYSU-MM01")
 
         test_image = []
+        test_view_weights = []
         test_text_ir = []
         test_text_rgb = []
         caption_rng = np.random.RandomState(int(caption_seed))
@@ -656,35 +698,45 @@ class Test_Tri_Data(data.Dataset):
         print(f"Loading Test {self.type} Data...")
         for i in range(len(test_img_file)):
             # load img from the test_img_file
-            image_path = test_img_file[i]
+            source_image_path = test_img_file[i]
+            image_paths = [source_image_path]
+            view_weights = [1.0]
             if dataset_name == "sysu" and source_modality is not None:
-                image_path = _sysu_eval_image_path(
-                    image_path,
+                image_paths, view_weights = _sysu_eval_image_paths(
+                    source_image_path,
                     data_path,
                     sysu_sr_data_root,
                     sr_modalities,
                     source_modality,
-                    sr_backend=sysu_sr_backend,
-                    sr_view_manifest=sysu_sr_view_manifest,
-                    sr_views_per_image=sysu_sr_views_per_image,
-                    sr_eval_view_index=sysu_sr_eval_view_index,
+                    sysu_sr_backend,
+                    sysu_sr_view_manifest,
+                    sysu_sr_views_per_image,
+                    sysu_sr_eval_mode,
+                    sysu_sr_eval_top_k,
+                    sysu_sr_eval_view_index,
                 )
-            img = Image.open(image_path).convert("RGB")
-            using_sr = source_modality in sr_modalities
-            if using_sr and sysu_sr_exact_size:
-                expected_size = (int(img_size[0]), int(img_size[1]))
-                if img.size != expected_size:
-                    raise ValueError(
-                        f"SYSU {source_modality} SR evaluation image has size {img.size}, "
-                        f"expected {expected_size}"
-                    )
-            elif not using_sr and sysu_source_size is not None and dataset_name == "sysu":
-                source_h, source_w = (int(value) for value in sysu_source_size)
-                img = img.resize((source_w, source_h), PIL_BICUBIC)
-            else:
-                img = img.resize((img_size[0], img_size[1]), PIL_BICUBIC)
-            pix_array = np.array(img)
-            test_image.append(pix_array)
+            image_arrays = []
+            for image_path in image_paths:
+                with Image.open(image_path) as handle:
+                    img = handle.convert("RGB")
+                using_sr = source_modality in sr_modalities
+                if using_sr and sysu_sr_exact_size:
+                    expected_size = (int(img_size[0]), int(img_size[1]))
+                    if img.size != expected_size:
+                        raise ValueError(
+                            f"SYSU {source_modality} SR evaluation image has size {img.size}, "
+                            f"expected {expected_size}"
+                        )
+                elif not using_sr and sysu_source_size is not None and dataset_name == "sysu":
+                    source_h, source_w = (int(value) for value in sysu_source_size)
+                    img = img.resize((source_w, source_h), PIL_BICUBIC)
+                else:
+                    img = img.resize((img_size[0], img_size[1]), PIL_BICUBIC)
+                image_arrays.append(np.array(img))
+            test_image.append(
+                np.stack(image_arrays) if len(image_arrays) > 1 else image_arrays[0]
+            )
+            test_view_weights.append(np.asarray(view_weights, dtype=np.float32))
 
             if load_text:
                 if caption_lookup == "image":
@@ -710,6 +762,7 @@ class Test_Tri_Data(data.Dataset):
         test_image = np.array(test_image)
 
         self.test_image = test_image
+        self.test_view_weights = test_view_weights
         self.test_text_rgb = test_text_rgb
         self.test_text_ir = test_text_ir
         self.test_label = test_label
@@ -731,7 +784,13 @@ class Test_Tri_Data(data.Dataset):
                 batch_dict['text'] = text
 
         img1, target1 = self.test_image[index], self.test_label[index]
-        img1 = self.transform(img1)
+        if img1.ndim == 4:
+            img1 = torch.stack([self.transform(view) for view in img1])
+            batch_dict['view_weights'] = torch.as_tensor(
+                self.test_view_weights[index], dtype=torch.float32
+            )
+        else:
+            img1 = self.transform(img1)
 
         # add to batch_dict
         batch_dict['img'] = img1

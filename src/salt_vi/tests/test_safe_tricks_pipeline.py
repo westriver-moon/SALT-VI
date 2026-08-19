@@ -95,6 +95,34 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
     assert configs["c3_b96_camera_diverse_cosine"].num_pos == 4
 
 
+@pytest.mark.parametrize("variant", ("uniform", "proposal", "posterior"))
+def test_qri_stage_a_configs_extend_c3_b96_without_cross_variant_state(
+    monkeypatch, tmp_path, variant
+):
+    data_root = tmp_path / "qri-data"
+    experiment_root = tmp_path / "qri-experiments"
+    manifest = data_root / "manifests" / f"manifest.{variant}.jsonl"
+    monkeypatch.setenv("SALT_QRI_DATA_ROOT", str(data_root))
+    monkeypatch.setenv("SALT_QRI_VIEW_MANIFEST", str(manifest))
+    monkeypatch.setenv("SALT_QRI_EXPERIMENT_ROOT", str(experiment_root))
+    monkeypatch.setenv("SALT_SAFE_TRICKS_OUTPUT_ROOT", str(experiment_root))
+
+    config = load_train_configs(
+        PROJECT_ROOT
+        / f"configs/stage_a/semantic_imagination/c3_b96_qri_{variant}.yaml"
+    )
+    validate_runtime_config(config)
+
+    assert config.batch_size == 48
+    assert config.sampler_type == "identity_camera_diverse"
+    assert config.normalized_classifier is True
+    assert config.sysu_sr_views_per_image == 0
+    assert config.sysu_sr_view_sampling == "paired"
+    assert config.sysu_sr_eval_mode == "marginalize"
+    assert config.sysu_sr_eval_top_k == 5
+    assert config.sysu_sr_view_manifest == str(manifest)
+
+
 def test_camera_diverse_sampler_covers_available_cameras_per_identity():
     labels = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1]).numpy()
     positions, _ = GenIdx(labels, labels)

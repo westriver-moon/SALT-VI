@@ -138,6 +138,9 @@ class PASDMultiviewIndex:
             for view in self.record(source_key)["views"]
         ]
 
+    def view_records(self, source_key: str) -> list[dict]:
+        return [dict(view) for view in self.record(source_key)["views"]]
+
 
 @lru_cache(maxsize=8)
 def load_index(manifest_path: str, data_root: str, output_root: str, views: int):
@@ -215,3 +218,41 @@ def eval_view_path(
         int(views),
     )
     return str(index.image_path(index.key_for_path(image_path), int(view_index)))
+
+
+def eval_views(
+    image_path: str | Path,
+    data_root: str | Path,
+    output_root: str | Path,
+    manifest_path: str | Path,
+    top_k: int,
+    views: int = 0,
+) -> tuple[list[str], list[float]]:
+    """Return deterministic top-k paths and normalized weights for feature marginalization.
+
+    Dynamic QRI manifests may contain one to five worlds. Short sources are padded
+    with their first image and zero weights so the default DataLoader can collate a
+    fixed tensor without treating padding as probability mass.
+    """
+    top_k = int(top_k)
+    if not 1 <= top_k <= 5:
+        raise ValueError("SYSU marginalization top_k must be in [1, 5]")
+    index = load_index(
+        str(Path(manifest_path).expanduser().resolve()),
+        str(Path(data_root).expanduser().resolve()),
+        str(Path(output_root).expanduser().resolve()),
+        int(views),
+    )
+    key = index.key_for_path(image_path)
+    ranked = sorted(
+        index.view_records(key),
+        key=lambda view: (-float(view["hypothesis_weight"]), int(view["view_index"])),
+    )[:top_k]
+    paths = [str(index.image_path(key, int(view["view_index"]))) for view in ranked]
+    weights = [float(view["hypothesis_weight"]) for view in ranked]
+    total = sum(weights)
+    weights = [weight / total for weight in weights]
+    while len(paths) < top_k:
+        paths.append(paths[0])
+        weights.append(0.0)
+    return paths, weights

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from salt_vi.retrieval import get_retrieval_protocol
 from salt_vi.utils import eval_llcm, eval_regdb, eval_sysu
@@ -10,6 +11,34 @@ def _eval_image_feature(base, visual_output, mode="RGB", use_backup=False):
         feat = base.backup_pool(visual_output).flatten(1)
         return base.backup_classifier(feat)
     return base.classifier(base.extract_global_feat(visual_output), mode)
+
+
+def _marginalized_image_feature(
+    base,
+    image,
+    view_weights,
+    *,
+    modality,
+    mode,
+    use_backup=False,
+):
+    if image.ndim == 4:
+        visual = base.encode_image_featmap(image, modality)
+        return _eval_image_feature(base, visual, mode=mode, use_backup=use_backup)
+    if image.ndim != 5 or view_weights is None:
+        raise ValueError(
+            "QRI feature marginalization expects images [B,K,C,H,W] and view_weights [B,K]"
+        )
+    batch, views = image.shape[:2]
+    flat = image.reshape(batch * views, *image.shape[2:])
+    visual = base.encode_image_featmap(flat, modality)
+    features = _eval_image_feature(
+        base, visual, mode=mode, use_backup=use_backup
+    ).reshape(batch, views, -1)
+    features = F.normalize(features.float(), dim=-1)
+    weights = view_weights.to(features.device, dtype=features.dtype)
+    weights = weights / weights.sum(dim=1, keepdim=True).clamp_min(1e-12)
+    return F.normalize((features * weights.unsqueeze(-1)).sum(dim=1), dim=-1)
 
 
 def test(base, loader, config, device):
@@ -35,18 +64,25 @@ def _extract_query(base, query_loader, modalities, config, device):
     with torch.no_grad():
         for batch in query_loader:
             image = batch["img"].to(device)
+            view_weights = batch.get("view_weights")
+            if view_weights is not None:
+                view_weights = view_weights.to(device)
             text = (
                 batch["text"].to(device).long()
                 if "Fusion" in modalities or "Text" in modalities
                 else None
             )
             if "IR" in modalities:
-                visual = base.encode_image_featmap(image, "ir")
                 _append(
                     features,
                     "IR",
-                    _eval_image_feature(
-                        base, visual, mode="IR", use_backup=config.Fix_Visual
+                    _marginalized_image_feature(
+                        base,
+                        image,
+                        view_weights,
+                        modality="ir",
+                        mode="IR",
+                        use_backup=config.Fix_Visual,
                     ),
                 )
             if "Fusion" in modalities:
@@ -73,13 +109,32 @@ def _extract_gallery(base, gallery_loader, modalities, config, device):
     with torch.no_grad():
         for batch in gallery_loader:
             image = batch["img"].to(device)
-            visual = base.encode_image_featmap(image, "rgb")
-            _append(features, "RGB", _eval_image_feature(base, visual))
+            view_weights = batch.get("view_weights")
+            if view_weights is not None:
+                view_weights = view_weights.to(device)
+            _append(
+                features,
+                "RGB",
+                _marginalized_image_feature(
+                    base,
+                    image,
+                    view_weights,
+                    modality="rgb",
+                    mode="RGB",
+                ),
+            )
             if "IR" in modalities and config.Fix_Visual:
                 _append(
                     features,
                     "IR_RGB",
-                    _eval_image_feature(base, visual, use_backup=True),
+                    _marginalized_image_feature(
+                        base,
+                        image,
+                        view_weights,
+                        modality="rgb",
+                        mode="RGB",
+                        use_backup=True,
+                    ),
                 )
     return _concatenate(features)
 

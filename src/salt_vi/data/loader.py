@@ -269,6 +269,8 @@ class Loader:
         self.sysu_sr_views_per_image = int(getattr(config, "sysu_sr_views_per_image", 1))
         self.sysu_sr_view_sampling = getattr(config, "sysu_sr_view_sampling", "independent")
         self.sysu_sr_eval_view_index = int(getattr(config, "sysu_sr_eval_view_index", 0))
+        self.sysu_sr_eval_mode = str(getattr(config, "sysu_sr_eval_mode", "fixed"))
+        self.sysu_sr_eval_top_k = int(getattr(config, "sysu_sr_eval_top_k", 5))
         self.llm_aug = config.llm_aug
         self.llm_aug_prob = config.llm_aug_prob
         if "Text" in config.training_mode:
@@ -388,6 +390,8 @@ class Loader:
                                             sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                             sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                             sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
+                                            sysu_sr_eval_mode=self.sysu_sr_eval_mode,
+                                            sysu_sr_eval_top_k=self.sysu_sr_eval_top_k,
                                             source_modality="ir", caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
@@ -422,6 +426,8 @@ class Loader:
                                         sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                         sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
+                                        sysu_sr_eval_mode=self.sysu_sr_eval_mode,
+                                        sysu_sr_eval_top_k=self.sysu_sr_eval_top_k,
                                         source_modality="rgb",
                                         caption_seed=self.eval_caption_seed)
                 gallery_samples_list.append(gallery_samples)

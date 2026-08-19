@@ -327,6 +327,24 @@ def validate_runtime_config(config):
         eval_index = int(_value(config, "sysu_sr_eval_view_index", 0))
         if eval_index < 0 or (views and eval_index >= views):
             raise ValueError(f"sysu_sr_eval_view_index must be in [0, {views - 1}]")
+        eval_mode = str(_value(config, "sysu_sr_eval_mode", "fixed")).lower()
+        if eval_mode not in ("fixed", "marginalize"):
+            raise ValueError("sysu_sr_eval_mode must be fixed or marginalize")
+        eval_top_k = int(_value(config, "sysu_sr_eval_top_k", 5))
+        if not 1 <= eval_top_k <= 5:
+            raise ValueError("sysu_sr_eval_top_k must be in [1, 5]")
+        if eval_mode == "marginalize" and str(
+            _value(config, "retrieval_backend", "identity_text")
+        ) != "identity_text":
+            raise ValueError(
+                "SYSU QRI feature marginalization currently requires identity_text retrieval"
+            )
+        if eval_mode == "marginalize" and "Fusion" in str(
+            _value(config, "test_modality", "")
+        ):
+            raise ValueError(
+                "SYSU QRI feature marginalization supports image retrieval features only"
+            )
         if (int(_value(config, "img_h", 0)), int(_value(config, "img_w", 0))) != (512, 256):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
 
