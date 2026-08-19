@@ -69,7 +69,9 @@ def _flat_rows(records: Iterable[dict], weight_field: str) -> list[dict]:
         weights = [float(world[weight_field]) for world in worlds]
         total = sum(weights)
         if total <= 0:
-            raise ValueError(f"source {record['source_key']} has no {weight_field} mass")
+            raise ValueError(
+                f"source {record['source_key']} has no {weight_field} mass"
+            )
         for index, (world, weight) in enumerate(zip(worlds, weights)):
             row = {
                 key: record[key]
@@ -88,6 +90,8 @@ def _flat_rows(records: Iterable[dict], weight_field: str) -> list[dict]:
                     "world_id": world["world_id"],
                     "assignments": world["assignments"],
                     "proposal_mass": float(world["proposal_mass"]),
+                    "coverage_sample_count": int(world.get("coverage_sample_count", 0)),
+                    "free_sample_count": int(world.get("free_sample_count", 0)),
                     "uniform_weight": float(world["uniform_weight"]),
                     "proposal_weight": float(world["proposal_weight"]),
                     "posterior_weight": float(world["posterior_weight"]),
@@ -136,6 +140,10 @@ def consolidate_manifests(
             f"QRI source record count {len(records)} != expected {expected_source_count}"
         )
     records = sorted(records, key=lambda record: record["source_key"])
+    plugins = {str(record["plugin"]) for record in records}
+    if len(plugins) != 1:
+        raise ValueError(f"QRI manifest cannot mix plugin versions: {sorted(plugins)}")
+    plugin = next(iter(plugins))
     raw_path = output_root / "manifests" / "regional.jsonl"
     raw_sha = _atomic_jsonl(raw_path, records)
     summaries = {}
@@ -145,7 +153,7 @@ def consolidate_manifests(
         digest = _atomic_jsonl(path, rows)
         summary = {
             "schema_version": 2,
-            "plugin": "qwen-regional-imagination-v1",
+            "plugin": plugin,
             "weight_variant": variant,
             "views_per_source": 0,
             "source_count": len(records),
@@ -156,7 +164,9 @@ def consolidate_manifests(
             "manifest_jsonl_sha256": digest,
             "regional_manifest": str(raw_path.relative_to(output_root)),
             "regional_manifest_sha256": raw_sha,
-            "fallback_source_count": sum(bool(record.get("fallback")) for record in records),
+            "fallback_source_count": sum(
+                bool(record.get("fallback")) for record in records
+            ),
         }
         atomic_json(path.with_suffix(".json"), summary)
         summaries[variant] = summary

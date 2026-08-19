@@ -84,13 +84,17 @@ def perturb(image: Image.Image, spec: TTASpec) -> Image.Image:
     raise ValueError(f"unsupported QRI TTA transform: {spec.name}")
 
 
-def inverse_align(restored: Image.Image, spec: TTASpec, lr_size: tuple[int, int]) -> Image.Image:
+def inverse_align(
+    restored: Image.Image, spec: TTASpec, lr_size: tuple[int, int]
+) -> Image.Image:
     if spec.name != "shift":
         return restored.convert("RGB")
     dx, dy = spec.value
     scale_x = restored.width / float(lr_size[0])
     scale_y = restored.height / float(lr_size[1])
-    return _shift(restored, -int(round(int(dx) * scale_x)), -int(round(int(dy) * scale_y)))
+    return _shift(
+        restored, -int(round(int(dx) * scale_x)), -int(round(int(dy) * scale_y))
+    )
 
 
 def restore_tta_set(
@@ -124,9 +128,12 @@ def _gray(image: Image.Image) -> np.ndarray:
 
 def _high_pass(image: Image.Image) -> np.ndarray:
     base = _gray(image)
-    blurred = np.asarray(
-        image.convert("L").filter(ImageFilter.GaussianBlur(1.0)), dtype=np.float32
-    ) / 255.0
+    blurred = (
+        np.asarray(
+            image.convert("L").filter(ImageFilter.GaussianBlur(1.0)), dtype=np.float32
+        )
+        / 255.0
+    )
     return base - blurred
 
 
@@ -136,12 +143,14 @@ def swin_instability(
     mask: np.ndarray,
 ) -> float:
     if len(variants) != 12:
-        raise ValueError(f"QRI-v1 requires 12 SwinIR TTA outputs, got {len(variants)}")
+        raise ValueError(f"QRI requires 12 SwinIR TTA outputs, got {len(variants)}")
     selected = np.asarray(mask, dtype=bool)
     if selected.shape != (reference.height, reference.width) or not selected.any():
         raise ValueError("regional instability requires a non-empty aligned mask")
     reference_hf = _high_pass(reference)
-    residuals = np.stack([np.abs(_high_pass(image) - reference_hf) for image in variants])
+    residuals = np.stack(
+        [np.abs(_high_pass(image) - reference_hf) for image in variants]
+    )
     pixel_median = np.median(residuals, axis=0)
     values = pixel_median[selected]
     center = float(np.median(values))

@@ -52,6 +52,7 @@ class PluginConfig:
     enable_xformers: bool = True
     target_height: int = 512
     target_width: int = 256
+    geometry_mode: str = "person_fit_blurred_background"
     views_per_source: int = 1
     asset_sha256: dict[str, str] = field(default_factory=dict)
     png_compress_level: int = 4
@@ -74,7 +75,9 @@ class PluginConfig:
         return {
             "dataset": self.dataset,
             "dataset_root": str(self.dataset_root),
-            "captions": {name: str(path) for name, path in sorted(self.captions.items())},
+            "captions": {
+                name: str(path) for name, path in sorted(self.captions.items())
+            },
             "mixed_precision": self.mixed_precision,
             "process_size": self.process_size,
             "num_inference_steps": self.num_inference_steps,
@@ -92,11 +95,14 @@ class PluginConfig:
             "enable_xformers": self.enable_xformers,
             "target_height": self.target_height,
             "target_width": self.target_width,
+            "geometry_mode": self.geometry_mode,
             "views_per_source": self.views_per_source,
             "seed": self.seed,
             "asset_sha256": dict(sorted(self.asset_sha256.items())),
             "png_compress_level": self.png_compress_level,
-            "person_detector_model": str(self.person_detector_model) if self.person_detector_model else None,
+            "person_detector_model": str(self.person_detector_model)
+            if self.person_detector_model
+            else None,
             "person_detector_confidence": self.person_detector_confidence,
             "person_margin": self.person_margin,
             "background_blur_radius": self.background_blur_radius,
@@ -105,19 +111,28 @@ class PluginConfig:
 
     def validate_assets(self) -> None:
         files = {
-            "sd_text_encoder": self.pretrained_model_path / "text_encoder/model.safetensors",
-            "sd_text_encoder_config": self.pretrained_model_path / "text_encoder/config.json",
-            "sd_vae": self.pretrained_model_path / "vae/diffusion_pytorch_model.safetensors",
+            "sd_text_encoder": self.pretrained_model_path
+            / "text_encoder/model.safetensors",
+            "sd_text_encoder_config": self.pretrained_model_path
+            / "text_encoder/config.json",
+            "sd_vae": self.pretrained_model_path
+            / "vae/diffusion_pytorch_model.safetensors",
             "sd_vae_config": self.pretrained_model_path / "vae/config.json",
-            "sd_scheduler_config": self.pretrained_model_path / "scheduler/scheduler_config.json",
+            "sd_scheduler_config": self.pretrained_model_path
+            / "scheduler/scheduler_config.json",
             "sd_tokenizer_vocab": self.pretrained_model_path / "tokenizer/vocab.json",
             "sd_tokenizer_merges": self.pretrained_model_path / "tokenizer/merges.txt",
-            "sd_tokenizer_config": self.pretrained_model_path / "tokenizer/tokenizer_config.json",
-            "sd_tokenizer_special_tokens": self.pretrained_model_path / "tokenizer/special_tokens_map.json",
-            "sd_feature_extractor_config": self.pretrained_model_path / "feature_extractor/preprocessor_config.json",
-            "pasd_unet": self.pasd_model_path / "unet/diffusion_pytorch_model.safetensors",
+            "sd_tokenizer_config": self.pretrained_model_path
+            / "tokenizer/tokenizer_config.json",
+            "sd_tokenizer_special_tokens": self.pretrained_model_path
+            / "tokenizer/special_tokens_map.json",
+            "sd_feature_extractor_config": self.pretrained_model_path
+            / "feature_extractor/preprocessor_config.json",
+            "pasd_unet": self.pasd_model_path
+            / "unet/diffusion_pytorch_model.safetensors",
             "pasd_unet_config": self.pasd_model_path / "unet/config.json",
-            "pasd_controlnet": self.pasd_model_path / "controlnet/diffusion_pytorch_model.safetensors",
+            "pasd_controlnet": self.pasd_model_path
+            / "controlnet/diffusion_pytorch_model.safetensors",
             "pasd_controlnet_config": self.pasd_model_path / "controlnet/config.json",
             "person_detector": self.person_detector_model,
         }
@@ -140,7 +155,14 @@ class PluginConfig:
     def from_yaml(cls, path: str | Path) -> "PluginConfig":
         path = Path(path).expanduser().resolve()
         values = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        required = ("dataset", "dataset_root", "captions", "output_root", "pretrained_model_path", "pasd_model_path")
+        required = (
+            "dataset",
+            "dataset_root",
+            "captions",
+            "output_root",
+            "pretrained_model_path",
+            "pasd_model_path",
+        )
         missing = [key for key in required if not values.get(key)]
         if missing:
             raise ValueError(f"missing required plugin settings: {missing}")
@@ -148,7 +170,12 @@ class PluginConfig:
         if values["dataset"] not in SUPPORTED_DATASETS:
             raise ValueError(f"dataset must be one of {SUPPORTED_DATASETS}")
         base = path.parent
-        for key in ("dataset_root", "output_root", "pretrained_model_path", "pasd_model_path"):
+        for key in (
+            "dataset_root",
+            "output_root",
+            "pretrained_model_path",
+            "pasd_model_path",
+        ):
             values[key] = _resolve(values[key], base)
         if not values["dataset_root"].is_dir():
             raise FileNotFoundError(values["dataset_root"])
@@ -158,22 +185,50 @@ class PluginConfig:
         captions = values["captions"]
         if not isinstance(captions, Mapping) or set(captions) != {"rgb", "ir"}:
             raise ValueError("captions must contain exactly rgb and ir JSON paths")
-        values["captions"] = {name: _resolve(value, base) for name, value in captions.items()}
+        values["captions"] = {
+            name: _resolve(value, base) for name, value in captions.items()
+        }
         for caption in values["captions"].values():
             if not caption.is_file():
                 raise FileNotFoundError(caption)
         detector = values.get("person_detector_model")
         values["person_detector_model"] = _resolve(detector, base) if detector else None
-        if values["person_detector_model"] and not values["person_detector_model"].is_file():
+        if (
+            values["person_detector_model"]
+            and not values["person_detector_model"].is_file()
+        ):
             raise FileNotFoundError(values["person_detector_model"])
-        values["gpu_allowlist"] = tuple(int(value) for value in values.get("gpu_allowlist", (1, 2, 3)))
-        if not values["gpu_allowlist"] or 0 in values["gpu_allowlist"] or any(value not in (1, 2, 3) for value in values["gpu_allowlist"]):
-            raise ValueError("gpu_allowlist must be a non-empty subset of physical GPUs 1, 2, 3")
+        values["gpu_allowlist"] = tuple(
+            int(value) for value in values.get("gpu_allowlist", (1, 2, 3))
+        )
+        if (
+            not values["gpu_allowlist"]
+            or 0 in values["gpu_allowlist"]
+            or any(value not in (1, 2, 3) for value in values["gpu_allowlist"])
+        ):
+            raise ValueError(
+                "gpu_allowlist must be a non-empty subset of physical GPUs 1, 2, 3"
+            )
         if int(values.get("views_per_source", 1)) != 1:
-            raise ValueError("the unified PASD protocol requires exactly one view per source")
+            raise ValueError(
+                "the unified PASD protocol requires exactly one view per source"
+            )
         values["views_per_source"] = 1
-        if (int(values.get("target_width", 256)), int(values.get("target_height", 512))) != (256, 512):
-            raise ValueError("the unified PASD protocol requires target_width=256 and target_height=512")
+        if (
+            int(values.get("target_width", 256)),
+            int(values.get("target_height", 512)),
+        ) != (256, 512):
+            raise ValueError(
+                "the unified PASD protocol requires target_width=256 and target_height=512"
+            )
+        geometry_mode = str(
+            values.get("geometry_mode", "person_fit_blurred_background")
+        )
+        if geometry_mode not in {"person_fit_blurred_background", "direct_rewrite"}:
+            raise ValueError(
+                "geometry_mode must be person_fit_blurred_background or direct_rewrite"
+            )
+        values["geometry_mode"] = geometry_mode
         if not 0 <= int(values.get("png_compress_level", 4)) <= 9:
             raise ValueError("png_compress_level must be in [0, 9]")
         if float(values.get("background_blur_radius", 24.0)) <= 0:

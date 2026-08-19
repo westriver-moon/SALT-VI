@@ -26,6 +26,16 @@ class Candidate:
         return self.state, self.value
 
 
+@dataclass(frozen=True)
+class JointSample:
+    assignments: dict[str, Candidate]
+    origin: str
+
+    def __post_init__(self):
+        if self.origin not in {"coverage", "free"}:
+            raise ValueError("joint sample origin must be coverage or free")
+
+
 @dataclass
 class Region:
     region_id: str
@@ -39,6 +49,8 @@ class Region:
     u_swin_normalized: float = 0.0
     u_blur: float = 0.0
     u_qwen: float = 0.0
+    u_qwen_proposal: float = 0.0
+    u_qwen_compatible: float = 0.0
     candidates: list[Candidate] = field(default_factory=list)
     critic: list[dict[str, Any]] = field(default_factory=list)
 
@@ -68,6 +80,8 @@ class World:
     assignments: list[Assignment]
     sample_count: int
     proposal_mass: float
+    coverage_sample_count: int = 0
+    free_sample_count: int = 0
     caption: str = ""
     seed: int = 0
     mask_path: str | None = None

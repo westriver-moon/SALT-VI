@@ -41,6 +41,7 @@ class RegionalConfig:
     schema_version: int
     dataset_root: Path
     output_root: Path
+    plugin_version: str = "qri-v1"
     modalities: tuple[str, ...] = ("rgb", "ir")
     source_size_hw: tuple[int, int] = (256, 128)
     output_size_hw: tuple[int, int] = (512, 256)
@@ -48,6 +49,10 @@ class RegionalConfig:
     qwen_sample_count: int = 16
     selected_region_count: int = 3
     max_worlds: int = 5
+    proposal_rounds: int = 1
+    coverage_sampling: bool = False
+    ensure_editing_world_per_region: bool = False
+    roi_board_size_px: int = 384
     mask_dilation_px: int = 4
     mask_feather_px: float = 3.0
     calibration_alpha: float = 1.0
@@ -62,15 +67,28 @@ class RegionalConfig:
     swinir: dict[str, Any] = field(default_factory=dict)
     identity: dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def plugin_id(self) -> str:
+        return {
+            "qri-v1": "qwen-regional-imagination-v1",
+            "qri-v2": "qwen-regional-imagination-v2",
+        }[self.plugin_version]
+
     def validate(self) -> "RegionalConfig":
-        if int(self.schema_version) != 1:
-            raise ValueError("QRI config schema_version must be 1")
+        expected_schema = {"qri-v1": 1, "qri-v2": 2}
+        if self.plugin_version not in expected_schema:
+            raise ValueError("plugin_version must be qri-v1 or qri-v2")
+        if int(self.schema_version) != expected_schema[self.plugin_version]:
+            raise ValueError(
+                f"{self.plugin_version} config schema_version must be "
+                f"{expected_schema[self.plugin_version]}"
+            )
         if set(self.modalities) != {"rgb", "ir"}:
-            raise ValueError("QRI-v1 formal SYSU runs require both rgb and ir")
+            raise ValueError("formal QRI SYSU runs require both rgb and ir")
         if tuple(self.source_size_hw) != (256, 128):
-            raise ValueError("QRI-v1 source_size_hw must be [256, 128]")
+            raise ValueError("QRI source_size_hw must be [256, 128]")
         if tuple(self.output_size_hw) != (512, 256):
-            raise ValueError("QRI-v1 output_size_hw must be [512, 256]")
+            raise ValueError("QRI output_size_hw must be [512, 256]")
         expected = {
             "tta_count": 12,
             "qwen_sample_count": 16,
@@ -80,9 +98,9 @@ class RegionalConfig:
         }
         for name, required in expected.items():
             if int(getattr(self, name)) != required:
-                raise ValueError(f"QRI-v1 {name} must be {required}")
+                raise ValueError(f"QRI {name} must be {required}")
         if float(self.mask_feather_px) != 3.0:
-            raise ValueError("QRI-v1 mask_feather_px must be 3.0")
+            raise ValueError("QRI mask_feather_px must be 3.0")
         coefficients = (
             self.calibration_alpha,
             self.calibration_beta,
@@ -90,11 +108,29 @@ class RegionalConfig:
             self.calibration_delta,
         )
         if tuple(float(value) for value in coefficients) != (1.0, 8.0, 4.0, 16.0):
-            raise ValueError("QRI-v1 calibration coefficients must be [1, 8, 4, 16]")
+            raise ValueError("QRI calibration coefficients must be [1, 8, 4, 16]")
+        if self.plugin_version == "qri-v1":
+            if int(self.proposal_rounds) != 1:
+                raise ValueError("QRI-v1 proposal_rounds must be 1")
+            if self.coverage_sampling or self.ensure_editing_world_per_region:
+                raise ValueError("QRI-v1 does not enable V2 coverage selection")
+            if int(self.roi_board_size_px) != 384:
+                raise ValueError("QRI-v1 roi_board_size_px must be 384")
+        else:
+            if int(self.proposal_rounds) != 3:
+                raise ValueError("QRI-v2 proposal_rounds must be 3")
+            if not self.coverage_sampling or not self.ensure_editing_world_per_region:
+                raise ValueError(
+                    "QRI-v2 requires coverage sampling and editing-world coverage"
+                )
+            if int(self.roi_board_size_px) != 512:
+                raise ValueError("QRI-v2 roi_board_size_px must be 512")
         return self
 
 
-def load_regional_config(path: str | Path, *, require_resolved: bool = True) -> RegionalConfig:
+def load_regional_config(
+    path: str | Path, *, require_resolved: bool = True
+) -> RegionalConfig:
     config_path = Path(path).expanduser().resolve()
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     expanded = _expand(raw)
@@ -105,7 +141,11 @@ def load_regional_config(path: str | Path, *, require_resolved: bool = True) -> 
 
     def resolve_path(value: str | Path) -> Path:
         candidate = Path(value).expanduser()
-        return candidate.resolve() if candidate.is_absolute() else (base / candidate).resolve()
+        return (
+            candidate.resolve()
+            if candidate.is_absolute()
+            else (base / candidate).resolve()
+        )
 
     assets = {
         str(name): Asset(resolve_path(spec["path"]), str(spec["sha256"]).lower())
@@ -113,7 +153,9 @@ def load_regional_config(path: str | Path, *, require_resolved: bool = True) -> 
     }
     expanded["dataset_root"] = resolve_path(expanded["dataset_root"])
     expanded["output_root"] = resolve_path(expanded["output_root"])
-    expanded["modalities"] = tuple(str(item).lower() for item in expanded.get("modalities", ("rgb", "ir")))
+    expanded["modalities"] = tuple(
+        str(item).lower() for item in expanded.get("modalities", ("rgb", "ir"))
+    )
     expanded["source_size_hw"] = tuple(expanded.get("source_size_hw", (256, 128)))
     expanded["output_size_hw"] = tuple(expanded.get("output_size_hw", (512, 256)))
     expanded["assets"] = assets

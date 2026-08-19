@@ -2,8 +2,11 @@
 
 `pasd_plugin` is the single offline PASD generator for SYSU-MM01, RegDB, and LLCM.
 It creates one 256x512 PNG per official RGB and IR/NIR source image, including
-training and evaluation sources. Every output preserves the source aspect ratio:
-the complete source frame is uniformly fitted over a blurred, same-image background.
+training and evaluation sources. The default `person_fit_blurred_background` mode preserves
+source aspect ratio by uniformly fitting the complete frame over a blurred, same-image
+background. QRI uses the separate `direct_rewrite` mode: its input is already a canonical
+256×512 SwinIR canvas, so PASD must keep identity coordinates and is forbidden to detect,
+letterbox, pad, crop, or restore a different background canvas.
 
 Both modalities use PASD. Infrared/NIR PASD outputs are converted to three-channel
 greyscale after generation, preserving their modality contract.
@@ -20,7 +23,8 @@ The configuration carries the dataset root, both caption dictionaries, PASD asse
 output root, and GPU policy. `build-records` rejects missing or unused captions.
 `generate` is resumable and writes `build.json`, source metadata, `manifest.jsonl`,
 and `manifest.json`. `validate` checks source/output checksums, protocol membership,
-image integrity, and the no-stretch geometry invariant.
+image integrity, and the selected geometry invariant. Validation distinguishes the legacy
+aspect-preserving person-fit transform from QRI's identity-coordinate direct rewrite.
 
 RegDB emits one output per unique source and records membership for all ten trials;
 it never duplicates generated images by trial. SYSU records train/val/test identity

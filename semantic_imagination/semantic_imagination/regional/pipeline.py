@@ -8,7 +8,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from .calibration import CalibrationWeights, calibrate_world_weights, cosine_identity_energy
+from .calibration import (
+    CalibrationWeights,
+    calibrate_world_weights,
+    cosine_identity_energy,
+)
 from .composite import (
     atomic_mask,
     atomic_png,
@@ -22,9 +26,15 @@ from .config import RegionalConfig
 from .manifest import canonical_sha256, save_source_record, sha256_file
 from .qwen import RegionalReasoner, sample_joint_worlds
 from .roi import HumanROIGenerator
-from .runtime import IdentityBackend, PASDBackend
+from .runtime import IdentityBackend, PASDBackend, validate_qri_pasd_generation
 from .schema import Region, SourceItem, fallback_world
-from .tta import SwinBackend, blur_information, restore_tta_set, robust_category_normalize, swin_instability
+from .tta import (
+    SwinBackend,
+    blur_information,
+    restore_tta_set,
+    robust_category_normalize,
+    swin_instability,
+)
 from .worlds import build_worlds, edited_region_ids
 
 
@@ -51,8 +61,8 @@ class RegionalImaginationPipeline:
         self.identity = identity
         self.category_stats = category_stats or {}
         self.build_payload = {
-            "schema_version": 1,
-            "plugin": "qwen-regional-imagination-v1",
+            "schema_version": config.schema_version,
+            "plugin": config.plugin_id,
             "config": {
                 key: value
                 for key, value in asdict(config).items()
@@ -106,12 +116,19 @@ class RegionalImaginationPipeline:
             stats = self.category_stats.get(region.category, {})
             median = float(stats.get("median", global_median))
             iqr = float(stats.get("iqr", global_iqr))
-            region.u_swin_normalized = robust_category_normalize(region.u_swin, median, iqr)
+            region.u_swin_normalized = robust_category_normalize(
+                region.u_swin, median, iqr
+            )
 
     def _save_regions(self, artifact_dir: Path, regions: list[Region]) -> None:
         for region in regions:
             path = artifact_dir / "regions" / f"{region.region_id}.png"
-            atomic_mask(path, Image.fromarray(np.asarray(region.mask, dtype=np.uint8) * 255, mode="L"))
+            atomic_mask(
+                path,
+                Image.fromarray(
+                    np.asarray(region.mask, dtype=np.uint8) * 255, mode="L"
+                ),
+            )
             region.mask_path = self._relative(path)
             region.mask_sha256 = sha256_file(path)
 
@@ -123,21 +140,30 @@ class RegionalImaginationPipeline:
         reference: Image.Image,
         regions: list[Region],
         worlds,
-    ) -> None:
+    ) -> dict | None:
         control = artifact_dir / "swin_reference.png"
         atomic_png(control, reference)
         reference_feature = self.identity.feature(reference, source.modality)
         by_id = {region.region_id: region for region in regions}
         editable = [world for world in worlds if edited_region_ids(world)]
-        generated = self.pasd.generate(
-            control,
-            [world.caption for world in editable],
-            [world.seed for world in editable],
-            source.modality,
-        ) if editable else []
+        generation = (
+            self.pasd.generate(
+                control,
+                [world.caption for world in editable],
+                [world.seed for world in editable],
+                source.modality,
+            )
+            if editable
+            else None
+        )
+        generated = generation.images if generation is not None else []
+        if generation is not None:
+            validate_qri_pasd_generation(generation, reference.size)
         if len(generated) != len(editable):
             raise RuntimeError("PASD did not return one image for every editable world")
-        generated_by_id = {world.world_id: image for world, image in zip(editable, generated)}
+        generated_by_id = {
+            world.world_id: image for world, image in zip(editable, generated)
+        }
 
         for world in worlds:
             edited = edited_region_ids(world)
@@ -182,6 +208,7 @@ class RegionalImaginationPipeline:
                 delta=self.config.calibration_delta,
             ),
         )
+        return generation.geometry if generation is not None else None
 
     def _fallback_record(
         self,
@@ -197,8 +224,8 @@ class RegionalImaginationPipeline:
         world.output_sha256 = sha256_file(output_path)
         world.output_bytes = output_path.stat().st_size
         return {
-            "schema_version": 1,
-            "plugin": "qwen-regional-imagination-v1",
+            "schema_version": self.config.schema_version,
+            "plugin": self.config.plugin_id,
             "build_sha256": self.build_sha256,
             "source_key": source.source_key,
             "image": str(source.image),
@@ -209,6 +236,7 @@ class RegionalImaginationPipeline:
             "selected_region_ids": [],
             "regions": [],
             "worlds": [world.manifest()],
+            "pasd_geometry": None,
             "fallback": True,
             "failure": {
                 "type": type(error).__name__,
@@ -234,7 +262,11 @@ class RegionalImaginationPipeline:
             self._score_regions(reference, variants, regions)
             selected = sorted(
                 regions,
-                key=lambda region: (-region.u_swin_normalized, -region.u_swin, region.region_id),
+                key=lambda region: (
+                    -region.u_swin_normalized,
+                    -region.u_swin,
+                    region.region_id,
+                ),
             )[: self.config.selected_region_count]
             if len(selected) != self.config.selected_region_count:
                 raise ValueError("ROI stack produced fewer than three regions")
@@ -247,7 +279,9 @@ class RegionalImaginationPipeline:
                 selected,
                 proposals,
                 self.config.qwen_sample_count,
-                self.config.seed + int(hashlib.sha256(source.source_key.encode()).hexdigest()[:8], 16),
+                self.config.seed
+                + int(hashlib.sha256(source.source_key.encode()).hexdigest()[:8], 16),
+                coverage_first=self.config.coverage_sampling,
             )
             worlds = build_worlds(
                 self.reasoner,
@@ -258,11 +292,14 @@ class RegionalImaginationPipeline:
                 samples,
                 max_worlds=self.config.max_worlds,
                 seed=self.config.seed,
+                ensure_editing_coverage=self.config.ensure_editing_world_per_region,
             )
-            self._materialize_worlds(source, artifact_dir, lr, reference, selected, worlds)
+            pasd_geometry = self._materialize_worlds(
+                source, artifact_dir, lr, reference, selected, worlds
+            )
             record = {
-                "schema_version": 1,
-                "plugin": "qwen-regional-imagination-v1",
+                "schema_version": self.config.schema_version,
+                "plugin": self.config.plugin_id,
                 "build_sha256": self.build_sha256,
                 "source_key": source.source_key,
                 "image": str(source.image),
@@ -274,6 +311,7 @@ class RegionalImaginationPipeline:
                 "selected_region_ids": [region.region_id for region in selected],
                 "regions": [region.manifest() for region in regions],
                 "worlds": [world.manifest() for world in worlds],
+                "pasd_geometry": pasd_geometry,
                 "fallback": False,
             }
         except Exception as error:

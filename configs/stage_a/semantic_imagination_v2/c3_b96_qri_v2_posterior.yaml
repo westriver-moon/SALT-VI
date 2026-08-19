@@ -1,0 +1,6 @@
+extends: qri_v2_common.yaml
+
+config_select: configs/stage_a/semantic_imagination_v2/c3_b96_qri_v2_posterior.yaml
+metric_experiment_id: C3-B96-QRI-V2-POSTERIOR
+metric_events_path: ${SALT_QRI_V2_EXPERIMENT_ROOT}/events/c3_b96_qri_v2_posterior.jsonl
+output_root: ${SALT_QRI_V2_EXPERIMENT_ROOT}/c3_b96_qri_v2_posterior

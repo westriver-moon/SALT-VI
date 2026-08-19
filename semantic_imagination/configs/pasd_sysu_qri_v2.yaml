@@ -3,7 +3,7 @@ dataset_root: /home/cgv841/datasets/SYSU-MM01
 captions:
   rgb: /home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json
   ir: /home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json
-output_root: /home/lab929/ybj/experiments/qri-v1/runtime/pasd
+output_root: /home/lab929/ybj/experiments/qri-v2/runtime/pasd
 pretrained_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/stable-diffusion-v1-5
 pasd_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/pasd/checkpoint-100000
 device: cuda:1

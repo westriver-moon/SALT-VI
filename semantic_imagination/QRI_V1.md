@@ -17,7 +17,7 @@ flowchart TD
     SWIN --> QWEN
     TOP3 --> QWEN
     QWEN --> WORLDS[最多 5 个联合语义世界]
-    WORLDS --> PASD[PASD 整图实例化]
+    WORLDS --> PASD[PASD canonical canvas 直接改写]
     PASD --> MASK[4 px dilation + 3 px feather]
     SWIN --> MASK
     MASK --> FINAL[区域 PASD + 区域外 SwinIR]
@@ -36,7 +36,9 @@ flowchart TD
 - Qwen 为三个 ROI 先提出 2–4 个互斥候选，再进行 16 次联合世界采样。critic 以最多四个 world 的固定小批次校验，避免长 JSON 截断；它丢弃 contradicted 世界，保留并标记 compatible-prior-only，最终最多保留 5 个世界。
 - llama.cpp 请求显式传入 `enable_thinking=true` 与 `reasoning_effort=high`；插件只持久化结构化 evidence/candidate/critic 结果，不保存内部 reasoning 文本。
 - `absent` / `no_additional_detail` 不产生编辑 mask。全 abstain 世界直接复制 SwinIR，不运行 PASD。
-- PASD v1 仍整图生成；最终使用 soft mask 复合，不修改 diffusion latent。
+- PASD v1 仍整图生成；输入必须是与 SwinIR/ROI mask 共用坐标的 256×512 canonical
+  canvas，adapter 使用 `direct_rewrite`，不再执行人物检测、letterbox、模糊背景填充或
+  背景恢复；最终使用 soft mask 复合，不修改 diffusion latent。
 - calibrated weight 固定为：`log p = log(q + 1e-8) - 8 E_LR - 4 E_ID - 16 E_edit + const`。
 - 任一源图像处理失败时，只输出一张 SwinIR world，三种权重均为 1，并在 source metadata 中保留错误审计。
 - 训练使用动态视图、paired sampling；测试对按权重排序的 top-5 world feature 先逐一归一化、加权求和，再归一化最终 feature。少于 5 个世界时使用零权重 padding，不增加概率质量。
@@ -45,7 +47,7 @@ flowchart TD
 
 - `semantic_imagination/regional/`：区域插件实现；重依赖均为惰性加载。
 - `configs/qri_v1_sysu.yaml`：生成期唯一正式配置。
-- `configs/pasd_sysu_qri_v1.yaml`：QRI 专用 PASD adapter 配置，使用绝对共享 checkpoint 路径与既有资产哈希，不依赖当前 Git worktree 的位置。
+- `configs/pasd_sysu_qri_v1.yaml`：QRI 专用 PASD `direct_rewrite` 配置，使用绝对共享 checkpoint 路径与既有资产哈希，不依赖当前 Git worktree 的位置。
 - `../configs/stage_a/semantic_imagination/`：三个彼此隔离的 C3-b96 训练配置。
 - `../configs/pipelines/sysu_qri_v1.yaml`：预注册的 smoke、pilot、训练和测试契约。
 - `../scripts/experiments/run_qri_v1_pipeline.py`：只读计划/预检/显式训练入口；正式训练必须提供含 `train_epoch=23` 的 C3-b96 event stream。

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -10,6 +11,12 @@ from PIL import Image
 from .config import RegionalConfig
 
 
+@dataclass
+class PASDGeneration:
+    images: list[Image.Image]
+    geometry: dict
+
+
 class PASDBackend(Protocol):
     def generate(
         self,
@@ -17,7 +24,46 @@ class PASDBackend(Protocol):
         captions: list[str],
         seeds: list[int],
         modality: str,
-    ) -> list[Image.Image]: ...
+    ) -> PASDGeneration: ...
+
+
+def validate_qri_pasd_generation(
+    generation: PASDGeneration,
+    expected_size: tuple[int, int],
+) -> PASDGeneration:
+    expected = [int(expected_size[0]), int(expected_size[1])]
+    geometry = generation.geometry
+    if geometry.get("mode") != "direct_rewrite":
+        raise ValueError("QRI requires PASD direct_rewrite geometry")
+    if (
+        geometry.get("source_size") != expected
+        or geometry.get("target_size") != expected
+    ):
+        raise ValueError("QRI PASD source and target canvases must match SwinIR")
+    if geometry.get("resized_size") != expected or geometry.get("padding") != [
+        0,
+        0,
+        0,
+        0,
+    ]:
+        raise ValueError(
+            "QRI PASD direct rewrite cannot resize or pad the control canvas"
+        )
+    if geometry.get("transform") != {
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+        "offset_x": 0.0,
+        "offset_y": 0.0,
+    }:
+        raise ValueError("QRI PASD direct rewrite requires identity coordinates")
+    if geometry.get("background_restoration") is not False:
+        raise ValueError("QRI PASD direct rewrite cannot restore a background canvas")
+    for image in generation.images:
+        if image.size != tuple(expected):
+            raise ValueError(
+                f"QRI PASD image size {image.size} does not match canonical {tuple(expected)}"
+            )
+    return generation
 
 
 class IdentityBackend(Protocol):
@@ -73,6 +119,12 @@ class ExistingPASDBackend:
         config = PluginConfig.from_yaml(config_path)
         if device is not None:
             config.device = str(device)
+        if config.geometry_mode != "direct_rewrite":
+            raise ValueError(
+                "QRI PASD adapters must use geometry_mode=direct_rewrite; person-fit and "
+                "background restoration do not share the SwinIR/ROI coordinate system"
+            )
+        self.config = config
         self.generator = PASDGenerator(config)
 
     def generate(
@@ -81,15 +133,21 @@ class ExistingPASDBackend:
         captions: list[str],
         seeds: list[int],
         modality: str,
-    ) -> list[Image.Image]:
-        images, _ = self.generator.generate_views(
+    ) -> PASDGeneration:
+        from pasd_plugin.validation import validate_geometry
+
+        images, geometry = self.generator.generate_views(
             control_path,
             captions,
             seeds,
             modality=modality,
             batch_size=1,
         )
-        return [image.convert("RGB") for image in images]
+        validate_geometry(geometry, self.config)
+        return PASDGeneration(
+            images=[image.convert("RGB") for image in images],
+            geometry=geometry,
+        )
 
 
 class SALTIdentityBackend:
@@ -114,8 +172,12 @@ class SALTIdentityBackend:
             self.model, str(Path(checkpoint).expanduser().resolve()), self.device
         )
         self.model.set_eval()
-        self.mean = torch.tensor([0.485, 0.456, 0.406], device=self.device).view(1, 3, 1, 1)
-        self.std = torch.tensor([0.229, 0.224, 0.225], device=self.device).view(1, 3, 1, 1)
+        self.mean = torch.tensor([0.485, 0.456, 0.406], device=self.device).view(
+            1, 3, 1, 1
+        )
+        self.std = torch.tensor([0.229, 0.224, 0.225], device=self.device).view(
+            1, 3, 1, 1
+        )
 
     def feature(self, image: Image.Image, modality: str) -> np.ndarray:
         torch = self.torch

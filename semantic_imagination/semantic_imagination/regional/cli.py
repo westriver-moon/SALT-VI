@@ -29,6 +29,7 @@ from .manifest import (  # noqa: E402
 )
 from .pipeline import RegionalImaginationPipeline, category_statistics  # noqa: E402
 from .qwen import LlamaServerQwenReasoner  # noqa: E402
+from .qwen_v2 import ImaginativeQwenReasoner  # noqa: E402
 from .roi import (  # noqa: E402
     HumanROIGenerator,
     SCHPLIPBackend,
@@ -80,12 +81,28 @@ def build_pipeline(config: RegionalConfig) -> RegionalImaginationPipeline:
         ),
         strict=True,
     )
-    reasoner = LlamaServerQwenReasoner(
-        endpoint=str(config.qwen.get("endpoint", "http://127.0.0.1:8080/v1/chat/completions")),
+    reasoner_class = (
+        ImaginativeQwenReasoner
+        if config.plugin_version == "qri-v2"
+        else LlamaServerQwenReasoner
+    )
+    reasoner_kwargs = {}
+    if config.plugin_version == "qri-v2":
+        reasoner_kwargs.update(
+            proposal_rounds=config.proposal_rounds,
+            roi_board_size_px=config.roi_board_size_px,
+        )
+    else:
+        reasoner_kwargs["roi_crop_size_px"] = config.roi_board_size_px
+    reasoner = reasoner_class(
+        endpoint=str(
+            config.qwen.get("endpoint", "http://127.0.0.1:8080/v1/chat/completions")
+        ),
         model_id=str(config.qwen.get("model_id", "third-party-qwen3.8-27b-ud-q4-k-xl")),
         timeout_seconds=float(config.qwen.get("timeout_seconds", 180)),
         enable_thinking=bool(config.qwen.get("thinking_mode", True)),
         reasoning_effort=str(config.qwen.get("reasoning_effort", "high")),
+        **reasoner_kwargs,
     )
     pasd = ExistingPASDBackend(
         _repo_path(config.pasd.get("config_path", "pasd_plugin/configs/sysu.yaml")),
@@ -249,7 +266,7 @@ def preflight(config: RegionalConfig, *, check_server: bool = True) -> dict:
         raise FileNotFoundError(config.dataset_root)
     result = {
         "valid": True,
-        "plugin": "qwen-regional-imagination-v1",
+        "plugin": config.plugin_id,
         "model_status": "third-party checkpoint; not an official Qwen model claim",
         "assets": assets,
         "roi_sources": _validate_roi_sources(config),
@@ -275,9 +292,7 @@ def serve(config: RegionalConfig, *, execute: bool) -> dict:
     raise AssertionError("os.execvpe returned unexpectedly")
 
 
-def _sources(
-    config: RegionalConfig, limit: int | None, split: str
-) -> list[SourceItem]:
+def _sources(config: RegionalConfig, limit: int | None, split: str) -> list[SourceItem]:
     by_modality = {}
     for modality in config.modalities:
         records = []
@@ -369,7 +384,9 @@ def run(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Qwen Regional Imagination v1 offline pipeline")
+    parser = argparse.ArgumentParser(
+        description="Versioned Qwen Regional Imagination pipeline"
+    )
     subparsers = parser.add_subparsers(dest="action", required=True)
     for action in ("preflight", "run", "serve"):
         command = subparsers.add_parser(action)

@@ -2,7 +2,9 @@
 
 该离线插件把一幅模糊行人图像转换为带经验权重的语义假设集合，并将其导出为 PASD source records。它不导入 SALT 训练代码或 PASD 模型代码。
 
-新的区域推理版本与本插件并行存在，见 [QRI_V1.md](QRI_V1.md)。原有 atomic sampler 的接口和数学语义保持不变。
+区域推理版本与本插件并行存在：稳定接口见 [QRI_V1.md](QRI_V1.md)，
+imagination-first 并行版本见 [QRI_V2_IMAGINATIVE.md](QRI_V2_IMAGINATIVE.md)。
+原有 atomic sampler 的接口和数学语义保持不变。
 
 权威数学语义和实现不变量见 [`MATHEMATICAL_SPEC.md`](MATHEMATICAL_SPEC.md)。当前验证契约和剩余限制在本文固定；实现可以替换 VLM、扰动、文本嵌入和聚类后端，但不能改变其中定义的概率解释。
 
