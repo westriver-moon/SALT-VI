@@ -72,7 +72,7 @@ configs/pipelines/sysu_safe_tricks.yaml 是变体注册表。调度器根据 --v
 | `pasd_plugin/` | 当前离线 PASD 入口；`pasd_plugin/vendor/pasd` 被 `runtime.py` 直接导入 | 保留 |
 | `semantic_imagination/` | 独立包，有实验入口和测试，不被训练主线自动启用 | 保留，继续保持离线边界 |
 | `feature_analysis/` | 独立分析包，有 CLI 和测试，不修改训练代码 | 保留，继续保持离线边界 |
-| src/salt_vi/data/processing.py:ChannelAdap | 仅在基线中存在、仓库与配置/测试均无引用，功能由 ChannelAdapGray/ChannelExchange 覆盖 | 已移除 23 行重复旧增强实现 |
+| src/salt_vi/data/processing.py:ChannelAdap; src/salt_vi/utils/meter.py:CatMeter | AST/全文引用均无当前调用，功能已有替代或不在主线使用 | 已移除两段基线遗留实现（共 46 行） |
 | `vendor/legacy_code/` | 未纳入 Git、无当前代码导入、无运行进程引用的旧 baseline/source_core | 已迁移至仓库外日期归档 |
 | `experiments/*/source/` | 历史运行 entrypoint 快照，供实验 provenance 使用；不是当前入口 | 保留，后续可在 registry 稳定后迁出源码树 |
 
@@ -97,7 +97,7 @@ metric/retrieval alias、旧 checkpoint 文件名识别和历史数据属性兼�
 3. `.gitignore` 中针对已迁出目录的失效规则已移除，避免旧树静默回流。
 4. CI 中已经删除的 `pasd_offline` 引用已改为当前 `pasd_plugin`，包括测试和
    compileall 目标。
-5. AST/全文引用复核确认 ChannelAdap 为孤儿类，已移除；_parse_best_ir_records 不删除，因为仍由 Stage-A checkpoint 选择路径调用。
+5. AST/全文引用复核确认 ChannelAdap 与 CatMeter 均为无调用遗留，已移除；_parse_best_ir_records 不删除，因为仍由 Stage-A checkpoint 选择路径调用。
 
 ### 保留理由
 
