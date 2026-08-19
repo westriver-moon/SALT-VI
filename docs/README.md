@@ -1,6 +1,7 @@
 # SALT-VI 统一项目指南
 
 本文档是 SALT-VI 当前项目状态、架构、数据契约、训练入口和实验解释的唯一综合说明。历史决策和逐实验叙述不再维护为独立文档；需要追溯时使用 Git 历史、配置快照、原始日志和实验总表。
+本轮架构审计、模块边界和清理计划统一记录在 [ARCHITECTURE_AND_RESTRUCTURE.md](ARCHITECTURE_AND_RESTRUCTURE.md)。
 
 ## 1. 当前研究主线
 

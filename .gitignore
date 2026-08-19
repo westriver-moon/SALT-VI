@@ -25,7 +25,6 @@ __pycache__/
 # Generated experiment evidence and source snapshots
 /experiments/
 /reports/evidence/
-/vendor/legacy_code/
 
 # Generated datasets and model artifacts
 /data/

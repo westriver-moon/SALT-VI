@@ -24,14 +24,14 @@ jobs:
         run: |
           python -m pytest src/salt_vi/baselines/vision_text/tests
           python -m pytest src/salt_vi/tests
-          PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
+          PYTHONPATH=. python -m pytest pasd_plugin/tests
       - name: Run semantic-imagination contracts
         if: matrix.python-version != '3.9'
         run: PYTHONPATH=semantic_imagination python -m pytest semantic_imagination/tests
       - name: Check CLI help
         run: python scripts/train.py --help
       - name: Compile Python sources
-        run: python -m compileall -q src scripts experiments pasd_offline semantic_imagination
+        run: python -m compileall -q src scripts experiments pasd_plugin semantic_imagination feature_analysis
       - name: Build and inspect wheel resources
         run: |
           python -m build --wheel

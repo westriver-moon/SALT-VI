@@ -11,6 +11,7 @@ SALT-VI 是可见光—红外行人重识别研究仓库。当前实现包含两
 - 实验指标与 checkpoint 身份的唯一总表：`reports/experiment_registry/experiment_registry.csv`。
 
 项目架构、数据契约、当前实验、运行命令和结果解释统一见 [`docs/README.md`](docs/README.md)。
+- 本轮架构审计与清理记录见 docs/ARCHITECTURE_AND_RESTRUCTURE.md。
 
 ## 主要入口
 
