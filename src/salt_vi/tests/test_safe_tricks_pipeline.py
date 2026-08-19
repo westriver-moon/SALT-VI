@@ -67,6 +67,7 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
             "c1_ema_cosine",
             "c2_ema_camera_diverse",
             "c3_camera_diverse_cosine",
+            "c3_b96_camera_diverse_cosine",
         )
     }
     for config in configs.values():
@@ -87,6 +88,11 @@ def test_stage_a_p1_configs_are_single_variable_and_valid(monkeypatch, tmp_path)
     assert configs["c2_ema_camera_diverse"].sampler_type == "identity_camera_diverse"
     assert configs["c3_camera_diverse_cosine"].sampler_type == "identity_camera_diverse"
     assert configs["c3_camera_diverse_cosine"].normalized_classifier is True
+    assert configs["c3_camera_diverse_cosine"].batch_size == 32
+    assert configs["c3_b96_camera_diverse_cosine"].sampler_type == "identity_camera_diverse"
+    assert configs["c3_b96_camera_diverse_cosine"].normalized_classifier is True
+    assert configs["c3_b96_camera_diverse_cosine"].batch_size == 48
+    assert configs["c3_b96_camera_diverse_cosine"].num_pos == 4
 
 
 def test_camera_diverse_sampler_covers_available_cameras_per_identity():
