@@ -52,17 +52,18 @@ class RegionalReasoner(Protocol):
 
 def _json_object(text: str) -> dict[str, Any]:
     text = text.strip()
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fenced:
-        text = fenced.group(1)
-    else:
-        start, end = text.find("{"), text.rfind("}")
-        if start >= 0 and end > start:
-            text = text[start : end + 1]
-    value = json.loads(text)
-    if not isinstance(value, dict):
-        raise ValueError("Qwen response must be one JSON object")
-    return value
+    decoder = json.JSONDecoder()
+    candidates: list[tuple[int, int, dict[str, Any]]] = []
+    for match in re.finditer(r"\{", text):
+        try:
+            value, consumed = decoder.raw_decode(text[match.start() :])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            candidates.append((match.start() + consumed, -match.start(), value))
+    if not candidates:
+        raise ValueError("Qwen response must contain one complete JSON object")
+    return max(candidates, key=lambda item: (item[0], item[1]))[2]
 
 
 def _data_url(image: Image.Image) -> str:

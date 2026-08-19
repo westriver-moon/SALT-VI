@@ -12,6 +12,7 @@ from semantic_imagination.regional.cli import _qwen_server_command
 from semantic_imagination.regional.config import Asset, RegionalConfig
 from semantic_imagination.regional.manifest import consolidate_manifests
 from semantic_imagination.regional.pipeline import RegionalImaginationPipeline
+from semantic_imagination.regional.qwen import _json_object
 from semantic_imagination.regional.schema import Candidate, Region, SourceItem, World
 from semantic_imagination.regional.tta import qri_tta_specs
 
@@ -152,6 +153,18 @@ def pipeline_with_stats(tmp_path: Path, stats: dict):
 def test_qri_tta_budget_is_preregistered():
     assert len(qri_tta_specs()) == 12
     assert [spec.name for spec in qri_tta_specs()].count("shift") == 4
+
+
+def test_qwen_json_parser_ignores_reasoning_braces_before_final_object():
+    response = (
+        "compare options {A, B}; neither fragment is JSON.\n"
+        "Final answer:\n```json\n"
+        '{"regions":[{"region_id":"eyes","candidates":[]}]}\n'
+        "```"
+    )
+    assert _json_object(response) == {
+        "regions": [{"region_id": "eyes", "candidates": []}]
+    }
 
 
 def test_regional_pipeline_materializes_joint_worlds_and_three_weights(tmp_path: Path):
