@@ -186,7 +186,7 @@ class LlamaServerQwenReasoner:
             f"Closed taxonomy: {json.dumps(board, separators=(',', ':'))}"
         )
         result = self._complete(
-            _image_content(lr, swin, regions), instruction, seed=0, temperature=0.2, max_tokens=2048
+            _image_content(lr, swin, regions), instruction, seed=0, temperature=0.2, max_tokens=4096
         )
         proposals: dict[str, list[Candidate]] = {}
         region_by_id = {region.region_id: region for region in regions}
