@@ -22,7 +22,7 @@ def _marginalized_image_feature(
     mode,
     use_backup=False,
 ):
-    if image.ndim == 4:
+    if image.ndim != 5 and view_weights is None:
         visual = base.encode_image_featmap(image, modality)
         return _eval_image_feature(base, visual, mode=mode, use_backup=use_backup)
     if image.ndim != 5 or view_weights is None:

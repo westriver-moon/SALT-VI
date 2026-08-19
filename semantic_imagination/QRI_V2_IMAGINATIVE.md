@@ -60,3 +60,17 @@ category statistics 生成 `--split all`。自动晋级保持关闭，Stage-A �
 - QRI PASD geometry 必须为 identity-coordinate `direct_rewrite`；只有尺寸相同但经过
   person-fit、padding 或背景恢复的输出必须拒绝。
 - 世界图像、caption 和 mask 始终 paired。
+
+## 真实模型冒烟
+
+启动本地 llama.cpp server 后，可以对一个实际眼部 ROI 验证模型是否真正提出正向世界：
+
+```text
+python scripts/experiments/smoke_qri_v2_imagination.py \
+  --lr /path/to/original.jpg \
+  --swin /path/to/canonical-256x512-swin.jpg \
+  --bbox 69,20,201,71
+```
+
+如果只有自动正向兜底而 Qwen 自身没有提出正向 interpretation，命令会失败；因此该检查
+不能被 coverage contract 的 fallback 假阳性绕过。
