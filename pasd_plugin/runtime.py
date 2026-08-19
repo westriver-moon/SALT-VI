@@ -88,6 +88,11 @@ class PASDGenerator:
         pipeline._init_tiled_vae(
             encoder_tile_size=self.config.encoder_tiled_size,
             decoder_tile_size=self.config.decoder_tiled_size,
+            # PASD's vendor hook otherwise calls get_optimal_device(), which
+            # silently moves VAE blocks to cuda:0 even when this worker is
+            # explicitly bound to cuda:1/2/3. Components are already resident
+            # on self.device, so the hook must preserve that device.
+            vae_to_gpu=False,
         )
         return pipeline
 
