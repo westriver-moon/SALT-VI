@@ -125,6 +125,44 @@ class RegionalConfig:
                 )
             if int(self.roi_board_size_px) != 512:
                 raise ValueError("QRI-v2 roi_board_size_px must be 512")
+            imaginative_pasd_defaults = {
+                "realization": "roi-direct-rewrite-then-soft-mask-composite",
+                "roi_context_scale": 1.75,
+                "guidance_scale": 7.0,
+                "conditioning_scale": 0.75,
+                "localized_added_prompt": (
+                    "high-detail localized semantic realization, make the requested detail "
+                    "crisp and recognizable at surveillance scale, preserve the same person "
+                    "and surrounding observed structure"
+                ),
+                "localized_negative_prompt": (
+                    "different person, changed identity, changed pose, changed body "
+                    "proportions, different clothing, changes outside the requested region, "
+                    "unrequested accessories outside the requested region, duplicated object, "
+                    "distorted anatomy, painting, cartoon, artificial texture, blurry, noise, "
+                    "raster lines, over-smoothed"
+                ),
+            }
+            for name, value in imaginative_pasd_defaults.items():
+                self.pasd.setdefault(name, value)
+            if self.pasd["realization"] != imaginative_pasd_defaults["realization"]:
+                raise ValueError(
+                    "QRI-v2 requires localized ROI PASD realization; whole-canvas PASD "
+                    "dilutes small semantic hypotheses"
+                )
+            if not 1.0 <= float(self.pasd["roi_context_scale"]) <= 3.0:
+                raise ValueError("QRI-v2 PASD roi_context_scale must be in [1, 3]")
+            if not 1.0 <= float(self.pasd["guidance_scale"]) <= 12.0:
+                raise ValueError("QRI-v2 PASD guidance_scale must be in [1, 12]")
+            if not 0.1 <= float(self.pasd["conditioning_scale"]) <= 1.0:
+                raise ValueError("QRI-v2 PASD conditioning_scale must be in [0.1, 1]")
+            negative = str(self.pasd["localized_negative_prompt"]).lower()
+            contradictory = {"new accessories", "altered face"}
+            if any(term in negative for term in contradictory):
+                raise ValueError(
+                    "QRI-v2 localized negative prompt cannot suppress the requested "
+                    "accessory or facial-detail hypothesis"
+                )
         return self
 
 

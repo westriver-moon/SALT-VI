@@ -19,6 +19,9 @@ from .composite import (
     edit_energy,
     lr_cycle_energy,
     masked_composite,
+    paste_roi_realization,
+    roi_control_image,
+    roi_crop_box,
     soft_mask,
     union_mask,
 )
@@ -26,7 +29,12 @@ from .config import RegionalConfig
 from .manifest import canonical_sha256, save_source_record, sha256_file
 from .qwen import RegionalReasoner, sample_joint_worlds
 from .roi import HumanROIGenerator
-from .runtime import IdentityBackend, PASDBackend, validate_qri_pasd_generation
+from .runtime import (
+    IdentityBackend,
+    PASDBackend,
+    PASDGenerationOptions,
+    validate_qri_pasd_generation,
+)
 from .schema import Region, SourceItem, fallback_world
 from .tta import (
     SwinBackend,
@@ -141,6 +149,14 @@ class RegionalImaginationPipeline:
         regions: list[Region],
         worlds,
     ) -> dict | None:
+        if (
+            self.config.plugin_version == "qri-v2"
+            and self.config.pasd.get("realization")
+            == "roi-direct-rewrite-then-soft-mask-composite"
+        ):
+            return self._materialize_localized_worlds(
+                source, artifact_dir, lr, reference, regions, worlds
+            )
         control = artifact_dir / "swin_reference.png"
         atomic_png(control, reference)
         reference_feature = self.identity.feature(reference, source.modality)
@@ -209,6 +225,166 @@ class RegionalImaginationPipeline:
             ),
         )
         return generation.geometry if generation is not None else None
+
+    def _materialize_localized_worlds(
+        self,
+        source: SourceItem,
+        artifact_dir: Path,
+        lr: Image.Image,
+        reference: Image.Image,
+        regions: list[Region],
+        worlds,
+    ) -> dict:
+        """Realize every V2 assignment in an enlarged ROI before full-canvas fusion."""
+        control = artifact_dir / "swin_reference.png"
+        atomic_png(control, reference)
+        reference_feature = self.identity.feature(reference, source.modality)
+        by_id = {region.region_id: region for region in regions}
+        context_scale = float(self.config.pasd["roi_context_scale"])
+        pasd_target = (256, 512)
+        options = PASDGenerationOptions(
+            guidance_scale=float(self.config.pasd["guidance_scale"]),
+            conditioning_scale=float(self.config.pasd["conditioning_scale"]),
+            added_prompt=str(self.config.pasd["localized_added_prompt"]),
+            negative_prompt=str(self.config.pasd["localized_negative_prompt"]),
+        )
+        geometry_worlds: dict[str, list[dict]] = {}
+
+        for world in worlds:
+            edited = edited_region_ids(world)
+            masks = [by_id[region_id].mask for region_id in sorted(edited)]
+            binary = union_mask(masks, self.config.output_size_hw)
+            feathered = soft_mask(
+                binary,
+                dilation_px=self.config.mask_dilation_px,
+                feather_px=self.config.mask_feather_px,
+            )
+            mask_path = artifact_dir / "world_masks" / f"{world.world_id}.png"
+            atomic_mask(mask_path, feathered)
+            world.mask_path = self._relative(mask_path)
+            world.mask_sha256 = sha256_file(mask_path)
+
+            composite = reference.copy()
+            world_geometry = []
+            for assignment_index, assignment in enumerate(
+                sorted(world.assignments, key=lambda item: item.region_id)
+            ):
+                if assignment.region_id not in edited:
+                    continue
+                region = by_id[assignment.region_id]
+                crop_box = roi_crop_box(
+                    region.bbox_xyxy,
+                    reference.size,
+                    context_scale=context_scale,
+                    target_size=pasd_target,
+                )
+                roi_control = roi_control_image(reference, crop_box, pasd_target)
+                control_path = (
+                    artifact_dir
+                    / "pasd_roi_controls"
+                    / world.world_id
+                    / f"{assignment.region_id}.png"
+                )
+                atomic_png(control_path, roi_control)
+                caption = (
+                    "same pedestrian and same surveillance frame; edit only the target "
+                    f"{assignment.region_id} region ({assignment.category}); clearly realize "
+                    f"exactly this plausible hypothesis: {assignment.value}; make its defining "
+                    "shape and boundaries visually legible; preserve all surrounding identity, "
+                    "pose, clothing and anatomy"
+                )
+                seed_digest = hashlib.sha256(
+                    f"{world.seed}:{assignment.region_id}:{assignment_index}".encode()
+                ).hexdigest()
+                realization_seed = int(seed_digest[:8], 16)
+                generation = self.pasd.generate(
+                    control_path,
+                    [caption],
+                    [realization_seed],
+                    source.modality,
+                    options=options,
+                )
+                validate_qri_pasd_generation(generation, pasd_target)
+                if len(generation.images) != 1:
+                    raise RuntimeError(
+                        "localized PASD must return exactly one ROI image"
+                    )
+                generated_crop = generation.images[0].convert("RGB")
+                generated_path = (
+                    artifact_dir
+                    / "pasd_roi_outputs"
+                    / world.world_id
+                    / f"{assignment.region_id}.png"
+                )
+                atomic_png(generated_path, generated_crop)
+                region_mask = soft_mask(
+                    region.mask,
+                    dilation_px=self.config.mask_dilation_px,
+                    feather_px=self.config.mask_feather_px,
+                )
+                composite = paste_roi_realization(
+                    composite, generated_crop, crop_box, region_mask
+                )
+                realization = {
+                    "region_id": assignment.region_id,
+                    "category": assignment.category,
+                    "state": assignment.state,
+                    "value": assignment.value,
+                    "seed": realization_seed,
+                    "caption": caption,
+                    "crop_box_xyxy": list(crop_box),
+                    "context_scale": context_scale,
+                    "control": self._relative(control_path),
+                    "control_sha256": sha256_file(control_path),
+                    "pasd_output": self._relative(generated_path),
+                    "pasd_output_sha256": sha256_file(generated_path),
+                    "sampling": options.manifest(),
+                    "geometry": generation.geometry,
+                }
+                world.realizations.append(realization)
+                world_geometry.append(
+                    {
+                        "region_id": assignment.region_id,
+                        "crop_box_xyxy": list(crop_box),
+                        "pasd": generation.geometry,
+                    }
+                )
+
+            if edited:
+                pasd_path = artifact_dir / "pasd_full" / f"{world.world_id}.png"
+                atomic_png(pasd_path, composite)
+                world.pasd_output = self._relative(pasd_path)
+                world.pasd_output_sha256 = sha256_file(pasd_path)
+                world.e_edit = edit_energy(composite, reference, feathered)
+            else:
+                world.e_edit = 0.0
+            output_path = artifact_dir / "views" / f"{world.world_id}.png"
+            atomic_png(output_path, composite)
+            world.output = self._relative(output_path)
+            world.output_sha256 = sha256_file(output_path)
+            world.output_bytes = output_path.stat().st_size
+            world.e_lr = lr_cycle_energy(composite, lr, source.modality)
+            candidate_feature = self.identity.feature(composite, source.modality)
+            world.e_id = cosine_identity_energy(reference_feature, candidate_feature)
+            geometry_worlds[world.world_id] = world_geometry
+
+        calibrate_world_weights(
+            worlds,
+            CalibrationWeights(
+                alpha=self.config.calibration_alpha,
+                beta=self.config.calibration_beta,
+                gamma=self.config.calibration_gamma,
+                delta=self.config.calibration_delta,
+            ),
+        )
+        return {
+            "mode": "roi_direct_rewrite",
+            "canvas_size": list(reference.size),
+            "pasd_target_size": list(pasd_target),
+            "roi_context_scale": context_scale,
+            "sampling": options.manifest(),
+            "worlds": geometry_worlds,
+        }
 
     def _fallback_record(
         self,

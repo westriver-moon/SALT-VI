@@ -24,6 +24,22 @@ class PASDGeneration:
     geometry: dict
 
 
+@dataclass(frozen=True)
+class PASDGenerationOptions:
+    guidance_scale: float
+    conditioning_scale: float
+    added_prompt: str
+    negative_prompt: str
+
+    def manifest(self) -> dict[str, object]:
+        return {
+            "guidance_scale": float(self.guidance_scale),
+            "conditioning_scale": float(self.conditioning_scale),
+            "added_prompt": self.added_prompt,
+            "negative_prompt": self.negative_prompt,
+        }
+
+
 class PASDBackend(Protocol):
     def generate(
         self,
@@ -31,6 +47,7 @@ class PASDBackend(Protocol):
         captions: list[str],
         seeds: list[int],
         modality: str,
+        options: PASDGenerationOptions | None = None,
     ) -> PASDGeneration: ...
 
 
@@ -140,6 +157,7 @@ class ExistingPASDBackend:
         captions: list[str],
         seeds: list[int],
         modality: str,
+        options: PASDGenerationOptions | None = None,
     ) -> PASDGeneration:
         from pasd_plugin.validation import validate_geometry
 
@@ -149,6 +167,16 @@ class ExistingPASDBackend:
             seeds,
             modality=modality,
             batch_size=1,
+            added_prompt=(options.added_prompt if options is not None else None),
+            negative_prompts=(
+                [options.negative_prompt] * len(captions)
+                if options is not None
+                else None
+            ),
+            guidance_scale=(options.guidance_scale if options is not None else None),
+            conditioning_scale=(
+                options.conditioning_scale if options is not None else None
+            ),
         )
         validate_geometry(geometry, self.config)
         return PASDGeneration(

@@ -88,6 +88,7 @@ class World:
     mask_sha256: str | None = None
     pasd_output: str | None = None
     pasd_output_sha256: str | None = None
+    realizations: list[dict[str, Any]] = field(default_factory=list)
     output: str | None = None
     output_sha256: str | None = None
     output_bytes: int | None = None

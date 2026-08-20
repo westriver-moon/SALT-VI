@@ -133,6 +133,11 @@ class PASDGenerator:
         seeds: list[int],
         modality: str,
         batch_size: int = 1,
+        *,
+        added_prompt: str | None = None,
+        negative_prompts: list[str] | None = None,
+        guidance_scale: float | None = None,
+        conditioning_scale: float | None = None,
     ) -> tuple[list[Image.Image], dict]:
         if len(captions) != len(seeds) or not captions:
             raise ValueError(
@@ -140,7 +145,33 @@ class PASDGenerator:
             )
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
+        if negative_prompts is not None and len(negative_prompts) != len(captions):
+            raise ValueError("negative_prompts must match captions")
+        prompt_suffix = (
+            self.config.added_prompt if added_prompt is None else added_prompt
+        )
+        negatives = (
+            [self.config.negative_prompt] * len(captions)
+            if negative_prompts is None
+            else list(negative_prompts)
+        )
+        active_guidance = float(
+            self.config.guidance_scale if guidance_scale is None else guidance_scale
+        )
+        active_conditioning = float(
+            self.config.conditioning_scale
+            if conditioning_scale is None
+            else conditioning_scale
+        )
+        if active_guidance <= 0 or active_conditioning <= 0:
+            raise ValueError("PASD guidance and conditioning scales must be positive")
         working, source_background, geometry = self.prepare(image_path)
+        geometry["sampling"] = {
+            "guidance_scale": active_guidance,
+            "conditioning_scale": active_conditioning,
+            "added_prompt": prompt_suffix,
+            "negative_prompts": negatives,
+        }
         args = SimpleNamespace(
             init_latent_with_noise=self.config.init_latent_with_noise,
             offset_noise_scale=self.config.offset_noise_scale,
@@ -155,9 +186,7 @@ class PASDGenerator:
             seed_batch = seeds[start : start + batch_size]
             prompts = [
                 ", ".join(
-                    part
-                    for part in (caption.strip(), self.config.added_prompt.strip())
-                    if part
+                    part for part in (caption.strip(), prompt_suffix.strip()) if part
                 )
                 for caption in caption_batch
             ]
@@ -171,9 +200,9 @@ class PASDGenerator:
                 working,
                 num_inference_steps=self.config.num_inference_steps,
                 generator=generators,
-                guidance_scale=self.config.guidance_scale,
-                negative_prompt=[self.config.negative_prompt] * len(prompts),
-                conditioning_scale=self.config.conditioning_scale,
+                guidance_scale=active_guidance,
+                negative_prompt=negatives[start : start + len(prompts)],
+                conditioning_scale=active_conditioning,
             ).images
             for image in generated:
                 image = wavelet_color_fix(image, working).resize(

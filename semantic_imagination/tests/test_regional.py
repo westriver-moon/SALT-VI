@@ -23,9 +23,11 @@ from semantic_imagination.regional.qwen import (
 from semantic_imagination.regional.qwen_v2 import ImaginativeQwenReasoner
 from semantic_imagination.regional.runtime import (
     PASDGeneration,
+    PASDGenerationOptions,
     _autocast_context,
     validate_qri_pasd_generation,
 )
+from semantic_imagination.regional.composite import roi_crop_box
 from semantic_imagination.regional.schema import Candidate, Region, SourceItem, World
 from semantic_imagination.regional.tta import qri_tta_specs
 from semantic_imagination.regional.visual_context import roi_comparison_board
@@ -136,7 +138,19 @@ class BrokenReasoner(FakeReasoner):
 
 
 class FakePASD:
-    def generate(self, control_path, captions, seeds, modality):
+    def __init__(self):
+        self.calls = []
+
+    def generate(self, control_path, captions, seeds, modality, options=None):
+        self.calls.append(
+            {
+                "control_path": Path(control_path),
+                "captions": list(captions),
+                "seeds": list(seeds),
+                "modality": modality,
+                "options": options,
+            }
+        )
         with Image.open(control_path) as image:
             base = np.asarray(image.convert("RGB"), dtype=np.uint8).copy()
         outputs = []
@@ -355,18 +369,20 @@ def test_category_statistics_are_part_of_cache_build_identity(tmp_path: Path):
 
 
 def test_qri_v2_isolated_config_and_manifest_identity(tmp_path: Path):
+    pasd = FakePASD()
     runtime = RegionalImaginationPipeline(
         config_v2(tmp_path),
         swin=FakeSwin(),
         roi=FakeROI(),
         reasoner=FakeReasoner(),
-        pasd=FakePASD(),
+        pasd=pasd,
         identity=FakeIdentity(),
     )
     record = runtime.process(source(tmp_path), allow_fallback=False)
     assert record["plugin"] == "qwen-regional-imagination-v2"
     assert runtime.config.output_root.name == "qri-v2"
-    assert record["pasd_geometry"]["mode"] == "direct_rewrite"
+    assert record["pasd_geometry"]["mode"] == "roi_direct_rewrite"
+    assert record["pasd_geometry"]["pasd_target_size"] == [256, 512]
     assert any(
         any(
             assignment["state"] not in {"absent", "no_additional_detail", "unresolved"}
@@ -387,6 +403,30 @@ def test_qri_v2_isolated_config_and_manifest_identity(tmp_path: Path):
         if region["region_id"] in record["selected_region_ids"]
     ]
     assert all(region["u_qwen"] == region["u_qwen_compatible"] for region in selected)
+    assert pasd.calls
+    assert all(len(call["captions"]) == 1 for call in pasd.calls)
+    assert all(
+        Image.open(call["control_path"]).size == (256, 512) for call in pasd.calls
+    )
+    assert all(
+        isinstance(call["options"], PASDGenerationOptions) for call in pasd.calls
+    )
+    assert all(call["options"].guidance_scale == 7.0 for call in pasd.calls)
+    assert all(call["options"].conditioning_scale == 0.75 for call in pasd.calls)
+    assert all(
+        "new accessories" not in call["options"].negative_prompt for call in pasd.calls
+    )
+    realized = [
+        realization
+        for world in record["worlds"]
+        for realization in world["realizations"]
+    ]
+    assert realized
+    assert all(realization["crop_box_xyxy"] for realization in realized)
+    assert all(
+        (runtime.config.output_root / realization["pasd_output"]).is_file()
+        for realization in realized
+    )
 
 
 def test_v2_proposer_guarantees_positive_absent_and_unresolved_without_abstention_bias():
@@ -497,6 +537,31 @@ def test_v2_roi_board_has_tight_and_context_views_without_changing_canvas():
     region = Region("eyes", "eyewear", (64, 12, 204, 104), mask)
     board = roi_comparison_board(lr, swin, region, size_px=512)
     assert board.size == (512, 512)
+
+
+def test_v2_roi_crop_is_in_bounds_contains_target_and_preserves_pasd_aspect():
+    crop = roi_crop_box(
+        (92, 0, 189, 45),
+        (256, 512),
+        context_scale=1.75,
+        target_size=(256, 512),
+    )
+    left, top, right, bottom = crop
+    assert 0 <= left <= 92 < 189 <= right <= 256
+    assert 0 <= top <= 0 < 45 <= bottom <= 512
+    assert (right - left) / (bottom - top) == pytest.approx(0.5, abs=0.01)
+
+
+def test_v2_localized_pasd_defaults_reject_contradictory_negative_prompt(
+    tmp_path: Path,
+):
+    runtime = config_v2(tmp_path)
+    assert runtime.pasd["realization"] == "roi-direct-rewrite-then-soft-mask-composite"
+    assert runtime.pasd["guidance_scale"] == 7.0
+    assert runtime.pasd["conditioning_scale"] == 0.75
+    runtime.pasd["localized_negative_prompt"] += ", new accessories"
+    with pytest.raises(ValueError, match="cannot suppress"):
+        runtime.validate()
 
 
 def test_qri_rejects_size_only_alignment_without_identity_coordinates():

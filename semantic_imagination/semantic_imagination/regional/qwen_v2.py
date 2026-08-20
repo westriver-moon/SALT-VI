@@ -32,14 +32,14 @@ GENERIC_POSITIVE_STATE: Mapping[str, str] = {
     "footwear_detail": "footwear_detail_present",
 }
 GENERIC_POSITIVE_VALUE: Mapping[str, str] = {
-    "eyewear": "possible eyewear; subtype unresolved",
-    "wrist_accessory": "possible wrist accessory; subtype unresolved",
-    "headwear": "possible headwear; subtype unresolved",
-    "body_marking": "possible body marking; subtype unresolved",
-    "clothing_detail": "possible clothing detail; subtype unresolved",
-    "carried_object": "possible carried object; subtype unresolved",
-    "pocket_item": "possible pocket item; subtype unresolved",
-    "footwear_detail": "possible footwear detail; subtype unresolved",
+    "eyewear": "thin dark eyeglass frames around both eyes with a visible bridge and temples",
+    "wrist_accessory": "small dark wristwatch with a clear strap and watch face",
+    "headwear": "close-fitting dark cap with a recognizable crown edge",
+    "body_marking": "small distinct low-contrast marking on the visible skin",
+    "clothing_detail": "distinct compact clothing emblem or structured fabric detail",
+    "carried_object": "small clearly bounded carried personal object",
+    "pocket_item": "small object visibly protruding from the pocket opening",
+    "footwear_detail": "clearly structured shoe closure with visible laces or straps",
 }
 
 
@@ -206,6 +206,9 @@ class ImaginativeQwenReasoner(LlamaServerQwenReasoner):
             "an absent interpretation when allowed, and unresolved. A weak or prior-only candidate "
             "is valid whenever Image A does not contradict it. Image B may suggest candidates but "
             "cannot prove them. Do not change identity, pose, body shape or observed clothing. "
+            "Every positive value must be a concrete, visually drawable appearance description "
+            "for a diffusion model; express uncertainty in evidence_source, never with hedged "
+            "phrases such as possible, maybe, subtype unresolved, or unclear inside value. "
             'Return JSON only as {"regions":[{"region_id":...,"candidates":[{"state":...,'
             '"value":...,"evidence":...,"evidence_source":"strong_pixel_supported|'
             'weak_pixel_supported|prior_plausible|unresolved"}]}]}. Do not return internal '

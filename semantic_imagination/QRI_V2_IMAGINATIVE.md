@@ -18,11 +18,16 @@ Stage-A 配置、实验 ID 和 pipeline registry；V2 不读取或覆盖 V1 的�
    `contradicted`、`unresolved`；弱证据和先验世界在不冲突时保留。
 6. 最多选择五个世界：保留 no-edit baseline，并尽量确保每个高不确定区域至少有一个
    正向编辑世界。
-7. PASD 在 canonical 256×512 SwinIR 画布上直接改写，不运行人物适配或模糊背景恢复。
-   生成后仍通过 soft mask 限定区域。
-8. manifest 同时记录 critic 前的 `u_qwen_proposal` 和排除矛盾后的
+7. 每个正向 assignment 单独截取保持 1:2 长宽比的上下文 ROI，并放大到 PASD 的
+   256×512 canonical 画布。PASD 只接收一个具体、可绘制的区域假设，使用
+   `guidance_scale=7.0`、`conditioning_scale=0.75`；生成结果映射回原坐标后再由该区域的
+   soft mask 融合。不同区域依次融合，mask 外始终保留 SwinIR。
+8. V2 的局部负向提示不含 `new accessories` 或 `altered face`，避免正向 eyewear、
+   headwear、wrist accessory 假设被通用身份保护词反向压制。身份、姿态、体型和区域外
+   内容仍然受到保护。
+9. manifest 同时记录 critic 前的 `u_qwen_proposal` 和排除矛盾后的
    `u_qwen_compatible`；兼容性熵才是区域语义不确定性的正式值。
-9. LR cycle、C3 identity drift 和 edit penalty 把 proposal mass 校准为 posterior weight。
+10. LR cycle、C3 identity drift 和 edit penalty 把 proposal mass 校准为 posterior weight。
    训练按 paired world 采样，测试对 top-5 世界做特征边缘化。
 
 ## 隔离边界
@@ -57,8 +62,11 @@ category statistics 生成 `--split all`。自动晋级保持关闭，Stage-A �
 - 背面或遮挡眼镜区域必须允许正向 eyewear world，不得只产生 `absent`。
 - `unresolved`、`absent` 和正向候选是不同状态。
 - proposer/sampler 不含 `Prefer abstention`。
-- QRI PASD geometry 必须为 identity-coordinate `direct_rewrite`；只有尺寸相同但经过
-  person-fit、padding 或背景恢复的输出必须拒绝。
+- 每次 ROI PASD 调用必须为 identity-coordinate `direct_rewrite`；聚合记录的模式为
+  `roi_direct_rewrite`。只有尺寸相同但经过 person-fit、padding 或背景恢复的输出必须拒绝。
+- 每个 ROI 的 crop box、control/output checksum、单独 caption、seed、采样强度和 PASD
+  geometry 都必须进入 world realization provenance。
+- 局部负向提示不得包含 `new accessories` 或 `altered face`。
 - 世界图像、caption 和 mask 始终 paired。
 
 ## 真实模型冒烟
