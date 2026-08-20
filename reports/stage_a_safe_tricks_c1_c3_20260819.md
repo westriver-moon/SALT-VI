@@ -16,7 +16,7 @@
 | C3 Camera-diverse + Cosine Softmax | 0.7029975653 | 0.6864646066 | 0.5725203372 |
 
 The archive retains all event files, raw logs, resolved `configs.yaml` files,
-run manifests, selected models, resumable checkpoints, source-config snapshots,
+run manifests, selected best models, shared starting-weight reference, source-config snapshots,
 the pipeline and scheduler snapshots, the environment capture, the exact Git
 bundle, and the verified file inventory.
 
@@ -25,3 +25,5 @@ The safe-trick pipeline remains preregistered as
 `configs/pipelines/sysu_safe_tricks.yaml` and YAML `extends`; no code branch is
 switched between variants. Stage-B still requires an explicitly supplied and
 hashed Stage-A checkpoint. This archive does not select or install one.
+
+- Retention update (2026-08-20): optimizer/resume checkpoints were removed after SHA256 recording; the shared PMT start is a single hard-linked physical copy.
