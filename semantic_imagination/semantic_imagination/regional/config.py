@@ -127,20 +127,16 @@ class RegionalConfig:
                 raise ValueError("QRI-v2 roi_board_size_px must be 512")
             imaginative_pasd_defaults = {
                 "realization": "roi-direct-rewrite-then-soft-mask-composite",
-                "roi_context_scale": 1.75,
-                "guidance_scale": 7.0,
-                "conditioning_scale": 0.75,
+                "roi_context_scale": 1.25,
+                "guidance_scale": 9.0,
+                "conditioning_scale": 0.5,
                 "localized_added_prompt": (
-                    "high-detail localized semantic realization, make the requested detail "
-                    "crisp and recognizable at surveillance scale, preserve the same person "
-                    "and surrounding observed structure"
+                    "crisp localized detail, preserve identity and surrounding structure"
                 ),
                 "localized_negative_prompt": (
                     "different person, changed identity, changed pose, changed body "
-                    "proportions, different clothing, changes outside the requested region, "
-                    "unrequested accessories outside the requested region, duplicated object, "
-                    "distorted anatomy, painting, cartoon, artificial texture, blurry, noise, "
-                    "raster lines, over-smoothed"
+                    "proportions, changed clothing outside the target region, changes outside "
+                    "the target region, distorted anatomy, blurry, noise, cartoon, painting"
                 ),
             }
             for name, value in imaginative_pasd_defaults.items():

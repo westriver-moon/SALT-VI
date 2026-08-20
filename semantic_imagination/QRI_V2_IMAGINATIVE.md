@@ -20,11 +20,13 @@ Stage-A 配置、实验 ID 和 pipeline registry；V2 不读取或覆盖 V1 的�
    正向编辑世界。
 7. 每个正向 assignment 单独截取保持 1:2 长宽比的上下文 ROI，并放大到 PASD 的
    256×512 canonical 画布。PASD 只接收一个具体、可绘制的区域假设，使用
-   `guidance_scale=7.0`、`conditioning_scale=0.75`；生成结果映射回原坐标后再由该区域的
+   `guidance_scale=9.0`、`conditioning_scale=0.5`；生成结果映射回原坐标后再由该区域的
    soft mask 融合。不同区域依次融合，mask 外始终保留 SwinIR。
 8. V2 的局部负向提示不含 `new accessories` 或 `altered face`，避免正向 eyewear、
    headwear、wrist accessory 假设被通用身份保护词反向压制。身份、姿态、体型和区域外
    内容仍然受到保护。
+   正向假设还会加入类别相关的 absence-negative（例如 eyewear 的 `no glasses / bare
+   eyes / missing eyeglass frames`），避免扩散模型退回无编辑解。
 9. manifest 同时记录 critic 前的 `u_qwen_proposal` 和排除矛盾后的
    `u_qwen_compatible`；兼容性熵才是区域语义不确定性的正式值。
 10. LR cycle、C3 identity drift 和 edit penalty 把 proposal mass 校准为 posterior weight。

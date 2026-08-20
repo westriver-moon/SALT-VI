@@ -21,6 +21,7 @@ from semantic_imagination.regional.qwen import (
     sample_joint_worlds,
 )
 from semantic_imagination.regional.qwen_v2 import ImaginativeQwenReasoner
+from semantic_imagination.regional.roi import HumanROIGenerator
 from semantic_imagination.regional.runtime import (
     PASDGeneration,
     PASDGenerationOptions,
@@ -411,11 +412,12 @@ def test_qri_v2_isolated_config_and_manifest_identity(tmp_path: Path):
     assert all(
         isinstance(call["options"], PASDGenerationOptions) for call in pasd.calls
     )
-    assert all(call["options"].guidance_scale == 7.0 for call in pasd.calls)
-    assert all(call["options"].conditioning_scale == 0.75 for call in pasd.calls)
+    assert all(call["options"].guidance_scale == 9.0 for call in pasd.calls)
+    assert all(call["options"].conditioning_scale == 0.5 for call in pasd.calls)
     assert all(
         "new accessories" not in call["options"].negative_prompt for call in pasd.calls
     )
+    assert any("no glasses" in call["options"].negative_prompt for call in pasd.calls)
     realized = [
         realization
         for world in record["worlds"]
@@ -552,13 +554,42 @@ def test_v2_roi_crop_is_in_bounds_contains_target_and_preserves_pasd_aspect():
     assert (right - left) / (bottom - top) == pytest.approx(0.5, abs=0.01)
 
 
+def test_eyewear_roi_is_a_tight_eye_band_not_a_sam_face_mask():
+    class Pose:
+        def infer(self, image):
+            return {
+                "bbox_xyxy": (10, 0, 110, 200),
+                "keypoints": {
+                    "left_eye": (42, 20, 0.9),
+                    "right_eye": (78, 20, 0.9),
+                },
+            }
+
+    class Parsing:
+        def infer(self, image):
+            return np.zeros((image.height, image.width), dtype=np.uint8)
+
+    class SAM:
+        def refine(self, image, bbox, seed_mask):
+            return np.ones((image.height, image.width), dtype=bool)
+
+    regions = HumanROIGenerator(Pose(), Parsing(), SAM(), strict=True).regions(
+        Image.new("RGB", (128, 256), "gray"), "rgb"
+    )
+    eyes = next(region for region in regions if region.region_id == "eyes")
+    left, top, right, bottom = eyes.bbox_xyxy
+    assert top > 0
+    assert bottom - top <= 12
+    assert int(eyes.mask.sum()) == (right - left) * (bottom - top)
+
+
 def test_v2_localized_pasd_defaults_reject_contradictory_negative_prompt(
     tmp_path: Path,
 ):
     runtime = config_v2(tmp_path)
     assert runtime.pasd["realization"] == "roi-direct-rewrite-then-soft-mask-composite"
-    assert runtime.pasd["guidance_scale"] == 7.0
-    assert runtime.pasd["conditioning_scale"] == 0.75
+    assert runtime.pasd["guidance_scale"] == 9.0
+    assert runtime.pasd["conditioning_scale"] == 0.5
     runtime.pasd["localized_negative_prompt"] += ", new accessories"
     with pytest.raises(ValueError, match="cannot suppress"):
         runtime.validate()

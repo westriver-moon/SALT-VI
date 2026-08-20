@@ -12,16 +12,14 @@ views_per_source: 1
 target_width: 256
 target_height: 512
 geometry_mode: direct_rewrite
-guidance_scale: 7.0
-conditioning_scale: 0.75
+guidance_scale: 9.0
+conditioning_scale: 0.5
 added_prompt: >-
-  high-detail localized semantic realization, crisp recognizable structure,
-  preserve the same person and surrounding observed structure
+  crisp localized detail, preserve identity and surrounding structure
 negative_prompt: >-
   different person, changed identity, changed pose, changed body proportions,
-  different clothing, changes outside the requested region, unrequested accessories
-  outside the requested region, duplicated object, distorted anatomy, painting,
-  cartoon, artificial texture, blurry, noise, raster lines, over-smoothed
+  changed clothing outside the target region, changes outside the target region,
+  distorted anatomy, blurry, noise, cartoon, painting
 asset_sha256:
   sd_text_encoder: d008943c017f0092921106440254dbbe00b6a285f7883ec8ba160c3faad88334
   sd_text_encoder_config: 845df614cb9327ae7bbea027316246fae917827407da6df13572e41b5f93b4cc

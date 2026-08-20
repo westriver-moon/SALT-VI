@@ -48,6 +48,17 @@ from .worlds import build_worlds, edited_region_ids
 
 BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
 
+ABSENCE_NEGATIVE_BY_CATEGORY = {
+    "eyewear": "no glasses, bare eyes, missing eyeglass frames",
+    "headwear": "bare head, no headwear, missing cap or hat",
+    "wrist_accessory": "bare wrist, no watch, no bracelet, missing wrist accessory",
+    "body_marking": "unmarked skin, missing body marking",
+    "clothing_detail": "plain clothing, missing clothing detail",
+    "carried_object": "empty hand, no carried object, missing carried object",
+    "pocket_item": "empty pocket, no pocket item, missing pocket item",
+    "footwear_detail": "plain shoes, missing laces, missing straps",
+}
+
 
 class RegionalImaginationPipeline:
     def __init__(
@@ -242,12 +253,12 @@ class RegionalImaginationPipeline:
         by_id = {region.region_id: region for region in regions}
         context_scale = float(self.config.pasd["roi_context_scale"])
         pasd_target = (256, 512)
-        options = PASDGenerationOptions(
-            guidance_scale=float(self.config.pasd["guidance_scale"]),
-            conditioning_scale=float(self.config.pasd["conditioning_scale"]),
-            added_prompt=str(self.config.pasd["localized_added_prompt"]),
-            negative_prompt=str(self.config.pasd["localized_negative_prompt"]),
-        )
+        sampling_profile = {
+            "guidance_scale": float(self.config.pasd["guidance_scale"]),
+            "conditioning_scale": float(self.config.pasd["conditioning_scale"]),
+            "added_prompt": str(self.config.pasd["localized_added_prompt"]),
+            "base_negative_prompt": str(self.config.pasd["localized_negative_prompt"]),
+        }
         geometry_worlds: dict[str, list[dict]] = {}
 
         for world in worlds:
@@ -287,11 +298,21 @@ class RegionalImaginationPipeline:
                 )
                 atomic_png(control_path, roi_control)
                 caption = (
-                    "same pedestrian and same surveillance frame; edit only the target "
-                    f"{assignment.region_id} region ({assignment.category}); clearly realize "
-                    f"exactly this plausible hypothesis: {assignment.value}; make its defining "
-                    "shape and boundaries visually legible; preserve all surrounding identity, "
-                    "pose, clothing and anatomy"
+                    f"same person, {assignment.category} at {assignment.region_id}: "
+                    f"{assignment.value}, crisp visible structure, photorealistic "
+                    "surveillance image"
+                )
+                category_negative = ABSENCE_NEGATIVE_BY_CATEGORY.get(
+                    assignment.category, "missing requested detail"
+                )
+                options = PASDGenerationOptions(
+                    guidance_scale=sampling_profile["guidance_scale"],
+                    conditioning_scale=sampling_profile["conditioning_scale"],
+                    added_prompt=sampling_profile["added_prompt"],
+                    negative_prompt=(
+                        f"{category_negative}, "
+                        f"{sampling_profile['base_negative_prompt']}"
+                    ),
                 )
                 seed_digest = hashlib.sha256(
                     f"{world.seed}:{assignment.region_id}:{assignment_index}".encode()
@@ -382,7 +403,7 @@ class RegionalImaginationPipeline:
             "canvas_size": list(reference.size),
             "pasd_target_size": list(pasd_target),
             "roi_context_scale": context_scale,
-            "sampling": options.manifest(),
+            "sampling_profile": sampling_profile,
             "worlds": geometry_worlds,
         }
 

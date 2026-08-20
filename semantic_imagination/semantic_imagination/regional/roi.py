@@ -62,7 +62,10 @@ class ParsingBackend(Protocol):
 
 class SamBackend(Protocol):
     def refine(
-        self, image: Image.Image, bbox_xyxy: tuple[int, int, int, int], seed_mask: np.ndarray
+        self,
+        image: Image.Image,
+        bbox_xyxy: tuple[int, int, int, int],
+        seed_mask: np.ndarray,
     ) -> np.ndarray: ...
 
 
@@ -146,12 +149,20 @@ class HumanROIGenerator:
                 base &= part
         if not base.any():
             base = _bbox_mask((image.height, image.width), bbox)
-        refined = np.asarray(self.sam.refine(image, bbox, base), dtype=bool)
-        if refined.shape != base.shape:
-            raise ValueError(f"SAM mask shape {refined.shape} does not match image {base.shape}")
-        refined &= _bbox_mask(base.shape, bbox)
-        if not refined.any():
+        # Eyewear is a thin geometric edit around the eye line. Asking SAM to
+        # refine an absent or unresolved accessory commonly returns the entire
+        # face/hair component, which turns a local hypothesis into a face rewrite.
+        if category == "eyewear":
             refined = base
+        else:
+            refined = np.asarray(self.sam.refine(image, bbox, base), dtype=bool)
+            if refined.shape != base.shape:
+                raise ValueError(
+                    f"SAM mask shape {refined.shape} does not match image {base.shape}"
+                )
+            refined &= _bbox_mask(base.shape, bbox)
+            if not refined.any():
+                refined = base
         return Region(region_id, category, bbox, refined, side=side)
 
     def regions(self, image: Image.Image, modality: str) -> list[Region]:
@@ -176,36 +187,118 @@ class HumanROIGenerator:
         eyes = [_keypoint(pose, "left_eye"), _keypoint(pose, "right_eye")]
         visible_eyes = [point for point in eyes if point is not None]
         eye_center = (
-            (sum(point[0] for point in visible_eyes) / len(visible_eyes),
-             sum(point[1] for point in visible_eyes) / len(visible_eyes))
-            if visible_eyes else (left + person_w * 0.5, top + person_h * 0.09)
+            (
+                sum(point[0] for point in visible_eyes) / len(visible_eyes),
+                sum(point[1] for point in visible_eyes) / len(visible_eyes),
+            )
+            if visible_eyes
+            else (left + person_w * 0.5, top + person_h * 0.09)
         )
         head_bbox = _clip_bbox(
-            (left + person_w * 0.25, top, right - person_w * 0.25, top + person_h * 0.22),
+            (
+                left + person_w * 0.25,
+                top,
+                right - person_w * 0.25,
+                top + person_h * 0.22,
+            ),
             image.width,
             image.height,
         )
         eye_bbox = _point_box(
-            eye_center, (max(12, person_w * 0.55), max(10, person_h * 0.10)), image.size
+            eye_center,
+            (max(12, person_w * 0.55), max(8, person_h * 0.055)),
+            image.size,
         )
         wrist_size = (max(12, person_w * 0.24), max(12, person_h * 0.10))
         shoe_size = (max(16, person_w * 0.36), max(14, person_h * 0.12))
         pocket_size = (max(18, person_w * 0.35), max(20, person_h * 0.18))
 
         specs = [
-            ("eyes", "eyewear", eye_bbox, ("sunglasses", "face"), None),
+            ("eyes", "eyewear", eye_bbox, (), None),
             ("head", "headwear", head_bbox, ("hat", "hair"), None),
-            ("left_wrist", "wrist_accessory", _point_box(_keypoint(pose, "left_wrist"), wrist_size, image.size), (), "left"),
-            ("right_wrist", "wrist_accessory", _point_box(_keypoint(pose, "right_wrist"), wrist_size, image.size), (), "right"),
+            (
+                "left_wrist",
+                "wrist_accessory",
+                _point_box(_keypoint(pose, "left_wrist"), wrist_size, image.size),
+                (),
+                "left",
+            ),
+            (
+                "right_wrist",
+                "wrist_accessory",
+                _point_box(_keypoint(pose, "right_wrist"), wrist_size, image.size),
+                (),
+                "right",
+            ),
             ("left_arm", "body_marking", None, ("left_arm",), "left"),
             ("right_arm", "body_marking", None, ("right_arm",), "right"),
-            ("upper_torso", "clothing_detail", None, ("upper_clothes", "dress", "coat", "jumpsuit"), None),
-            ("left_pocket", "pocket_item", _point_box(_keypoint(pose, "left_hip"), pocket_size, image.size), (), "left"),
-            ("right_pocket", "pocket_item", _point_box(_keypoint(pose, "right_hip"), pocket_size, image.size), (), "right"),
-            ("left_carried", "carried_object", _clip_bbox((left - person_w * .35, top + person_h * .18, left + person_w * .30, top + person_h * .78), image.width, image.height), (), "left"),
-            ("right_carried", "carried_object", _clip_bbox((right - person_w * .30, top + person_h * .18, right + person_w * .35, top + person_h * .78), image.width, image.height), (), "right"),
-            ("left_foot", "footwear_detail", _point_box(_keypoint(pose, "left_ankle"), shoe_size, image.size), ("left_shoe", "socks"), "left"),
-            ("right_foot", "footwear_detail", _point_box(_keypoint(pose, "right_ankle"), shoe_size, image.size), ("right_shoe", "socks"), "right"),
+            (
+                "upper_torso",
+                "clothing_detail",
+                None,
+                ("upper_clothes", "dress", "coat", "jumpsuit"),
+                None,
+            ),
+            (
+                "left_pocket",
+                "pocket_item",
+                _point_box(_keypoint(pose, "left_hip"), pocket_size, image.size),
+                (),
+                "left",
+            ),
+            (
+                "right_pocket",
+                "pocket_item",
+                _point_box(_keypoint(pose, "right_hip"), pocket_size, image.size),
+                (),
+                "right",
+            ),
+            (
+                "left_carried",
+                "carried_object",
+                _clip_bbox(
+                    (
+                        left - person_w * 0.35,
+                        top + person_h * 0.18,
+                        left + person_w * 0.30,
+                        top + person_h * 0.78,
+                    ),
+                    image.width,
+                    image.height,
+                ),
+                (),
+                "left",
+            ),
+            (
+                "right_carried",
+                "carried_object",
+                _clip_bbox(
+                    (
+                        right - person_w * 0.30,
+                        top + person_h * 0.18,
+                        right + person_w * 0.35,
+                        top + person_h * 0.78,
+                    ),
+                    image.width,
+                    image.height,
+                ),
+                (),
+                "right",
+            ),
+            (
+                "left_foot",
+                "footwear_detail",
+                _point_box(_keypoint(pose, "left_ankle"), shoe_size, image.size),
+                ("left_shoe", "socks"),
+                "left",
+            ),
+            (
+                "right_foot",
+                "footwear_detail",
+                _point_box(_keypoint(pose, "right_ankle"), shoe_size, image.size),
+                ("right_shoe", "socks"),
+                "right",
+            ),
         ]
         regions = []
         for spec in specs:
@@ -218,7 +311,9 @@ class HumanROIGenerator:
 
 
 class UltralyticsPoseBackend:
-    def __init__(self, weights: str | Path, device: str = "cuda:0", confidence: float = 0.25):
+    def __init__(
+        self, weights: str | Path, device: str = "cuda:0", confidence: float = 0.25
+    ):
         import os
 
         weights = Path(weights).expanduser().resolve()
@@ -299,6 +394,7 @@ class SCHPLIPBackend:
         self.repository = Path(repository).expanduser().resolve()
         if not (self.repository / "networks" / "__init__.py").is_file():
             raise FileNotFoundError(f"invalid SCHP repository: {self.repository}")
+
         # The official SCHP checkout bundles a 2019 InPlaceABNSync CUDA extension.
         # Its serialized parameters are ordinary BatchNorm parameters, so inference
         # can use this API-compatible implementation without compiling an obsolete
@@ -450,7 +546,10 @@ class SegmentAnythingBackend:
         self.predictor = SamPredictor(model)
 
     def refine(
-        self, image: Image.Image, bbox_xyxy: tuple[int, int, int, int], seed_mask: np.ndarray
+        self,
+        image: Image.Image,
+        bbox_xyxy: tuple[int, int, int, int],
+        seed_mask: np.ndarray,
     ) -> np.ndarray:
         self.predictor.set_image(np.asarray(image.convert("RGB")))
         masks, scores, _ = self.predictor.predict(
