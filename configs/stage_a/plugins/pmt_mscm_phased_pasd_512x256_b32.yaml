@@ -24,3 +24,10 @@ pmt_mscm_transition_epochs: 4
 pmt_mscm_qct_margin: 1.2
 pmt_mscm_qct_weight: 0.1
 pmt_mscm_qct_branch_weight: 0.25
+
+# The two-view warmup needs much less activation memory, so checkpoint only
+# three blocks there. Four-view training uses the measured-safe 7/12 blocks.
+# Group the active checkpoint region into three contiguous recompute segments.
+pmt_gradient_checkpoint_blocks: 7
+pmt_gradient_checkpoint_blocks_warmup: 3
+pmt_gradient_checkpoint_segments: 3

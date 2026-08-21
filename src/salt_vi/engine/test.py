@@ -12,7 +12,9 @@ def _eval_image_feature(base, visual_output, mode="RGB", use_backup=False):
     return base.classifier(base.extract_global_feat(visual_output), mode)
 
 
-def test(base, loader, config, device):
+def test(base, loader, config, device, current_epoch=None):
+    if hasattr(base, "set_evaluation_epoch"):
+        base.set_evaluation_epoch(current_epoch)
     protocol = get_retrieval_protocol(getattr(config, "retrieval_backend", "identity_text"))
     if hasattr(torch, "amp") and hasattr(torch.amp, "autocast"):
         autocast = torch.amp.autocast("cuda", enabled=device.type == "cuda")
@@ -32,11 +34,11 @@ def _concatenate(features):
 
 def _extract_query(base, query_loader, modalities, config, device):
     features = {}
-    with torch.no_grad():
+    with torch.inference_mode():
         for batch in query_loader:
-            image = batch["img"].to(device)
+            image = batch["img"].to(device, non_blocking=True)
             text = (
-                batch["text"].to(device).long()
+                batch["text"].to(device, non_blocking=True).long()
                 if "Fusion" in modalities or "Text" in modalities
                 else None
             )
@@ -51,7 +53,9 @@ def _extract_query(base, query_loader, modalities, config, device):
                 )
             if "Fusion" in modalities:
                 if config.Feat_Filter:
-                    text_filter = batch["text_filter"].to(device).long()
+                    text_filter = batch["text_filter"].to(
+                        device, non_blocking=True
+                    ).long()
                     fusion = base.encode_filtered_fusion(text, text_filter, image)
                 else:
                     fusion = base.encode_fusion(text, image, "ir")
@@ -70,9 +74,9 @@ def _extract_query(base, query_loader, modalities, config, device):
 
 def _extract_gallery(base, gallery_loader, modalities, config, device):
     features = {}
-    with torch.no_grad():
+    with torch.inference_mode():
         for batch in gallery_loader:
-            image = batch["img"].to(device)
+            image = batch["img"].to(device, non_blocking=True)
             visual = base.encode_image_featmap(image, "rgb")
             _append(features, "RGB", _eval_image_feature(base, visual))
             if "IR" in modalities and config.Fix_Visual:

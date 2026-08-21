@@ -10,6 +10,7 @@ from salt_vi.data.dataset import SYSU_Tri_Data
 from salt_vi.data.loader import (
     ExactSize,
     build_mscmnet_exact_quadruple_transforms,
+    collate_pmt_mscm_warmup,
 )
 from salt_vi.data.processing import (
     MSCMChannelAdapGray,
@@ -35,6 +36,29 @@ BRANCH_ORDER = (
     "infrared_global",
     "infrared_channel",
 )
+
+
+def test_warmup_collate_drops_only_unused_rgb_view():
+    samples = [
+        {
+            "img_rgb_ori": torch.full((3, 2, 2), float(index)),
+            "img_rgb_aug": torch.full((3, 2, 2), float(index + 10)),
+            "img_ir": torch.full((3, 2, 2), float(index + 20)),
+            "target_rgb": index,
+            "target_ir": index,
+        }
+        for index in range(2)
+    ]
+    collated = collate_pmt_mscm_warmup(samples)
+    assert "img_rgb_ori" not in collated
+    torch.testing.assert_close(
+        collated["img_rgb_aug"],
+        torch.stack([sample["img_rgb_aug"] for sample in samples]),
+    )
+    torch.testing.assert_close(
+        collated["img_ir"],
+        torch.stack([sample["img_ir"] for sample in samples]),
+    )
 
 
 def build_visual(backend="quadruple_patch", template_trainable=False):
@@ -298,6 +322,30 @@ def test_phased_stage_a_config_resolves_with_branch_level_qct():
     assert config.pmt_mscm_qct_margin == 1.2
     assert config.pmt_mscm_qct_weight == 0.1
     assert config.pmt_mscm_qct_branch_weight == 0.25
+    assert config.pmt_gradient_checkpoint_blocks == 7
+    assert config.pmt_gradient_checkpoint_blocks_warmup == 3
+    assert config.pmt_gradient_checkpoint_segments == 3
+
+
+def test_phased_evaluation_uses_template_only_before_switch():
+    owner = SimpleNamespace(
+        args=SimpleNamespace(
+            pmt_recipe_variant="mscm_phased", pmt_progressive_epoch=6
+        ),
+        _evaluation_epoch=5,
+    )
+    assert (
+        CLIP2ReID._resolve_evaluation_visual_mode(owner, "rgb")
+        == "shared_template"
+    )
+    assert (
+        CLIP2ReID._resolve_evaluation_visual_mode(owner, "ir")
+        == "shared_template"
+    )
+    owner._evaluation_epoch = 6
+    assert CLIP2ReID._resolve_evaluation_visual_mode(owner, "rgb") == "rgb"
+    owner._evaluation_epoch = None
+    assert CLIP2ReID._resolve_evaluation_visual_mode(owner, "ir") == "ir"
 
 
 class _RecipeBase:
@@ -545,3 +593,25 @@ def test_phase_switch_reuses_optimizer_and_copies_template_adam_state():
             optimizer.state[weight]["exp_avg"].data_ptr()
             != optimizer.state[template_weight]["exp_avg"].data_ptr()
         )
+
+
+def test_phased_recipe_selects_warmup_and_four_view_checkpoint_budgets():
+    visual = build_visual(template_trainable=True)
+    owner = SimpleNamespace(
+        args=SimpleNamespace(
+            pmt_recipe_variant="mscm_phased",
+            pmt_progressive_epoch=6,
+            pmt_gradient_checkpoint_blocks=7,
+            pmt_gradient_checkpoint_blocks_warmup=3,
+        ),
+        base_model=SimpleNamespace(visual=visual),
+        _phased_quadruple_synced=False,
+    )
+    owner.sync_phased_quadruple_patch_embeddings = MethodType(
+        CLIP2ReID.sync_phased_quadruple_patch_embeddings, owner
+    )
+    optimizer = torch.optim.AdamW(visual.parameters(), lr=1e-3)
+    CLIP2ReID.prepare_pmt_mscm_phase(owner, 5, optimizer)
+    assert visual.gradient_checkpoint_blocks == 3
+    CLIP2ReID.prepare_pmt_mscm_phase(owner, 6, optimizer)
+    assert visual.gradient_checkpoint_blocks == 7

@@ -385,7 +385,14 @@ class ViT(nn.Module):
         x = self.pos_drop(x)
         return x, (grid_height, grid_width)
 
-    def run_blocks(self, tokens, start_index, end_index, checkpoint_blocks=False):
+    def run_blocks(
+        self,
+        tokens,
+        start_index,
+        end_index,
+        checkpoint_blocks=False,
+        checkpoint_segments=None,
+    ):
         """Run blocks[start_index:end_index] with an exclusive end index."""
         start_index = int(start_index)
         end_index = int(end_index)
@@ -401,12 +408,52 @@ class ViT(nn.Module):
                 f"PMT token dim {tokens.shape[-1]} does not match "
                 f"backbone dim {self.pos_embed.shape[-1]}"
             )
-        for block_index in range(start_index, end_index):
-            block = self.blocks[block_index]
-            if checkpoint_blocks and torch.is_grad_enabled() and tokens.requires_grad:
-                tokens = checkpoint_forward(block, tokens)
+        if isinstance(checkpoint_blocks, bool):
+            checkpoint_count = depth if checkpoint_blocks else 0
+        else:
+            checkpoint_count = int(checkpoint_blocks)
+            if not 0 <= checkpoint_count <= depth:
+                raise ValueError(
+                    f"checkpoint_blocks must be within [0, {depth}], "
+                    f"got {checkpoint_count}"
+                )
+        checkpoint_end = min(end_index, checkpoint_count)
+        checkpoint_start = min(max(start_index, 0), checkpoint_end)
+        active_checkpoint_count = checkpoint_end - checkpoint_start
+        if (
+            active_checkpoint_count > 0
+            and torch.is_grad_enabled()
+            and tokens.requires_grad
+        ):
+            if checkpoint_segments is None:
+                segment_count = active_checkpoint_count
             else:
-                tokens = block(tokens)
+                segment_count = int(checkpoint_segments)
+                if segment_count < 1:
+                    raise ValueError(
+                        "checkpoint_segments must be positive when checkpointing "
+                        f"is active, got {segment_count}"
+                    )
+                segment_count = min(segment_count, active_checkpoint_count)
+            segment_size, remainder = divmod(
+                active_checkpoint_count, segment_count
+            )
+            cursor = checkpoint_start
+            for segment_index in range(segment_count):
+                width = segment_size + int(segment_index < remainder)
+                segment_blocks = tuple(self.blocks[cursor : cursor + width])
+
+                def run_segment(value, blocks=segment_blocks):
+                    for block in blocks:
+                        value = block(value)
+                    return value
+
+                tokens = checkpoint_forward(run_segment, tokens)
+                cursor += width
+        else:
+            checkpoint_end = start_index
+        for block_index in range(checkpoint_end, end_index):
+            tokens = self.blocks[block_index](tokens)
         return tokens
 
     def finalize_tokens(self, tokens):

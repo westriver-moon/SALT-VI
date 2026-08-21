@@ -315,6 +315,12 @@ class CLIP2ReID(nn.Module):
             pmt_gradient_checkpointing=getattr(
                 self.args, "pmt_gradient_checkpointing", False
             ),
+            pmt_gradient_checkpoint_blocks=getattr(
+                self.args, "pmt_gradient_checkpoint_blocks", None
+            ),
+            pmt_gradient_checkpoint_segments=getattr(
+                self.args, "pmt_gradient_checkpoint_segments", None
+            ),
             pmt_attention_backend=getattr(
                 self.args, "pmt_attention_backend", "manual"
             ),
@@ -409,6 +415,7 @@ class CLIP2ReID(nn.Module):
         self._fixed_visual_parallel_devices = ()
         self._fixed_visual_parallel_replicas = []
         self._phased_quadruple_synced = False
+        self._evaluation_epoch = None
         self._configure_fix_visual_training()
 
     def _init_device(self):
@@ -427,6 +434,23 @@ class CLIP2ReID(nn.Module):
         for replica in self._fixed_visual_parallel_replicas:
             replica.eval()
         self.training = False
+
+    def set_evaluation_epoch(self, current_epoch):
+        self._evaluation_epoch = (
+            None if current_epoch is None else int(current_epoch)
+        )
+
+    def _resolve_evaluation_visual_mode(self, mode):
+        if (
+            str(getattr(self.args, "pmt_recipe_variant", "original")).lower()
+            == "mscm_phased"
+            and self._evaluation_epoch is not None
+            and self._evaluation_epoch
+            < int(getattr(self.args, "pmt_progressive_epoch", 6))
+            and str(mode).lower() in {"rgb", "visible", "ir", "infrared", "thermal"}
+        ):
+            return "shared_template"
+        return mode
 
     def configure_fixed_visual_data_parallel(self):
         """Create persistent read-only visual replicas after the primary model is placed."""
@@ -885,6 +909,7 @@ class CLIP2ReID(nn.Module):
         return x
 
     def encode_image_featmap(self, image, mode=None):
+        mode = self._resolve_evaluation_visual_mode(mode)
         if self.args.Fix_Visual and not self._visual_unfrozen:
             x = self._encode_fixed_visual(image, mode)
         else:
@@ -897,6 +922,7 @@ class CLIP2ReID(nn.Module):
         return x #[torch.arange(x.shape[0]), text.argmax(dim=-1)].float()
 
     def encode_image_feat(self, image, mode=None): # return [B, 512]
+        mode = self._resolve_evaluation_visual_mode(mode)
         x = self.base_model.encode_image(image,mode=mode)
         return self._get_visual_embedding(x)
 
@@ -1012,10 +1038,21 @@ class CLIP2ReID(nn.Module):
         if str(getattr(self.args, "pmt_recipe_variant", "original")).lower() != "mscm_phased":
             return None
         switch_epoch = int(getattr(self.args, "pmt_progressive_epoch", 6))
+        visual = self.base_model.visual
+        configured_blocks = int(
+            getattr(self.args, "pmt_gradient_checkpoint_blocks", 0) or 0
+        )
+        warmup_blocks = getattr(
+            self.args, "pmt_gradient_checkpoint_blocks_warmup", None
+        )
+        visual.gradient_checkpoint_blocks = (
+            int(warmup_blocks)
+            if int(current_epoch) < switch_epoch and warmup_blocks is not None
+            else configured_blocks
+        )
         if int(current_epoch) != switch_epoch or self._phased_quadruple_synced:
             return None
 
-        visual = self.base_model.visual
         template = visual.vit.patch_embed
         self.sync_phased_quadruple_patch_embeddings()
         template_parameters = dict(template.named_parameters())

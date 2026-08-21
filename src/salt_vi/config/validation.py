@@ -96,6 +96,9 @@ def _validate_numeric_ranges(config):
         "vocab_size": (1, None),
         "pmt_depth": (1, None),
         "pmt_num_heads": (1, None),
+        "pmt_gradient_checkpoint_blocks": (0, None),
+        "pmt_gradient_checkpoint_blocks_warmup": (0, None),
+        "pmt_gradient_checkpoint_segments": (1, None),
         "pmt_progressive_epoch": (1, None),
         "pmt_mscm_transition_epochs": (0, None),
         "prj_output_dim": (1, None),
@@ -338,6 +341,37 @@ def validate_runtime_config(config):
     ) != "PMT_VIT":
         raise ValueError(
             "pmt_attention_backend is only implemented for pretrain_choice='PMT_VIT'"
+        )
+    checkpoint_blocks = _value(config, "pmt_gradient_checkpoint_blocks", None)
+    warmup_checkpoint_blocks = _value(
+        config, "pmt_gradient_checkpoint_blocks_warmup", None
+    )
+    depth = int(_value(config, "pmt_depth", 12))
+    for field_name, field_value in (
+        ("pmt_gradient_checkpoint_blocks", checkpoint_blocks),
+        ("pmt_gradient_checkpoint_blocks_warmup", warmup_checkpoint_blocks),
+    ):
+        if field_value is None:
+            continue
+        if int(field_value) > depth:
+            raise ValueError(
+                f"{field_name} cannot exceed pmt_depth; "
+                f"got {field_value} > {depth}"
+            )
+        if int(field_value) > 0 and not bool(
+            _value(config, "pmt_gradient_checkpointing", False)
+        ):
+            raise ValueError(
+                f"{field_name} requires "
+                "pmt_gradient_checkpointing=true"
+            )
+    checkpoint_segments = _value(config, "pmt_gradient_checkpoint_segments", None)
+    if checkpoint_segments is not None and not bool(
+        _value(config, "pmt_gradient_checkpointing", False)
+    ):
+        raise ValueError(
+            "pmt_gradient_checkpoint_segments requires "
+            "pmt_gradient_checkpointing=true"
         )
 
     if joint_mode not in SUPPORTED_JOINT_MODES:

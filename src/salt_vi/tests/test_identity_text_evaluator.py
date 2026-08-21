@@ -11,6 +11,11 @@ evaluator = import_module("salt_vi.engine.test")
 def test_entrypoint_enables_cuda_autocast(monkeypatch):
     observed = {}
 
+    class Base:
+        @staticmethod
+        def set_evaluation_epoch(current_epoch):
+            observed["evaluation_epoch"] = current_epoch
+
     @contextmanager
     def fake_autocast(device_type, enabled):
         observed["autocast"] = (device_type, enabled)
@@ -24,9 +29,17 @@ def test_entrypoint_enables_cuda_autocast(monkeypatch):
     monkeypatch.setattr(evaluator.torch.amp, "autocast", fake_autocast)
     monkeypatch.setattr(evaluator, "get_retrieval_protocol", lambda name: Protocol())
     result = evaluator.test(
-        object(), object(), SimpleNamespace(retrieval_backend="identity_text"), torch.device("cuda")
+        Base(),
+        object(),
+        SimpleNamespace(retrieval_backend="identity_text"),
+        torch.device("cuda"),
+        current_epoch=5,
     )
-    assert observed == {"autocast": ("cuda", True), "evaluated": True}
+    assert observed == {
+        "evaluation_epoch": 5,
+        "autocast": ("cuda", True),
+        "evaluated": True,
+    }
     assert result == {"IR": "ok"}
 
 
@@ -41,10 +54,12 @@ class Model:
 
     @staticmethod
     def encode_image_featmap(image, mode):
+        assert torch.is_inference_mode_enabled()
         return image.float()
 
     @staticmethod
     def encode_image_feat(image, mode):
+        assert torch.is_inference_mode_enabled()
         return image.float()
 
     @staticmethod

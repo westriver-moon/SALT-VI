@@ -62,6 +62,23 @@ _RUN_MANIFEST_TRANSIENT_KEYS = {
 }
 
 
+def should_run_training_evaluation(config, current_epoch):
+    current_epoch = int(current_epoch)
+    scheduled = (
+        current_epoch + 1 >= int(config.eval_start_epoch)
+        and (current_epoch + 1) % int(config.eval_epoch) == 0
+    )
+    if not scheduled:
+        return False
+    if (
+        str(getattr(config, "pmt_recipe_variant", "original")).lower()
+        == "mscm_phased"
+        and current_epoch < int(getattr(config, "pmt_progressive_epoch", 6))
+    ):
+        return False
+    return True
+
+
 def _merge_runtime_config(cli_config):
     """Merge default YAML, selected YAML, then explicitly supplied CLI values."""
     selected_path = cli_config.config_select
@@ -1021,7 +1038,9 @@ def main(config):
 
         if bool(getattr(config, "eval_before_train", False)) and start_train_epoch == 0:
             with ema.average_parameters(model) if ema is not None else torch.no_grad():
-                result_dict = test(model, loaders, config, device)
+                result_dict = test(
+                    model, loaders, config, device, current_epoch=-1
+                )
             if fusion_result_key not in result_dict:
                 raise RuntimeError(
                     f"eval_before_train requires {fusion_result_key} retrieval metrics"
@@ -1113,9 +1132,15 @@ def main(config):
                 performance_writer.add_scalar("learnable_pa", pa_value, current_epoch)
 
             # testing while training
-            if current_epoch + 1 >= config.eval_start_epoch and (current_epoch + 1) % config.eval_epoch == 0:
+            if should_run_training_evaluation(config, current_epoch):
                 with ema.average_parameters(model) if ema is not None else torch.no_grad():
-                    result_dict = test(model, loaders, config, device)
+                    result_dict = test(
+                        model,
+                        loaders,
+                        config,
+                        device,
+                        current_epoch=current_epoch,
+                    )
                     _record_eval_epoch(
                         config,
                         model,

@@ -23,6 +23,7 @@ from salt_vi.data.sampler import (
 from salt_vi.data.sysu_sources import load_train_source_records
 from salt_vi.retrieval import get_retrieval_protocol
 import torch.utils.data as data
+from torch.utils.data._utils.collate import default_collate
 
 
 SYSU_INTERPOLATION = InterpolationMode.BICUBIC
@@ -56,6 +57,13 @@ REQUIRED_RGB_IR_TEXT_BATCH_KEYS = (
     "target_rgb",
     "target_ir",
 )
+
+
+def collate_pmt_mscm_warmup(batch):
+    """Preserve transform RNG while dropping the unused RGB view before pinning."""
+    collated = default_collate(batch)
+    collated.pop("img_rgb_ori", None)
+    return collated
 
 
 def validate_rgb_ir_text_batch_dict(batch_dict, text_modalities=("rgb", "ir")):
@@ -448,12 +456,24 @@ class Loader:
 
             # test sysu data simples
             query_samples, gallery_samples_list = self._get_test_samples(self.dataset)
-            query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                num_workers=self.num_workers)
+            query_loader = data.DataLoader(
+                query_samples,
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
             gallery_loaders = []
             for i in range(self.gallery_trials):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False,
-                                                 drop_last=False, num_workers=self.num_workers)
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.query_loader = query_loader
             self.gallery_loaders = gallery_loaders
@@ -474,15 +494,27 @@ class Loader:
             query_samples_list, gallery_samples_list = self._get_test_samples(self.dataset)
             query_loaders = []
             for i in range(self.eval_num_regdb):
-                query_loader = data.DataLoader(query_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                    num_workers=self.num_workers)
+                query_loader = data.DataLoader(
+                    query_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 query_loaders.append(query_loader)
             self.query_loaders = query_loaders
 
             gallery_loaders = []
             for i in range(self.eval_num_regdb):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                             num_workers=self.num_workers)
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.gallery_loaders = gallery_loaders
 
@@ -499,12 +531,24 @@ class Loader:
                 self.samples = samples
 
             query_samples, gallery_samples_list = self._get_test_samples(self.dataset)
-            query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                num_workers=self.num_workers)
+            query_loader = data.DataLoader(
+                query_samples,
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
             gallery_loaders = []
             for i in range(self.gallery_trials):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                             num_workers=self.num_workers)
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.query_loader = query_loader
             self.gallery_loaders = gallery_loaders
@@ -672,6 +716,17 @@ class Loader:
         sampler = sampler_cls(*sampler_args)
         self.samples.cIndex = sampler.index1
         self.samples.tIndex = sampler.index2
-        train_loader = data.DataLoader(self.samples, batch_size=self.batch_size,
-                                       sampler=sampler, num_workers=self.num_workers, drop_last=True)
+        train_loader = data.DataLoader(
+            self.samples,
+            batch_size=self.batch_size,
+            sampler=sampler,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True,
+            collate_fn=(
+                collate_pmt_mscm_warmup
+                if self.phased_mscm_recipe and phase == "pmt"
+                else None
+            ),
+        )
         return train_loader

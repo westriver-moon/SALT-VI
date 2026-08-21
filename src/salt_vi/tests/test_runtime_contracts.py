@@ -25,6 +25,30 @@ from salt_vi.models.clip_model.clip_model import CLIP
 from salt_vi.utils.utils import _expand_environment_values
 
 
+def test_phased_training_skips_all_warmup_evaluations():
+    config = SimpleNamespace(
+        eval_start_epoch=2,
+        eval_epoch=2,
+        pmt_recipe_variant="mscm_phased",
+        pmt_progressive_epoch=6,
+    )
+    assert not train_entry.should_run_training_evaluation(config, 1)
+    assert not train_entry.should_run_training_evaluation(config, 3)
+    assert not train_entry.should_run_training_evaluation(config, 5)
+    assert not train_entry.should_run_training_evaluation(config, 6)
+    assert train_entry.should_run_training_evaluation(config, 7)
+
+
+def test_original_recipe_keeps_existing_evaluation_schedule():
+    config = SimpleNamespace(
+        eval_start_epoch=2,
+        eval_epoch=2,
+        pmt_recipe_variant="original",
+        pmt_progressive_epoch=6,
+    )
+    assert train_entry.should_run_training_evaluation(config, 1)
+
+
 def test_dataset_name_inference_accepts_trailing_separator():
     assert _infer_dataset_name("datasets/sysu") == "sysu"
     assert _infer_dataset_name("datasets/sysu/") == "sysu"

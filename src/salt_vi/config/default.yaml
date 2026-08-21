@@ -149,6 +149,9 @@ normalized_classifier: false
 cosine_softmax_scale: 30.0
 pmt_assert_batch_layout: true
 pmt_gradient_checkpointing: false
+pmt_gradient_checkpoint_blocks: null
+pmt_gradient_checkpoint_blocks_warmup: null
+pmt_gradient_checkpoint_segments: null
 sysu_source_size: null
 sysu_sr_data_root: null
 sysu_sr_modalities: []

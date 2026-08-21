@@ -49,6 +49,8 @@ class PMTViTVisual(nn.Module):
         pretrained_path=None,
         patch_embed_config=None,
         gradient_checkpointing=False,
+        gradient_checkpoint_blocks=None,
+        gradient_checkpoint_segments=None,
         attention_backend="manual",
         visual_input_backend="single",
         quadruple_branch_order=None,
@@ -57,7 +59,6 @@ class PMTViTVisual(nn.Module):
         super().__init__()
         self.input_resolution = to_2tuple(input_resolution)
         self.output_dim = output_dim
-        self.gradient_checkpointing = bool(gradient_checkpointing)
         self.vit = ViT(
             img_size=self.input_resolution,
             patch_size=patch_size,
@@ -72,6 +73,29 @@ class PMTViTVisual(nn.Module):
             patch_embed_config=patch_embed_config,
             attention_backend=attention_backend,
         )
+        self.gradient_checkpointing = bool(gradient_checkpointing)
+        if gradient_checkpoint_blocks is None:
+            self.gradient_checkpoint_blocks = (
+                len(self.vit.blocks) if self.gradient_checkpointing else 0
+            )
+        else:
+            self.gradient_checkpoint_blocks = int(gradient_checkpoint_blocks)
+            if not 0 <= self.gradient_checkpoint_blocks <= len(self.vit.blocks):
+                raise ValueError(
+                    "gradient_checkpoint_blocks must be within [0, {}], got {}".format(
+                        len(self.vit.blocks), self.gradient_checkpoint_blocks
+                    )
+                )
+            if self.gradient_checkpoint_blocks and not self.gradient_checkpointing:
+                raise ValueError(
+                    "gradient_checkpoint_blocks requires gradient_checkpointing=true"
+                )
+        if gradient_checkpoint_segments is None:
+            self.gradient_checkpoint_segments = self.gradient_checkpoint_blocks
+        else:
+            self.gradient_checkpoint_segments = int(gradient_checkpoint_segments)
+            if self.gradient_checkpoint_segments < 1:
+                raise ValueError("gradient_checkpoint_segments must be positive")
         if embed_dim == output_dim:
             self.projection = nn.Identity()
         else:
@@ -120,7 +144,10 @@ class PMTViTVisual(nn.Module):
             tokens,
             0,
             len(self.vit.blocks),
-            checkpoint_blocks=self.gradient_checkpointing and self.training,
+            checkpoint_blocks=(
+                self.gradient_checkpoint_blocks if self.training else 0
+            ),
+            checkpoint_segments=self.gradient_checkpoint_segments,
         )
         return self.finalize_and_package(tokens)
 
@@ -135,7 +162,10 @@ class PMTViTVisual(nn.Module):
             tokens,
             0,
             len(self.vit.blocks),
-            checkpoint_blocks=self.gradient_checkpointing and self.training,
+            checkpoint_blocks=(
+                self.gradient_checkpoint_blocks if self.training else 0
+            ),
+            checkpoint_segments=self.gradient_checkpoint_segments,
         )
         return self.finalize_and_package(tokens)
 
@@ -154,7 +184,10 @@ class PMTViTVisual(nn.Module):
             tokens,
             0,
             len(self.vit.blocks),
-            checkpoint_blocks=self.gradient_checkpointing and self.training,
+            checkpoint_blocks=(
+                self.gradient_checkpoint_blocks if self.training else 0
+            ),
+            checkpoint_segments=self.gradient_checkpoint_segments,
         )
 
     @staticmethod
@@ -244,12 +277,20 @@ class PMTViTVisual(nn.Module):
     def prepare_tokens(self, x):
         return self.vit.prepare_tokens(x)
 
-    def run_blocks(self, tokens, start_index, end_index, checkpoint_blocks=False):
+    def run_blocks(
+        self,
+        tokens,
+        start_index,
+        end_index,
+        checkpoint_blocks=False,
+        checkpoint_segments=None,
+    ):
         return self.vit.run_blocks(
             tokens,
             start_index,
             end_index,
             checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=checkpoint_segments,
         )
 
     def finalize_and_package(self, tokens):
