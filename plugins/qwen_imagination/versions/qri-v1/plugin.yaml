@@ -1,0 +1,6 @@
+id: qri-v1
+display_name: Qwen Regional Imagination v1
+api_version: 1
+implementation: qwen_imagination.versions.qri_v1:QRIv1Plugin
+config: configs/qri_v1_sysu.yaml
+status: preserved

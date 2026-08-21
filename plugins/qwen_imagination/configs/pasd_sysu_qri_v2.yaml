@@ -1,0 +1,37 @@
+dataset: sysu
+dataset_root: \${SALT_QRI_DATA_ROOT}
+captions:
+  rgb: \${SALT_QRI_DATA_ROOT}/Text/Blip_RGB/caption_dict_Blip_RGB.json
+  ir: \${SALT_QRI_DATA_ROOT}/Text/Blip_IR/caption_dict_Blip_IR.json
+output_root: /home/lab929/ybj/experiments/qri-v2/runtime/pasd
+pretrained_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/stable-diffusion-v1-5
+pasd_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/pasd/checkpoint-100000
+device: cuda:1
+gpu_allowlist: [1, 2, 3]
+views_per_source: 1
+target_width: 256
+target_height: 512
+geometry_mode: direct_rewrite
+guidance_scale: 9.0
+conditioning_scale: 0.5
+added_prompt: >-
+  crisp localized detail, preserve identity and surrounding structure
+negative_prompt: >-
+  different person, changed identity, changed pose, changed body proportions,
+  changed clothing outside the target region, changes outside the target region,
+  distorted anatomy, blurry, noise, cartoon, painting
+asset_sha256:
+  sd_text_encoder: d008943c017f0092921106440254dbbe00b6a285f7883ec8ba160c3faad88334
+  sd_text_encoder_config: 845df614cb9327ae7bbea027316246fae917827407da6df13572e41b5f93b4cc
+  sd_vae: a2b5134f4dbc140d9c11f11cba3233099e00af40f262f136c691fb7d38d2194c
+  sd_vae_config: 786a7d21647ddea6a04b9675c03d3cb45e90a2f3c6da5fbda2c54ade040036de
+  sd_scheduler_config: 699cce92eb7c122e2eb7dfdea78e6187fda76a5ed4a8e42319b85610e620e091
+  sd_tokenizer_vocab: e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349
+  sd_tokenizer_merges: 9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a
+  sd_tokenizer_config: 00439066fcba73de57644cf41e4e3b9f2dbb09d7f3fc2005898ba52399045882
+  sd_tokenizer_special_tokens: c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac
+  sd_feature_extractor_config: 2a1da83b5e1032aaeef397552ddb408dca0d8cd1dc58f61bf6abf38d6f33a0a2
+  pasd_unet: 02cb7b57a4caeb642c58ccb4532ec61eda12ecb7af077201b9154faf6259e443
+  pasd_unet_config: fae179cb7930ca8a260e41c24a6c8d10e28c4546d661418cdc68d46cb31b8b83
+  pasd_controlnet: 8b5cdce2ac8c356d61756d58c97fdd93bd4f4b83c1576ea950f2b1a3d3ba0d00
+  pasd_controlnet_config: f0de98a60ac3b73bac55611dbb7d9ddf394bbc6e0a264883b84f85bbffbd30af

@@ -26,6 +26,7 @@ python scripts/train.py --config_select <config.yaml>
 - `configs/stage_a/`、`configs/stage_b/`、`configs/super_resolution/`：当前可运行配置；各目录中的 `reproduction/` 与 `configs/experiments/reproduction/` 只保存已运行实验快照。
 - `pasd_plugin/`：统一 PASD 数据生成、验证插件（SYSU-MM01、RegDB、LLCM），见 [`pasd_plugin/README.md`](pasd_plugin/README.md)。
 - `semantic_imagination/`：加权语义假设插件，见 [`semantic_imagination/README.md`](semantic_imagination/README.md)。
+- `plugins/qwen_imagination/`：集中管理 QRI v1/v2 及后续 Qwen 想象力插件；SALT 主线通过 `src/salt_vi/imagination.py` 的统一接口调用。
 - `feature_analysis/`：特征分析工具，见 [`feature_analysis/README.md`](feature_analysis/README.md)。
 - `reports/experiment_registry/`：实验总表及其字段说明。
 

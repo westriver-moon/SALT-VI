@@ -1,0 +1,16 @@
+extends: \${SALT_VI_ROOT}/configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+
+# QRI-v1 is a parallel Stage-A data strategy on the fixed C3 batch-96 recipe.
+sysu_sr_backend: pasd_multiview
+sysu_sr_data_root: ${SALT_QRI_DATA_ROOT}
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_exact_size: true
+sysu_sr_view_manifest: ${SALT_QRI_VIEW_MANIFEST}
+sysu_sr_views_per_image: 0
+sysu_sr_view_sampling: paired
+sysu_sr_eval_view_index: 0
+sysu_sr_eval_mode: marginalize
+sysu_sr_eval_top_k: 5
+total_train_epoch: 24
+eval_start_epoch: 2
+eval_epoch: 2
