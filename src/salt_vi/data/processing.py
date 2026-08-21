@@ -33,6 +33,94 @@ class ChannelAdapGray(object):
         return img
 
 
+class MSCMChannelAdapGray(object):
+    """Exact ChannelAdapGray operator from the original MSCMNet repository."""
+
+    def __init__(self, probability=0.5):
+        self.probability = probability
+
+    def __call__(self, img):
+        idx = random.randint(0, 1)
+        if idx == 0:
+            img[0, :, :] = img[1, :, :]
+            img[2, :, :] = img[1, :, :]
+        else:
+            if random.uniform(0, 1) <= self.probability:
+                tmp_img = (
+                    0.2989 * img[0, :, :]
+                    + 0.5870 * img[1, :, :]
+                    + 0.1140 * img[2, :, :]
+                )
+                img[0, :, :] = tmp_img
+                img[1, :, :] = tmp_img
+                img[2, :, :] = tmp_img
+        return img
+
+
+class MSCMChannelExchange(object):
+    """Exact always-on ChannelExchange operator from original MSCMNet."""
+
+    def __init__(self, gray=2):
+        self.gray = gray
+
+    def __call__(self, img):
+        idx = random.randint(0, self.gray)
+        if idx == 0:
+            img[1, :, :] = img[0, :, :]
+            img[2, :, :] = img[0, :, :]
+        elif idx == 1:
+            img[0, :, :] = img[1, :, :]
+            img[2, :, :] = img[1, :, :]
+        elif idx == 2:
+            img[0, :, :] = img[2, :, :]
+            img[1, :, :] = img[2, :, :]
+        else:
+            tmp_img = (
+                0.2989 * img[0, :, :]
+                + 0.5870 * img[1, :, :]
+                + 0.1140 * img[2, :, :]
+            )
+            img[0, :, :] = tmp_img
+            img[1, :, :] = tmp_img
+            img[2, :, :] = tmp_img
+        return img
+
+
+class MSCMChannelT(object):
+    """Exact per-channel thermal scaling operator from original MSCMNet."""
+
+    def __init__(self, probability=0.5):
+        self.probability = probability
+
+    def __call__(self, img):
+        if random.uniform(0, 1) > self.probability:
+            return img
+        a = random.uniform(0.01, 0.5)
+        b = random.uniform(0.01, 0.5)
+        c = random.uniform(0.01, 0.5)
+        img[0, :, :] = 2 * a * img[0, :, :]
+        img[1, :, :] = 2 * b * img[1, :, :]
+        img[2, :, :] = 2 * c * img[2, :, :]
+        return img
+
+
+class ChannelScale(object):
+    """Independently rescale three channels for the second infrared view."""
+
+    def __init__(self, probability=0.5, low=0.01, high=0.5):
+        self.probability = probability
+        self.low = low
+        self.high = high
+
+    def __call__(self, img):
+        if random.uniform(0, 1) > self.probability:
+            return img
+        scales = img.new_tensor(
+            [2.0 * random.uniform(self.low, self.high) for _ in range(3)]
+        ).view(3, 1, 1)
+        return img * scales
+
+
 class ChannelRandomErasing(object):
 
     def __init__(self, probability=0.5, sl=0.02, sh=0.4, r1=0.3, mean=[0.4914, 0.4822, 0.4465]):

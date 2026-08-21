@@ -96,6 +96,8 @@ def _validate_numeric_ranges(config):
         "vocab_size": (1, None),
         "pmt_depth": (1, None),
         "pmt_num_heads": (1, None),
+        "pmt_progressive_epoch": (1, None),
+        "pmt_mscm_transition_epochs": (0, None),
         "prj_output_dim": (1, None),
         "pid_num": (1, None),
         "stride_size": (1, None),
@@ -138,6 +140,9 @@ def _validate_numeric_ranges(config):
         ("patch_gem_p", 0.0, None, True, False),
         ("pmt_mlp_ratio", 0.0, None, True, False),
         ("pmt_triplet_margin", 0.0, None, False, False),
+        ("pmt_mscm_qct_margin", 0.0, None, False, False),
+        ("pmt_mscm_qct_weight", 0.0, None, False, False),
+        ("pmt_mscm_qct_branch_weight", 0.0, None, False, False),
         ("pmt_backbone_lr_factor", 0.0, None, False, False),
         ("visual_layer_decay", 0.0, 1.0, True, False),
         ("hetero_center_margin", 0.0, None, False, False),
@@ -244,6 +249,71 @@ def validate_runtime_config(config):
         )
     training_mode = str(_value(config, "training_mode", ""))
     joint_mode = str(_value(config, "joint_mode", "image_only"))
+    visual_input_backend = str(
+        _value(config, "visual_input_backend", "single") or "single"
+    ).lower()
+    pmt_recipe_variant = str(
+        _value(config, "pmt_recipe_variant", "original") or "original"
+    ).lower()
+    if pmt_recipe_variant not in {"original", "mscm_phased"}:
+        raise ValueError(
+            f"Unsupported pmt_recipe_variant {pmt_recipe_variant!r}"
+        )
+    if visual_input_backend not in {"single", "quadruple_patch"}:
+        raise ValueError(f"Unsupported visual_input_backend {visual_input_backend!r}")
+    if visual_input_backend == "quadruple_patch":
+        expected_order = [
+            "visible_global",
+            "visible_channel",
+            "infrared_global",
+            "infrared_channel",
+        ]
+        branch_order = list(_value(config, "quadruple_branch_order", expected_order))
+        if branch_order != expected_order:
+            raise ValueError(
+                f"quadruple_branch_order must be {expected_order}, got {branch_order}"
+            )
+        if str(_value(config, "pretrain_choice", "")) != "PMT_VIT":
+            raise ValueError("quadruple_patch requires pretrain_choice='PMT_VIT'")
+        if _value(config, "pmt_patch_embed", None) is not None:
+            raise ValueError("quadruple_patch cannot be combined with fused pmt_patch_embed")
+        if not bool(_value(config, "pmt_recipe", False)):
+            raise ValueError("quadruple_patch currently requires the Stage-A PMT recipe")
+        if training_mode != "RGB_IR":
+            raise ValueError("quadruple_patch currently requires training_mode='RGB_IR'")
+        if str(_value(config, "dataset", "")).lower() != "sysu":
+            raise ValueError("quadruple_patch is currently implemented for SYSU Stage A")
+        if bool(_value(config, "Fix_Visual", False)):
+            raise ValueError("quadruple_patch Stage A requires a trainable visual backbone")
+        sr_modalities = {
+            str(value).lower() for value in (_value(config, "sysu_sr_modalities", []) or [])
+        }
+        if sr_modalities != {"rgb", "ir"} or not _value(config, "sysu_sr_data_root"):
+            raise ValueError(
+                "quadruple_patch requires RGB and IR super-resolution assets; augmentations "
+                "are applied only after the SR source returns each image"
+            )
+    if pmt_recipe_variant == "mscm_phased":
+        if not bool(_value(config, "pmt_recipe", False)):
+            raise ValueError("mscm_phased requires pmt_recipe=true")
+        if visual_input_backend != "quadruple_patch":
+            raise ValueError("mscm_phased requires visual_input_backend='quadruple_patch'")
+        if not bool(_value(config, "quadruple_template_trainable", False)):
+            raise ValueError(
+                "mscm_phased requires quadruple_template_trainable=true for PMT warmup"
+            )
+        if str(_value(config, "pmt_metric_loss", "legacy")) != "legacy":
+            raise ValueError("mscm_phased requires pmt_metric_loss='legacy'")
+        if str(_value(config, "triplet_mining", "pmt_hard")) != "pmt_cross_modal_hard":
+            raise ValueError(
+                "mscm_phased post-switch stage requires "
+                "triplet_mining='pmt_cross_modal_hard'"
+            )
+        if float(_value(config, "rfa_probability", 0.0)) != 0.0:
+            raise ValueError(
+                "mscm_phased requires rfa_probability=0 so post-switch inputs "
+                "remain the exact MSCMNet augmentations"
+            )
     uses_text = "Text" in training_mode
     metric_loss = str(_value(config, "pmt_metric_loss", "legacy"))
     if metric_loss not in {"legacy", "hetero_center"}:

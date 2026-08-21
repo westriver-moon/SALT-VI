@@ -117,12 +117,24 @@ pmt_attention_dropout: 0.0
 pmt_attention_backend: manual
 pmt_drop_path_rate: 0.1
 pmt_patch_embed: null
+visual_input_backend: single
+quadruple_template_trainable: false
+quadruple_branch_order:
+- visible_global
+- visible_channel
+- infrared_global
+- infrared_channel
 pmt_recipe: false
+pmt_recipe_variant: original
 pmt_recipe_transforms: false
 pmt_progressive_epoch: 6
 pmt_triplet_margin: 0.1
 pmt_msel_weight: 0.5
 pmt_dcl_weight: 0.5
+pmt_mscm_qct_margin: 1.2
+pmt_mscm_qct_weight: 0.1
+pmt_mscm_qct_branch_weight: 0.25
+pmt_mscm_transition_epochs: 4
 pmt_metric_loss: legacy
 hetero_center_margin: 0.1
 hetero_center_weight: 1.0

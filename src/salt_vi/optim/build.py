@@ -88,6 +88,7 @@ def pmt_visual_layer_id(name, depth):
         return int(name[len(prefix) :].split(".", 1)[0]) + 1
     if name.startswith((
         "base_model.visual.vit.patch_embed",
+        "base_model.visual.input_plugin.patch_embeds",
         "base_model.visual.vit.pos_embed",
         "base_model.visual.vit.cls_token",
     )):
@@ -132,6 +133,7 @@ def build_optimizer(args, model):
     def is_pmt_backbone_param(name):
         return (
             name.startswith("base_model.visual.vit.patch_embed")
+            or name.startswith("base_model.visual.input_plugin.patch_embeds")
             or name.startswith("base_model.visual.vit.blocks")
         )
     

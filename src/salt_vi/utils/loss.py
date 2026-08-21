@@ -370,6 +370,93 @@ class PMTDCL(nn.Module):
         return ap_mean / (an_mean + 1e-12)
 
 
+class PMTQuadrupleCenterTripletLoss(nn.Module):
+    """Branch-aware QCT for [RGB-1, RGB-2, IR-1, IR-2] features.
+
+    The original MSCMNet code fixes its explicit four-branch coefficient to
+    zero. This implementation exposes that coefficient so the phased recipe
+    can actually supervise all four branches while retaining the same center
+    compactness and negative-center margin design.
+    """
+
+    def __init__(self, margin=1.2, branch_weight=0.25):
+        super().__init__()
+        self.margin = float(margin)
+        self.branch_weight = float(branch_weight)
+
+    def forward(self, branch_features, labels, return_components=False):
+        if branch_features.ndim != 3 or branch_features.size(1) != 4:
+            raise ValueError(
+                "QCT expects branch features [B,4,D] ordered as "
+                "[RGB-1, RGB-2, IR-1, IR-2]"
+            )
+        labels = labels.view(-1)
+        if labels.size(0) != branch_features.size(0):
+            raise ValueError("QCT labels must match the per-branch batch size")
+        unique_labels, inverse = torch.unique(
+            labels, sorted=True, return_inverse=True
+        )
+        if unique_labels.numel() < 2:
+            raise ValueError("QCT requires at least two identities per batch")
+
+        # Raw PMT embeddings have norms around 20--30, so a 0.7 margin in that
+        # space is ineffective.  QCT is defined in unit-normalized Euclidean
+        # space, where both positive distances and the margin share [0, 2].
+        normalized_features = F.normalize(branch_features, dim=-1)
+        branch_centers = []
+        joint_centers = []
+        for identity in unique_labels:
+            identity_features = normalized_features[labels == identity]
+            branch_centers.append(F.normalize(identity_features.mean(dim=0), dim=-1))
+            joint_centers.append(F.normalize(
+                identity_features.reshape(-1, branch_features.size(-1)).mean(dim=0),
+                dim=-1,
+            ))
+        branch_centers = torch.stack(branch_centers, dim=0)
+        joint_centers = torch.stack(joint_centers, dim=0)
+
+        sample_branch_centers = branch_centers[inverse]
+        visible_centers = F.normalize(branch_centers[:, :2].mean(dim=1), dim=-1)
+        infrared_centers = F.normalize(branch_centers[:, 2:].mean(dim=1), dim=-1)
+        modality_centers = torch.stack(
+            (visible_centers, visible_centers, infrared_centers, infrared_centers),
+            dim=1,
+        )
+        sample_modality_centers = modality_centers[inverse]
+
+        modality_compactness = torch.linalg.vector_norm(
+            normalized_features - sample_modality_centers, dim=-1
+        ).mean()
+        branch_compactness = torch.linalg.vector_norm(
+            normalized_features - sample_branch_centers, dim=-1
+        ).mean()
+
+        flat_features = normalized_features.reshape(-1, branch_features.size(-1))
+        flat_labels = labels.view(-1, 1).expand(-1, 4).reshape(-1)
+        center_distances = pdist_torch(flat_features, joint_centers)
+        negative_mask = flat_labels.view(-1, 1).ne(unique_labels.view(1, -1))
+        # Mine the closest wrong identity center for every branch sample.
+        # Averaging all negatives diluted the few active violations to zero.
+        hard_negative_distance = center_distances.masked_fill(
+            ~negative_mask, float("inf")
+        ).min(dim=1).values
+        negative_margin = F.relu(self.margin - hard_negative_distance).mean()
+
+        loss = 0.5 * (
+            modality_compactness
+            + negative_margin
+            + self.branch_weight * branch_compactness
+        )
+        if not return_components:
+            return loss
+        return loss, {
+            "modality_compactness": modality_compactness,
+            "branch_compactness": branch_compactness,
+            "negative_margin": negative_margin,
+            "hard_negative_distance": hard_negative_distance.mean(),
+        }
+
+
 # compute the cosine distance between each pair of features
 def cosine_matrix_compute(feat1,feat2,logit_scale):
     feat1_norm = feat1 / feat1.norm(dim=-1, keepdim=True)
@@ -436,7 +523,4 @@ def L_t2i(img_feat,text_feat,logit_scale,labels):
     return -(torch.log_softmax(cosine_matrix_compute(text_feat,img_feat,logit_scale),dim=-1) * mask).mean()/sum(mask)
 
     
-
-
-
 

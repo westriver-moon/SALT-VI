@@ -1,0 +1,26 @@
+extends: quadruple_patch_pasd_512x256_b32.yaml
+
+config_select: configs/stage_a/plugins/pmt_mscm_phased_pasd_512x256_b32.yaml
+experiment_name: stageA_pmt_mscm_phased_pasd_512x256_b32_seed0
+output_root: train_outputs/stage_a_plugins/pmt_mscm_phased_pasd_512x256_b32_seed0
+
+# Switch without changing the original PMTRecipe implementation or config.
+pmt_recipe_variant: mscm_phased
+quadruple_template_trainable: true
+
+# Epoch 0-5: original PMT gray/IR recipe. Epoch >=6: branch-level MSCM recipe.
+pmt_progressive_epoch: 6
+triplet_mining: pmt_cross_modal_hard
+pmt_metric_loss: legacy
+rfa_probability: 0.0
+
+# Keep one AdamW throughout. At epoch 6 the warmed template weights and AdamW
+# moments are copied into all four Patch Embeddings. The metric objective then
+# moves smoothly from branch-internal to four-pair cross-modal Triplet.
+pmt_mscm_transition_epochs: 4
+
+# MSEL is intentionally disabled in this recipe. QCT is normalized, hard-negative
+# mined, and ramped from zero to this deliberately small terminal weight.
+pmt_mscm_qct_margin: 1.2
+pmt_mscm_qct_weight: 0.1
+pmt_mscm_qct_branch_weight: 0.25

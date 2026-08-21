@@ -22,6 +22,12 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None, ema=None
     base.set_train()
     base.configure_qbn_running_stats(current_epoch)
     meter = MultiItemAverageMeter()
+    if hasattr(base, "prepare_pmt_mscm_phase"):
+        transition = base.prepare_pmt_mscm_phase(current_epoch, optimizer)
+        if transition is not None:
+            print(f"PMT-MSCM phase transition: {transition}")
+    if hasattr(loaders, "set_training_epoch"):
+        loaders.set_training_epoch(current_epoch)
     loader = loaders.get_train_loader()
     consecutive_amp_overflows = 0
     amp_skipped_steps = 0
@@ -126,9 +132,6 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None, ema=None
     meter.update({'amp_skipped_steps': float(amp_skipped_steps)})
 
     return meter.get_val(), meter.get_str()
-
-
-
 
 
 

@@ -4,7 +4,15 @@ from torchvision.transforms import InterpolationMode
 import os
 from salt_vi.data.dataset import process_query_sysu, process_gallery_sysu, \
     process_test_regdb,process_gallery_llcm,process_query_llcm, SYSU_Tri_Data,RegDB_Tri_Data,LLCM_Tri_Data,Test_Tri_Data
-from salt_vi.data.processing import ChannelRandomErasing, ChannelAdapGray, ChannelExchange
+from salt_vi.data.processing import (
+    ChannelAdapGray,
+    ChannelExchange,
+    ChannelRandomErasing,
+    ChannelScale,
+    MSCMChannelAdapGray,
+    MSCMChannelExchange,
+    MSCMChannelT,
+)
 from salt_vi.data.sampler import (
     GenIdx,
     IdentitySampler,
@@ -86,6 +94,114 @@ def sysu_resolution_transforms(config, modality):
     steps.append(transforms.Resize(target_size, interpolation=SYSU_INTERPOLATION))
     return steps
 
+
+def build_mscmnet_exact_quadruple_transforms(
+    train_size, normalize, rgb_resolution, ir_resolution
+):
+    """Build the original MSCMNet four-view augmentations after SR loading.
+
+    Resolution transforms are prepended only to validate/select the already
+    loaded model input. For the PASD plugin recipe these are ExactSize checks,
+    so super-resolution is never treated as an augmentation operation.
+    """
+    color1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *rgb_resolution,
+        transforms.RandomGrayscale(p=0.5),
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+    ])
+    color2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *rgb_resolution,
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelExchange(gray=2),
+    ])
+    thermal1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *ir_resolution,
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelAdapGray(probability=0.5),
+    ])
+    thermal2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *ir_resolution,
+        transforms.ColorJitter(brightness=0.5),
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelT(probability=0.5),
+    ])
+    return color1, color2, thermal1, thermal2
+
+
+def build_pmt_recipe_transforms(
+    train_size, normalize, rgb_resolution, ir_resolution
+):
+    """Build the unchanged PMT Stage-A transforms used before the switch epoch."""
+    random_erasing = lambda: ChannelRandomErasing(
+        probability=0.5,
+        mean=[0.485, 0.456, 0.406],
+    )
+    thermal_mix_aug = [
+        transforms.ColorJitter(brightness=0.3, contrast=0.3),
+        transforms.GaussianBlur(21, sigma=(0.1, 3)),
+    ]
+    color1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(rgb_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    color2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(rgb_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.Grayscale(num_output_channels=3),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    thermal1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(ir_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomChoice(thermal_mix_aug),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    thermal2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(ir_resolution or [transforms.Resize(train_size)]),
+        transforms.ColorJitter(brightness=0.5),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+        ChannelScale(probability=0.5),
+    ])
+    return color1, color2, thermal1, thermal2
+
 class Loader:
 
     def __init__(self, config):
@@ -93,44 +209,50 @@ class Loader:
         train_size = (config.img_h, config.img_w)
         rgb_resolution = sysu_resolution_transforms(config, "rgb")
         ir_resolution = sysu_resolution_transforms(config, "ir")
+        self.quadruple_input = (
+            str(getattr(config, "visual_input_backend", "single")).lower()
+            == "quadruple_patch"
+        )
+        self.pmt_recipe_variant = str(
+            getattr(config, "pmt_recipe_variant", "original") or "original"
+        ).lower()
+        self.phased_mscm_recipe = self.pmt_recipe_variant == "mscm_phased"
+        self.pmt_progressive_epoch = int(
+            getattr(config, "pmt_progressive_epoch", 6)
+        )
+        self.phased_mscm_transforms = None
 
-        if getattr(config, "pmt_recipe_transforms", False):
-            pmt_random_erasing = lambda: ChannelRandomErasing(
-                probability=0.5,
-                mean=[0.485, 0.456, 0.406],
+        if self.phased_mscm_recipe:
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_pmt_recipe_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
             )
-            thermal_mix_aug = [
-                transforms.ColorJitter(brightness=0.3, contrast=0.3),
-                transforms.GaussianBlur(21, sigma=(0.1, 3)),
-            ]
-            self.transform_color1 = transforms.Compose([
-                transforms.ToPILImage(),
-                *(rgb_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
-
-            self.transform_color2 = transforms.Compose([
-                transforms.ToPILImage(),
-                *(rgb_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.Grayscale(num_output_channels=3),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
-
-            self.transform_thermal = transforms.Compose([
-                transforms.ToPILImage(),
-                *(ir_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomChoice(thermal_mix_aug),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
+            self.transform_thermal2 = None
+            self.phased_mscm_transforms = build_mscmnet_exact_quadruple_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
+        elif self.quadruple_input:
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_mscmnet_exact_quadruple_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
+        elif getattr(config, "pmt_recipe_transforms", False):
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_pmt_recipe_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
         else:
             self.transform_color1 = transforms.Compose( [
                 transforms.ToPILImage(),
@@ -154,7 +276,7 @@ class Loader:
                 ChannelRandomErasing(probability = 0.6),
                 ChannelExchange(gray = 2)])
 
-            self.transform_thermal = transforms.Compose([
+            self.transform_thermal1 = transforms.Compose([
                 transforms.ToPILImage(),
                 *ir_resolution,
                 transforms.Pad(10),
@@ -164,6 +286,21 @@ class Loader:
                 normalize,
                 ChannelRandomErasing(probability=0.5),
                 ChannelAdapGray(probability=0.6)])
+            self.transform_thermal2 = transforms.Compose([
+                transforms.ToPILImage(),
+                *ir_resolution,
+                transforms.Pad(10),
+                transforms.RandomCrop(train_size),
+                transforms.ColorJitter(brightness=0.5),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+                ChannelRandomErasing(probability=0.5),
+                ChannelScale(probability=0.5),
+            ])
+
+        # Preserve every existing single-input dataset and recipe unchanged.
+        self.transform_thermal = self.transform_thermal1
 
 
         all_sysu_eval_modalities_are_exact_sr = (
@@ -282,7 +419,9 @@ class Loader:
             if self.mode == 'train':
                 # train sysu data simples
                 samples = SYSU_Tri_Data(self.sysu_data_path, transform1=self.transform_color1, transform2=self.transform_color2,
-                                transform3=self.transform_thermal,\
+                                transform3=self.transform_thermal1,
+                                transform4=self.transform_thermal2 if self.quadruple_input else None,\
+                                        phased_transforms=self.phased_mscm_transforms,\
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
                                                     joint_mode=self.joint_mode,\
@@ -498,7 +637,14 @@ class Loader:
             raise ValueError(f"Dataset {self.dataset} not supported")
 
 
+    def set_training_epoch(self, current_epoch):
+        self.current_training_epoch = 0 if current_epoch is None else int(current_epoch)
+
     def get_train_loader(self):
+        if self.phased_mscm_recipe:
+            epoch = int(getattr(self, "current_training_epoch", 0))
+            phase = "pmt" if epoch < self.pmt_progressive_epoch else "mscm"
+            self.samples.set_training_phase(phase)
         if self.sampler_type == "identity_current_replace":
             sampler_cls = IdentitySampler
         elif self.sampler_type == "identity_auto_replace":

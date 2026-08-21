@@ -116,29 +116,60 @@ class PMTRecipe:
         label_ir = batch["target_ir"].long()
         model._assert_pmt_batch_layout(label_rgb, label_ir)
 
-        epoch = 0 if current_epoch is None else int(current_epoch)
-        gray_stage = epoch < int(getattr(model.args, "pmt_progressive_epoch", 6))
-        visible_images = gray_images if gray_stage else rgb_images
-        visible_images, ir_images = random_frequency_augmentation(
-            visible_images,
-            ir_images,
-            float(getattr(model.args, "rfa_probability", 0.0)),
-            float(getattr(model.args, "rfa_gaussian_sigma", 0.1)),
-        )
-        stage = "gray_ir" if gray_stage else "rgb_ir"
-        images = torch.cat((visible_images, ir_images), dim=0)
-        if model.args.Fix_Visual and not model._visual_unfrozen:
-            visual = model._encode_fixed_visual(images, mode)
+        visual_input_backend = str(
+            getattr(model.args, "visual_input_backend", "single") or "single"
+        ).lower()
+        rfa_probability = float(getattr(model.args, "rfa_probability", 0.0))
+        rfa_sigma = float(getattr(model.args, "rfa_gaussian_sigma", 0.1))
+        if visual_input_backend == "quadruple_patch":
+            gray_stage = False
+            if "img_ir_aug" not in batch:
+                raise KeyError("quadruple_patch batch is missing img_ir_aug")
+            ir_aug_images = batch["img_ir_aug"]
+            rgb_images, ir_images = random_frequency_augmentation(
+                rgb_images, ir_images, rfa_probability, rfa_sigma
+            )
+            gray_images, ir_aug_images = random_frequency_augmentation(
+                gray_images, ir_aug_images, rfa_probability, rfa_sigma
+            )
+            views = torch.stack(
+                (rgb_images, gray_images, ir_images, ir_aug_images), dim=1
+            )
+            visual = model.base_model.encode_image(views, mode)
+            batch_size = ir_images.size(0)
+            flat_features = model._get_visual_embedding(visual)
+            expected = 4 * batch_size
+            if flat_features.shape[0] != expected:
+                raise RuntimeError(
+                    f"quadruple_patch produced {flat_features.shape[0]} features, expected {expected}"
+                )
+            branch_features = flat_features.reshape(4, batch_size, -1).permute(1, 0, 2)
+            # Preserve every existing Stage-A loss by reducing two views to one
+            # feature per modality before the original objective is evaluated.
+            visible_feats = branch_features[:, :2].mean(dim=1)
+            ir_feats = branch_features[:, 2:].mean(dim=1)
+            stage = "quadruple_rgb_ir"
         else:
-            visual = model.base_model.encode_image(images, mode)
+            epoch = 0 if current_epoch is None else int(current_epoch)
+            gray_stage = epoch < int(getattr(model.args, "pmt_progressive_epoch", 6))
+            visible_images = gray_images if gray_stage else rgb_images
+            visible_images, ir_images = random_frequency_augmentation(
+                visible_images, ir_images, rfa_probability, rfa_sigma
+            )
+            stage = "gray_ir" if gray_stage else "rgb_ir"
+            images = torch.cat((visible_images, ir_images), dim=0)
+            if model.args.Fix_Visual and not model._visual_unfrozen:
+                visual = model._encode_fixed_visual(images, mode)
+            else:
+                visual = model.base_model.encode_image(images, mode)
 
-        batch_size = ir_images.size(0)
-        visible_feats = model._get_visual_embedding(
-            model._slice_visual_output(visual, 0, batch_size)
-        )
-        ir_feats = model._get_visual_embedding(
-            model._slice_visual_output(visual, batch_size, None)
-        )
+            batch_size = ir_images.size(0)
+            visible_feats = model._get_visual_embedding(
+                model._slice_visual_output(visual, 0, batch_size)
+            )
+            ir_feats = model._get_visual_embedding(
+                model._slice_visual_output(visual, batch_size, None)
+            )
         features = torch.cat((visible_feats, ir_feats), dim=0)
         labels = torch.cat((label_rgb, label_ir), dim=0)
         _, scores = model.classifier(features)
@@ -205,6 +236,227 @@ class PMTRecipe:
             pmt_stage=stage,
         )
         return result
+
+
+class PMTMSCMPhasedRecipe:
+    """Original PMT gray warmup followed by branch-level MSCM supervision."""
+
+    name = "pmt_mscm_phased"
+    quadruple_keys = (
+        "img_mscm_rgb1",
+        "img_mscm_rgb2",
+        "img_mscm_ir1",
+        "img_mscm_ir2",
+    )
+
+    @staticmethod
+    def _require_keys(batch, keys):
+        missing = [key for key in keys if key not in batch]
+        if missing:
+            raise KeyError(
+                "pmt_mscm_phased batch is missing key(s): " + ", ".join(missing)
+            )
+
+    @staticmethod
+    def _transition_alpha(model, current_epoch):
+        """Smoothly replace warmup metric learning after the input switch."""
+        switch_epoch = int(getattr(model.args, "pmt_progressive_epoch", 6))
+        transition_epochs = int(
+            getattr(model.args, "pmt_mscm_transition_epochs", 4)
+        )
+        if transition_epochs <= 0:
+            return 1.0
+        return min(
+            1.0,
+            max(0.0, (int(current_epoch) - switch_epoch) / transition_epochs),
+        )
+
+    def _compute_gray_warmup(self, model, batch, current_epoch):
+        self._require_keys(
+            batch,
+            ("img_rgb_aug", "img_ir", "target_rgb", "target_ir"),
+        )
+        gray_images = batch["img_rgb_aug"]
+        ir_images = batch["img_ir"]
+        label_rgb = batch["target_rgb"].long()
+        label_ir = batch["target_ir"].long()
+        model._assert_pmt_batch_layout(label_rgb, label_ir)
+        gray_images, ir_images = random_frequency_augmentation(
+            gray_images,
+            ir_images,
+            float(getattr(model.args, "rfa_probability", 0.0)),
+            float(getattr(model.args, "rfa_gaussian_sigma", 0.1)),
+        )
+        images = torch.cat((gray_images, ir_images), dim=0)
+        visual = model.base_model.encode_image(images, "shared_template")
+        batch_size = gray_images.size(0)
+        visible_feats = model._get_visual_embedding(
+            model._slice_visual_output(visual, 0, batch_size)
+        )
+        ir_feats = model._get_visual_embedding(
+            model._slice_visual_output(visual, batch_size, None)
+        )
+        features = torch.cat((visible_feats, ir_feats), dim=0)
+        _, scores = model.classifier(features)
+        score_visible, score_ir = scores.chunk(2, dim=0)
+
+        mining = getattr(model.args, "triplet_mining", "pmt_hard")
+        if mining not in {"pmt_hard", "wrt", "pmt_cross_modal_hard"}:
+            raise ValueError(f"Unsupported triplet_mining: {mining}")
+        if mining == "wrt":
+            tri_loss = model.tri_criterion(
+                visible_feats, label_rgb
+            ) + model.tri_criterion(ir_feats, label_ir)
+        else:
+            tri_loss = model.pmt_tri_criterion(
+                visible_feats, visible_feats, label_rgb
+            ) + model.pmt_tri_criterion(ir_feats, ir_feats, label_ir)
+
+        zero = features.new_zeros(())
+        acc_visible = (score_visible.argmax(dim=1) == label_rgb).float().mean()
+        acc_ir = (score_ir.argmax(dim=1) == label_ir).float().mean()
+        return {
+            "temperature": 1 / model.logit_scale.exp(),
+            "id_loss": (
+                model.pid_criterion(score_visible, label_rgb)
+                + model.pid_criterion(score_ir, label_ir)
+            ) * model.args.id_loss_weight,
+            "tri_loss": tri_loss,
+            "dcl_loss": zero,
+            "qct_loss": zero,
+            "acc": (acc_visible + acc_ir) / 2,
+            "metric_objective": "legacy",
+            "triplet_mining": mining,
+            "pmt_stage": "gray_ir",
+            "training_recipe": self.name,
+            "current_epoch": int(current_epoch),
+        }
+
+    def _compute_quadruple(self, model, batch, current_epoch):
+        self._require_keys(
+            batch,
+            self.quadruple_keys + ("target_rgb", "target_ir"),
+        )
+        label_rgb = batch["target_rgb"].long()
+        label_ir = batch["target_ir"].long()
+        model._assert_pmt_batch_layout(label_rgb, label_ir)
+
+        views = torch.stack(
+            tuple(batch[key] for key in self.quadruple_keys), dim=1
+        )
+        visual = model.base_model.encode_image(views, None)
+        if not isinstance(visual, dict) or "branch_features" not in visual:
+            raise RuntimeError(
+                "pmt_mscm_phased requires branch_features from quadruple_patch"
+            )
+        branch_features = visual["branch_features"]
+        expected_shape = (views.size(0), 4)
+        if tuple(branch_features.shape[:2]) != expected_shape:
+            raise RuntimeError(
+                f"Expected branch features [B,4,D], got {tuple(branch_features.shape)}"
+            )
+
+        batch_size = branch_features.size(0)
+        branch_major_features = branch_features.permute(1, 0, 2).reshape(
+            4 * batch_size, -1
+        )
+        branch_major_labels = label_rgb.repeat(4)
+        _, scores = model.classifier(branch_major_features)
+        branch_scores = scores.reshape(4, batch_size, -1)
+        branch_id_losses = torch.stack([
+            model.pid_criterion(branch_scores[index], label_rgb)
+            for index in range(4)
+        ])
+        # Preserve the warmup scale: one averaged RGB term plus one averaged
+        # IR term, while every branch is still supervised independently.
+        id_loss = branch_id_losses[:2].mean() + branch_id_losses[2:].mean()
+
+        rgb_branches = (branch_features[:, 0], branch_features[:, 1])
+        ir_branches = (branch_features[:, 2], branch_features[:, 3])
+        cross_losses = []
+        for rgb_features in rgb_branches:
+            for ir_features in ir_branches:
+                cross_losses.append(
+                    model.cross_modal_tri_criterion(
+                        rgb_features, ir_features, label_rgb
+                    )
+                )
+        # Each modality contributed one Triplet term during PMT warmup.  The
+        # factor two keeps that two-term scale for the four cross-modal pairs.
+        cross_tri_loss = 2.0 * torch.stack(cross_losses).mean()
+        branch_intra_losses = torch.stack([
+            model.pmt_tri_criterion(features, features, label_rgb)
+            for features in branch_features.unbind(dim=1)
+        ])
+        intra_tri_loss = (
+            branch_intra_losses[:2].mean()
+            + branch_intra_losses[2:].mean()
+        )
+        transition_alpha = self._transition_alpha(model, current_epoch)
+        tri_loss = (
+            (1.0 - transition_alpha) * intra_tri_loss
+            + transition_alpha * cross_tri_loss
+        )
+        qct_loss, qct_components = model.pmt_qct_criterion(
+            branch_features, label_rgb, return_components=True
+        )
+        qct_weight = (
+            float(getattr(model.args, "pmt_mscm_qct_weight", 0.1))
+            * transition_alpha
+        )
+        branch_acc = torch.stack([
+            (branch_scores[index].argmax(dim=1) == branch_major_labels[
+                index * batch_size : (index + 1) * batch_size
+            ]).float().mean()
+            for index in range(4)
+        ]).mean()
+
+        return {
+            "temperature": 1 / model.logit_scale.exp(),
+            "id_loss": id_loss * model.args.id_loss_weight,
+            "tri_loss": tri_loss * float(
+                getattr(model.args, "pmt_cross_modal_triplet_weight", 1.0)
+            ),
+            "qct_loss": qct_loss * qct_weight,
+            "acc": branch_acc,
+            "metric_objective": "qct",
+            "triplet_mining": "phased_intra_to_four_pair_cross_modal_hard",
+            "pmt_stage": "mscm_quadruple",
+            "training_recipe": self.name,
+            "current_epoch": int(current_epoch),
+            "pmt_mscm_transition_alpha": transition_alpha,
+            "pmt_mscm_qct_effective_weight": qct_weight,
+            "pmt_mscm_intra_tri": intra_tri_loss.detach(),
+            "pmt_mscm_cross_tri": cross_tri_loss.detach(),
+            "qct_modality_compactness": qct_components[
+                "modality_compactness"
+            ].detach(),
+            "qct_branch_compactness": qct_components[
+                "branch_compactness"
+            ].detach(),
+            "qct_negative_margin": qct_components[
+                "negative_margin"
+            ].detach(),
+            "qct_hard_negative_distance": qct_components[
+                "hard_negative_distance"
+            ].detach(),
+        }
+
+    def compute_losses(self, model, batch, mode=None, current_epoch=None):
+        del mode
+        if model.args.pretrain_choice != "PMT_VIT":
+            raise ValueError(
+                "pmt_mscm_phased requires pretrain_choice='PMT_VIT'"
+            )
+        if model.args.training_mode != "RGB_IR":
+            raise ValueError(
+                "pmt_mscm_phased is image-only and requires training_mode='RGB_IR'"
+            )
+        epoch = 0 if current_epoch is None else int(current_epoch)
+        switch_epoch = int(getattr(model.args, "pmt_progressive_epoch", 6))
+        if epoch < switch_epoch:
+            return self._compute_gray_warmup(model, batch, epoch)
+        return self._compute_quadruple(model, batch, epoch)
 
 
 class IRToRGBTextRecipe:
@@ -443,6 +695,7 @@ class IdentityTextRGBIRRecipe:
 
 _RECIPES = {
     "pmt": PMTRecipe(),
+    "pmt_mscm_phased": PMTMSCMPhasedRecipe(),
     "ir_to_rgb_text": IRToRGBTextRecipe(),
     "identity_text_rgb_ir_text": IdentityTextRGBIRTextRecipe(),
     "identity_text_rgb_ir": IdentityTextRGBIRRecipe(),
@@ -451,7 +704,14 @@ _RECIPES = {
 
 def build_training_recipe(config, retrieval_protocol):
     if bool(getattr(config, "pmt_recipe", False)):
-        return _RECIPES["pmt"]
+        variant = str(
+            getattr(config, "pmt_recipe_variant", "original") or "original"
+        ).lower()
+        if variant == "original":
+            return _RECIPES["pmt"]
+        if variant == "mscm_phased":
+            return _RECIPES["pmt_mscm_phased"]
+        raise ValueError(f"Unsupported pmt_recipe_variant: {variant}")
     name = retrieval_protocol.training_recipe(config) or str(config.training_mode)
     try:
         return _RECIPES[name]

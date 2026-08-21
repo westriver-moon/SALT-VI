@@ -340,7 +340,6 @@ class ViT(nn.Module):
         """Prepare pre-block tokens and return their actual rectangular grid."""
         if x.ndim != 4:
             raise ValueError(f"ViT expects BCHW input, got {tuple(x.shape)}")
-        batch = x.shape[0]
         height, width = x.shape[-2:]
         patch_height, patch_width = self.patch_embed.patch_size
         stride_height, stride_width = self.patch_embed.stride_size
@@ -352,8 +351,24 @@ class ViT(nn.Module):
                 f"{patch_height}x{patch_width}"
             )
         x = self.patch_embed(x)
+        return self.prepare_embedded_tokens(x, (grid_height, grid_width))
+
+    def prepare_embedded_tokens(self, patch_tokens, grid_size):
+        """Add the shared CLS and positional embeddings to externally embedded patches."""
+        if patch_tokens.ndim != 3:
+            raise ValueError(
+                f"Embedded PMT patches must have shape [B,N,D], got {tuple(patch_tokens.shape)}"
+            )
+        grid_height, grid_width = (int(value) for value in grid_size)
+        expected_tokens = grid_height * grid_width
+        if patch_tokens.shape[1] != expected_tokens:
+            raise ValueError(
+                f"Embedded PMT patches contain {patch_tokens.shape[1]} tokens, expected "
+                f"{expected_tokens} for grid {grid_height}x{grid_width}"
+            )
+        batch = patch_tokens.shape[0]
         cls_tokens = self.cls_token.expand(batch, -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
+        x = torch.cat((cls_tokens, patch_tokens), dim=1)
         pos_embed = resize_pos_embed_grid(
             self.pos_embed,
             self.base_grid_size[0],

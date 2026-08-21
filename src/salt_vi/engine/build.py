@@ -24,6 +24,7 @@ from salt_vi.utils import (
     CrossModalPMTTripletLoss,
     PMTMSEL,
     PMTDCL,
+    PMTQuadrupleCenterTripletLoss,
     HeteroCenterTripletLoss,
     LabelSmoothingCrossEntropy,
 )
@@ -317,6 +318,15 @@ class CLIP2ReID(nn.Module):
             pmt_attention_backend=getattr(
                 self.args, "pmt_attention_backend", "manual"
             ),
+            visual_input_backend=getattr(
+                self.args, "visual_input_backend", "single"
+            ),
+            quadruple_branch_order=getattr(
+                self.args, "quadruple_branch_order", None
+            ),
+            quadruple_template_trainable=getattr(
+                self.args, "quadruple_template_trainable", False
+            ),
         )
         self.embed_dim = base_cfg['embed_dim']
         if args.pretrain_choice == 'RN50':
@@ -372,6 +382,10 @@ class CLIP2ReID(nn.Module):
         )
         self.pmt_msel_criterion = PMTMSEL(getattr(args, "num_pos", 4), feat_norm="no")
         self.pmt_dcl_criterion = PMTDCL(getattr(args, "num_pos", 4), feat_norm="no")
+        self.pmt_qct_criterion = PMTQuadrupleCenterTripletLoss(
+            margin=getattr(args, "pmt_mscm_qct_margin", 1.2),
+            branch_weight=getattr(args, "pmt_mscm_qct_branch_weight", 0.25),
+        )
         self.hetero_center_criterion = HeteroCenterTripletLoss(
             margin=getattr(args, "hetero_center_margin", 0.1)
         )
@@ -394,6 +408,7 @@ class CLIP2ReID(nn.Module):
         self._fixed_visual_parallel_enabled = False
         self._fixed_visual_parallel_devices = ()
         self._fixed_visual_parallel_replicas = []
+        self._phased_quadruple_synced = False
         self._configure_fix_visual_training()
 
     def _init_device(self):
@@ -981,6 +996,48 @@ class CLIP2ReID(nn.Module):
             mode=mode,
             current_epoch=current_epoch,
         )
+
+    def sync_phased_quadruple_patch_embeddings(self):
+        if self._phased_quadruple_synced:
+            return False
+        visual = self.base_model.visual
+        if not hasattr(visual, "sync_input_plugin_from_template"):
+            raise RuntimeError("phased MSCM recipe requires PMTViTVisual")
+        visual.sync_input_plugin_from_template()
+        self._phased_quadruple_synced = True
+        return True
+
+    def prepare_pmt_mscm_phase(self, current_epoch, optimizer):
+        """Synchronize four branches and their Adam state without rebuilding it."""
+        if str(getattr(self.args, "pmt_recipe_variant", "original")).lower() != "mscm_phased":
+            return None
+        switch_epoch = int(getattr(self.args, "pmt_progressive_epoch", 6))
+        if int(current_epoch) != switch_epoch or self._phased_quadruple_synced:
+            return None
+
+        visual = self.base_model.visual
+        template = visual.vit.patch_embed
+        self.sync_phased_quadruple_patch_embeddings()
+        template_parameters = dict(template.named_parameters())
+        copied_states = 0
+        missing_states = []
+        for branch_index, branch in enumerate(visual.input_plugin.patch_embeds):
+            for name, target_parameter in branch.named_parameters():
+                source_parameter = template_parameters[name]
+                if source_parameter not in optimizer.state:
+                    missing_states.append(name)
+                    continue
+                optimizer.state[target_parameter] = deepcopy(
+                    optimizer.state[source_parameter]
+                )
+                copied_states += 1
+        return {
+            "epoch": int(current_epoch),
+            "optimizer": type(optimizer).__name__,
+            "reused_optimizer": True,
+            "copied_parameter_states": copied_states,
+            "template_parameters_without_state": sorted(set(missing_states)),
+        }
 
 def build_model(config):
     model = CLIP2ReID(config, num_classes=config.pid_num)

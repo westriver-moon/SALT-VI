@@ -423,6 +423,9 @@ class CLIP(nn.Module):
                  pmt_patch_embed_config=None,
                  pmt_gradient_checkpointing: bool = False,
                  pmt_attention_backend: str = "manual",
+                 visual_input_backend: str = "single",
+                 quadruple_branch_order=None,
+                 quadruple_template_trainable: bool = False,
                  ):
         super().__init__()
 
@@ -446,6 +449,9 @@ class CLIP(nn.Module):
                 patch_embed_config=pmt_patch_embed_config,
                 gradient_checkpointing=pmt_gradient_checkpointing,
                 attention_backend=pmt_attention_backend,
+                visual_input_backend=visual_input_backend,
+                quadruple_branch_order=quadruple_branch_order,
+                quadruple_template_trainable=quadruple_template_trainable,
             )
         elif visual_name == "RN50_ORI":
             vision_heads = vision_width * 32 // 64
@@ -845,6 +851,11 @@ def build_CLIP_from_openai_pretrained(name: str, image_size: Union[int, Tuple[in
         'pmt_patch_embed_config': config_dict.get("pmt_patch_embed"),
         'pmt_gradient_checkpointing': config_dict.get("pmt_gradient_checkpointing", False),
         'pmt_attention_backend': config_dict.get("pmt_attention_backend", "manual"),
+        'visual_input_backend': config_dict.get("visual_input_backend", "single"),
+        'quadruple_branch_order': config_dict.get("quadruple_branch_order"),
+        'quadruple_template_trainable': config_dict.get(
+            "quadruple_template_trainable", False
+        ),
     }
 
 

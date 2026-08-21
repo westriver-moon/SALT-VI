@@ -259,6 +259,8 @@ class SYSU_Tri_Data(data.Dataset):
         transform1=None,
         transform2=None,
         transform3=None,
+        transform4=None,
+        phased_transforms=None,
         colorIndex=None,
         thermalIndex=None,
         text_length=77,
@@ -285,6 +287,11 @@ class SYSU_Tri_Data(data.Dataset):
         self.transform1 = transform1
         self.transform2 = transform2
         self.transform3 = transform3
+        self.transform4 = transform4
+        if phased_transforms is not None and len(phased_transforms) != 4:
+            raise ValueError("phased_transforms must contain exactly four transforms")
+        self.phased_transforms = phased_transforms
+        self.training_phase = "pmt" if phased_transforms is not None else "default"
 
         modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
         backend = normalize_backend(sysu_sr_backend)
@@ -354,18 +361,43 @@ class SYSU_Tri_Data(data.Dataset):
             sampling,
         )
 
+    def set_training_phase(self, phase):
+        if self.phased_transforms is None:
+            if phase != "default":
+                raise ValueError("training phase selection requires phased transforms")
+            return
+        if phase not in {"pmt", "mscm"}:
+            raise ValueError(f"Unsupported phased training phase {phase!r}")
+        self.training_phase = phase
+
     def __getitem__(self, index):
         color_index = int(self.cIndex[index])
         thermal_index = int(self.tIndex[index])
         rgb_image, rgb_view = self.rgb_visual_source.sample(color_index)
         ir_image, ir_view = self.ir_visual_source.sample(thermal_index)
-        batch = {
-            "img_rgb_ori": self.transform1(rgb_image),
-            "img_rgb_aug": self.transform2(rgb_image),
-            "img_ir": self.transform3(ir_image),
-            "target_rgb": self.train_color_label[color_index],
-            "target_ir": self.train_thermal_label[thermal_index],
-        }
+        phased_transforms = getattr(self, "phased_transforms", None)
+        training_phase = getattr(self, "training_phase", "default")
+        if phased_transforms is not None and training_phase == "mscm":
+            rgb1, rgb2, ir1, ir2 = phased_transforms
+            batch = {
+                "img_mscm_rgb1": rgb1(rgb_image),
+                "img_mscm_rgb2": rgb2(rgb_image),
+                "img_mscm_ir1": ir1(ir_image),
+                "img_mscm_ir2": ir2(ir_image),
+                "target_rgb": self.train_color_label[color_index],
+                "target_ir": self.train_thermal_label[thermal_index],
+            }
+        else:
+            batch = {
+                "img_rgb_ori": self.transform1(rgb_image),
+                "img_rgb_aug": self.transform2(rgb_image),
+                "img_ir": self.transform3(ir_image),
+                "target_rgb": self.train_color_label[color_index],
+                "target_ir": self.train_thermal_label[thermal_index],
+            }
+            if self.transform4 is not None:
+                # Both infrared augmentations are applied after sampling the SR asset.
+                batch["img_ir_aug"] = self.transform4(ir_image)
         if self.joint_mode in ("ir_crossfusion", "uni"):
             rgb_caption = self.rgb_caption_source.sample(color_index, rgb_view)
             ir_caption = self.ir_caption_source.sample(thermal_index, ir_view)
