@@ -1,11 +1,11 @@
 dataset: sysu
-dataset_root: \${SALT_QRI_DATA_ROOT}
+dataset_root: ${SALT_QRI_DATA_ROOT}
 captions:
-  rgb: \${SALT_QRI_DATA_ROOT}/Text/Blip_RGB/caption_dict_Blip_RGB.json
-  ir: \${SALT_QRI_DATA_ROOT}/Text/Blip_IR/caption_dict_Blip_IR.json
-output_root: /home/lab929/ybj/experiments/qri-v1/runtime/pasd
-pretrained_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/stable-diffusion-v1-5
-pasd_model_path: /home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/pasd/checkpoint-100000
+  rgb: ${SALT_QRI_DATA_ROOT}/Text/Blip_RGB/caption_dict_Blip_RGB.json
+  ir: ${SALT_QRI_DATA_ROOT}/Text/Blip_IR/caption_dict_Blip_IR.json
+output_root: ${QRI_OUTPUT_ROOT}/pasd
+pretrained_model_path: ${SALT_VI_ROOT}/pasd_plugin/checkpoints/stable-diffusion-v1-5
+pasd_model_path: ${SALT_VI_ROOT}/pasd_plugin/checkpoints/pasd/checkpoint-100000
 device: cuda:1
 gpu_allowlist: [1, 2, 3]
 views_per_source: 1

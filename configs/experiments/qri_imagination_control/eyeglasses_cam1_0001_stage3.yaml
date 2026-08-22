@@ -1,0 +1,63 @@
+schema_version: 1
+experiment_id: qri-imagination-control-eyeglasses-stage3-20260822
+inputs:
+  source: /home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg
+  reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+crop_box_xyxy: [64, 0, 216, 152]
+process_size: 512
+inpaint_source: edit_region
+transition_dilation_px: 4
+transition_feather_px: 1.0
+seed: 20260821
+prompt:
+  added: >-
+    coherent complete object, crisp continuous frame, precise facial alignment,
+    realistic low-resolution surveillance photograph
+  negative: >-
+    no glasses, bare eyes, round glasses, oversized glasses, sunglasses, goggles,
+    thick bridge, broken frame, disconnected frame, lens glare, opaque lenses,
+    duplicated eyes, changed face, different person, distorted anatomy, changed hair,
+    mosaic, checkerboard, text, cartoon, painting, pasted patch
+variants:
+  - name: face_roi_s070_seed21
+    strength: 0.70
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    harmonize_strength: 0.65
+  - name: face_roi_s082_seed21
+    strength: 0.82
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    harmonize_strength: 0.65
+  - name: face_roi_s092_seed21
+    strength: 0.92
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    harmonize_strength: 0.65
+  - name: face_roi_s082_seed22
+    seed: 20260822
+    strength: 0.82
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    harmonize_strength: 0.65

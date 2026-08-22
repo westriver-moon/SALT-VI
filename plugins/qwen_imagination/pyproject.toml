@@ -22,6 +22,7 @@ regional = [
 
 [project.scripts]
 salt-qwen-imagination = "qwen_imagination.regional.cli:main"
+salt-qwen-text-annotation = "qwen_imagination.text_annotation.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

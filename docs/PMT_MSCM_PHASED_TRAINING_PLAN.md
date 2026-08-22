@@ -1,5 +1,7 @@
 # PMT 分阶段接入 MSCMNet 四路输入方案
 
+> **历史设计说明（重要）**：本文记录的是早期“epoch 6 后切换、以 QCT 为主”的 recipe 设计，保留用于解释当时的动机和代码边界。它不是 2026-08-21/22 H1–H4 混合损失实验的结果说明。当前 H1–H4 的实际终端权重、渐进因子、加速设置和解析配置以 `configs/stage_a/plugins/hybrid_loss/common.yaml` 及各 H1–H4 YAML、归档中的 `configs.yaml` 为准；当前结果见 `reports/EXPERIMENT_STATUS_20260822.md`。
+
 ## 目标
 
 保持原有 PMT Stage-A 前期训练不变；第 6 个 epoch 后切换为严格 MSCMNet 四路增强。超分图像必须先由数据源读取，再执行增强；超分不是增强算子。

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "target_semantics": "a small compact purple backpack behind the right shoulder, with a rounded body, dark shoulder strap and top seam",
+  "appearance": "same pedestrian in side view, muted purple fabric, soft bright indoor surveillance texture",
+  "evaluation_roi_xyxy": [42, 44, 140, 196],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "backpack_region", "type": "polygon", "points": [[58, 67], [102, 53], [132, 84], [126, 166], [99, 192], [63, 173], [48, 115]], "fill": true}
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "backpack_body", "type": "polygon", "points": [[69, 74], [99, 65], [119, 91], [116, 157], [96, 177], [72, 164], [60, 112]], "stroke_width": 3.0},
+      {"id": "top_seam", "type": "polyline", "points": [[72, 84], [91, 75], [110, 88]], "stroke_width": 2.0},
+      {"id": "shoulder_strap", "type": "polyline", "points": [[62, 80], [93, 101], [112, 151]], "stroke_width": 4.0}
+    ]
+  }
+}

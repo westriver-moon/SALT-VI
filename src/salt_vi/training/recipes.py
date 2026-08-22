@@ -271,6 +271,16 @@ class PMTMSCMPhasedRecipe:
             max(0.0, (int(current_epoch) - switch_epoch) / transition_epochs),
         )
 
+    @classmethod
+    def _auxiliary_alpha(cls, model, current_epoch):
+        transition_alpha = cls._transition_alpha(model, current_epoch)
+        start_factor = float(
+            getattr(model.args, "pmt_mscm_aux_start_factor", 0.0)
+        )
+        if not 0.0 <= start_factor <= 1.0:
+            raise ValueError("pmt_mscm_aux_start_factor must be in [0, 1]")
+        return start_factor + (1.0 - start_factor) * transition_alpha
+
     def _compute_gray_warmup(self, model, batch, current_epoch):
         self._require_keys(
             batch,
@@ -397,12 +407,37 @@ class PMTMSCMPhasedRecipe:
             (1.0 - transition_alpha) * intra_tri_loss
             + transition_alpha * cross_tri_loss
         )
+        auxiliary_alpha = self._auxiliary_alpha(model, current_epoch)
+        terminal_msel_weight = float(
+            getattr(model.args, "pmt_mscm_msel_weight", 0.0)
+        )
+        terminal_dcl_weight = float(
+            getattr(model.args, "pmt_mscm_dcl_weight", 0.0)
+        )
+        terminal_qct_weight = float(
+            getattr(model.args, "pmt_mscm_qct_weight", 0.1)
+        )
+        msel_weight = terminal_msel_weight * auxiliary_alpha
+        dcl_weight = terminal_dcl_weight * auxiliary_alpha
+        qct_weight = terminal_qct_weight * auxiliary_alpha
+
+        visible_aux = branch_features[:, :2].mean(dim=1)
+        infrared_aux = branch_features[:, 2:].mean(dim=1)
+        auxiliary_features = torch.cat((visible_aux, infrared_aux), dim=0)
+        auxiliary_labels = torch.cat((label_rgb, label_ir), dim=0)
+        zero = branch_features.sum() * 0.0
+        msel_raw = (
+            model.pmt_msel_criterion(auxiliary_features, auxiliary_labels)
+            if terminal_msel_weight > 0.0
+            else zero
+        )
+        dcl_raw = (
+            model.pmt_dcl_criterion(auxiliary_features, auxiliary_labels)
+            if terminal_dcl_weight > 0.0
+            else zero
+        )
         qct_loss, qct_components = model.pmt_qct_criterion(
             branch_features, label_rgb, return_components=True
-        )
-        qct_weight = (
-            float(getattr(model.args, "pmt_mscm_qct_weight", 0.1))
-            * transition_alpha
         )
         branch_acc = torch.stack([
             (branch_scores[index].argmax(dim=1) == branch_major_labels[
@@ -417,15 +452,26 @@ class PMTMSCMPhasedRecipe:
             "tri_loss": tri_loss * float(
                 getattr(model.args, "pmt_cross_modal_triplet_weight", 1.0)
             ),
+            "msel_loss": msel_raw * msel_weight,
+            "dcl_loss": dcl_raw * dcl_weight,
             "qct_loss": qct_loss * qct_weight,
             "acc": branch_acc,
-            "metric_objective": "qct",
+            "metric_objective": (
+                "hybrid_msel_dcl_qct"
+                if terminal_msel_weight > 0.0 or terminal_dcl_weight > 0.0
+                else "qct"
+            ),
             "triplet_mining": "phased_intra_to_four_pair_cross_modal_hard",
             "pmt_stage": "mscm_quadruple",
             "training_recipe": self.name,
             "current_epoch": int(current_epoch),
             "pmt_mscm_transition_alpha": transition_alpha,
+            "pmt_mscm_auxiliary_alpha": auxiliary_alpha,
+            "pmt_mscm_msel_effective_weight": msel_weight,
+            "pmt_mscm_dcl_effective_weight": dcl_weight,
             "pmt_mscm_qct_effective_weight": qct_weight,
+            "pmt_mscm_msel_raw": msel_raw.detach(),
+            "pmt_mscm_dcl_raw": dcl_raw.detach(),
             "pmt_mscm_intra_tri": intra_tri_loss.detach(),
             "pmt_mscm_cross_tri": cross_tri_loss.detach(),
             "qct_modality_compactness": qct_components[

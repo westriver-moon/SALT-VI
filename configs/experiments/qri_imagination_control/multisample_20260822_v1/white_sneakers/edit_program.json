@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "target_semantics": "a pair of white low-top sneakers with two distinct soles and subtle lace structure",
+  "appearance": "same legs and walking pose, soft indoor surveillance texture, slightly worn matte white footwear",
+  "evaluation_roi_xyxy": [54, 418, 202, 512],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "left_shoe_region", "type": "ellipse", "bbox": [55, 437, 132, 512], "fill": true},
+      {"id": "right_shoe_region", "type": "ellipse", "bbox": [116, 430, 205, 505], "fill": true}
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "left_shoe", "type": "polygon", "points": [[69, 458], [102, 448], [129, 475], [120, 499], [73, 502], [59, 486]], "stroke_width": 3.0},
+      {"id": "right_shoe", "type": "polygon", "points": [[131, 450], [165, 442], [200, 463], [194, 487], [143, 492], [120, 474]], "stroke_width": 3.0},
+      {"id": "left_sole", "type": "polyline", "points": [[63, 492], [83, 502], [119, 500]], "stroke_width": 2.0},
+      {"id": "right_sole", "type": "polyline", "points": [[127, 482], [153, 492], [194, 487]], "stroke_width": 2.0}
+    ]
+  }
+}

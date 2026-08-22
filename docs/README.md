@@ -1,6 +1,6 @@
 # SALT-VI 统一项目指南
 
-本文档是 SALT-VI 当前项目状态、架构、数据契约、训练入口和实验解释的唯一综合说明。历史决策和逐实验叙述不再维护为独立文档；需要追溯时使用 Git 历史、配置快照、原始日志和实验总表。
+本文档是 SALT-VI 当前架构、数据契约、训练入口和实验解释的统一指南。当前实验结果入口是 [`../reports/EXPERIMENT_STATUS_20260822.md`](../reports/EXPERIMENT_STATUS_20260822.md)；历史决策和逐实验叙述保留在 `reports/`，但不再承担当前状态或排行榜职责。
 本轮架构审计、模块边界和清理计划统一记录在 [ARCHITECTURE_AND_RESTRUCTURE.md](ARCHITECTURE_AND_RESTRUCTURE.md)。
 
 ## 1. 当前研究主线
@@ -140,14 +140,14 @@ python scripts/train.py --config_select <config.yaml>
 
 `reports/experiment_registry/experiment_registry.csv` 是唯一跨阶段总表，不从 README 复制出第二份排行榜。每次完成实验时，保存配置快照、代码提交、运行命令、指标文件、日志、checkpoint 路径和校验值，再更新总表。
 
-历史 Markdown 已删除，因为它们包含重复结果、失效路径和过期“当前状态”。历史事实仍可从以下位置恢复：
+历史专项 Markdown 不删除：其中包含失败结果、负面结论、当时路径和协议等可复核证据；但它们不再作为平行的当前状态页面。历史事实和当前结果分别从以下位置读取：
 
-1. Git 历史；
-2. `reports/experiment_registry/experiment_registry.csv` 及 source tables；
-3. `configs/experiments/reproduction/`；
-4. `experiments/`、`logs/raw/` 和结构化 runtime manifests。
+1. 当前状态：`reports/EXPERIMENT_STATUS_20260822.md`；
+2. 结构化总表：`reports/experiment_registry/experiment_registry.csv`；
+3. 历史专项证据：`reports/stage_a_*.md`、`reports/qri_*.md`、`reports/autoresearch_*.md`；
+4. Git 历史、`configs/experiments/reproduction/`、`experiments/`、`logs/raw/` 和结构化 runtime manifests。
 
-这些原始实验产物不是当前运行说明，不应重新链接成平行文档体系。
+这些原始实验产物不是当前运行说明；当前页面只引用它们的证据位置，不复制出第二份排行榜。
 
 ## 9. 文档规则
 
@@ -155,11 +155,13 @@ python scripts/train.py --config_select <config.yaml>
 
 - `/README.md`：项目入口和状态摘要；
 - `/docs/README.md`：本统一指南；
+- `/reports/EXPERIMENT_STATUS_20260822.md`：当前批次实验状态与归档总览；
 - `/pasd_plugin/README.md`：统一 PASD 插件接口；
 - `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
 - `/feature_analysis/README.md`：特征分析模块；
 - `/reports/experiment_registry/README.md`：总表字段和维护边界；
-- `/reports/PROJECT_REMEDIATION_PLAN.md`：本轮用户要求保留的带时间审查与修复计划；
+- `/reports/PROJECT_REMEDIATION_PLAN.md`：历史修复计划及其完成边界；
+- `/reports/archive_plan_20260822.md`：当前批次可复现归档规范与验收证据；
 - vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
 
 新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交，历史过程只留在 Git。

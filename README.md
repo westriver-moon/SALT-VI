@@ -4,14 +4,15 @@ SALT-VI 是可见光—红外行人重识别研究仓库。当前实现包含两
 
 ## 当前状态
 
-- 当前研究主线：在 SYSU-MM01 上用 geometry-matched PASD RGB 与 IR 重建 Stage-A，并把保留的 RN50 Stage-A 初始化接入 Stage-B；首个 30 epoch 衔接实验已完成并登记。
-- PMT-ViT、No-MBPatch、batch 128、FlashAttention 路线：24 epoch 修复版已恢复结构化结果并保留最佳模型；70 epoch 延长版已完成并归档，但未替代该结果。
-- 已完成对照：RN50 Direct 完成 120 epoch；PostTrain60 在 epoch 28 停止并归档为失败。
-- 当前 Stage-B 主线使用 PASD-RN50 衔接方案；已完成运行的精确配置快照归档于 `configs/experiments/reproduction/archived_configs/`。`configs/stage_b/r_text_visual_20260729.yaml`（`SALT_R_TEXT_VISUAL`）仅保留为历史对照，不再作为默认入口。
+- 2026-08-21/22 的当前实验主线是 SYSU-MM01 PMT-MSCM 混合损失 H1–H4；H1–H4 已完成 24 epoch，H3 QCT-0.40 的 35 epoch 独立延长实验仍以服务器状态和完成门禁为准。
+- H1–H4 的最高/最终结果、协议、配置和归档状态统一见 [`reports/EXPERIMENT_STATUS_20260822.md`](reports/EXPERIMENT_STATUS_20260822.md)；不要从旧报告中的“当前状态”句子建立排行榜。
+- QRI 加速、眼镜验证、像素控制、文本标注和文本想象均保留为独立专项证据；smoke/负面结果不等同于全数据集生产或 ReID 训练结果。
+- RN50、PMT-ViT/No-MBPatch、safe-trick、PASD 和 Stage-B 结果是历史已归档路线，仍可由实验总表和归档目录追溯，不能误写成当前运行任务。
 - 实验指标与 checkpoint 身份的唯一总表：`reports/experiment_registry/experiment_registry.csv`。
 
 项目架构、数据契约、当前实验、运行命令和结果解释统一见 [`docs/README.md`](docs/README.md)。
 - 本轮架构审计与清理记录见 docs/ARCHITECTURE_AND_RESTRUCTURE.md。
+- 本轮可复现归档规范和双账号资产核验记录见 `reports/archive_plan_20260822.md`。
 
 ## 主要入口
 

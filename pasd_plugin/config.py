@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -14,7 +15,7 @@ SUPPORTED_DATASETS = ("sysu", "regdb", "llcm")
 
 
 def _resolve(value: str | Path, base: Path) -> Path:
-    path = Path(value).expanduser()
+    path = Path(os.path.expandvars(str(value))).expanduser()
     return path if path.is_absolute() else (base / path).resolve()
 
 
@@ -53,6 +54,7 @@ class PluginConfig:
     target_height: int = 512
     target_width: int = 256
     views_per_source: int = 1
+    geometry_mode: str = "person_fit_blurred_background"
     asset_sha256: dict[str, str] = field(default_factory=dict)
     png_compress_level: int = 4
     person_detector_model: Path | None = None
@@ -93,6 +95,7 @@ class PluginConfig:
             "target_height": self.target_height,
             "target_width": self.target_width,
             "views_per_source": self.views_per_source,
+            "geometry_mode": self.geometry_mode,
             "seed": self.seed,
             "asset_sha256": dict(sorted(self.asset_sha256.items())),
             "png_compress_level": self.png_compress_level,
@@ -166,6 +169,12 @@ class PluginConfig:
         values["person_detector_model"] = _resolve(detector, base) if detector else None
         if values["person_detector_model"] and not values["person_detector_model"].is_file():
             raise FileNotFoundError(values["person_detector_model"])
+        geometry_mode = str(
+            values.get("geometry_mode", "person_fit_blurred_background")
+        ).lower()
+        if geometry_mode not in {"person_fit_blurred_background", "direct_rewrite"}:
+            raise ValueError(f"unsupported geometry_mode: {geometry_mode}")
+        values["geometry_mode"] = geometry_mode
         values["gpu_allowlist"] = tuple(int(value) for value in values.get("gpu_allowlist", (1, 2, 3)))
         if not values["gpu_allowlist"] or 0 in values["gpu_allowlist"] or any(value not in (1, 2, 3) for value in values["gpu_allowlist"]):
             raise ValueError("gpu_allowlist must be a non-empty subset of physical GPUs 1, 2, 3")

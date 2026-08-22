@@ -1,0 +1,21 @@
+extends: ../pmt_mscm_phased_pasd_512x256_b32.yaml
+
+# Activate every auxiliary objective at one quarter of its terminal weight on
+# epoch 6, then reuse the existing four-epoch transition to reach full weight.
+pmt_mscm_aux_start_factor: 0.25
+
+# Keep the validated acceleration and memory policy unchanged.
+batch_size: 32
+pmt_attention_backend: flash
+pmt_gradient_checkpointing: true
+pmt_gradient_checkpoint_blocks: 7
+pmt_gradient_checkpoint_blocks_warmup: 3
+pmt_gradient_checkpoint_segments: 3
+
+# Keep all non-weight QCT choices fixed across the four comparisons.
+pmt_mscm_qct_margin: 1.2
+pmt_mscm_qct_branch_weight: 0.25
+pmt_mscm_transition_epochs: 4
+pmt_progressive_epoch: 6
+total_train_epoch: 24
+seed: 0

@@ -1,0 +1,12 @@
+extends: common.yaml
+
+config_select: configs/stage_a/plugins/hybrid_loss/h1_balanced_025.yaml
+experiment_name: stageA_mscm_hybrid_h1_balanced_025_seed0
+output_root: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/h1_balanced_025
+metric_experiment_id: pmt-mscm-hybrid-h1-balanced-025-seed0
+metric_events_path: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/events/h1_balanced_025.jsonl
+
+# Equal terminal coefficients provide the central comparison.
+pmt_mscm_msel_weight: 0.25
+pmt_mscm_dcl_weight: 0.25
+pmt_mscm_qct_weight: 0.25

@@ -11,7 +11,12 @@ from PIL import Image
 from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
 
 from .config import PluginConfig
-from .geometry import PersonDetector, prepare_control_image, restore_blurred_background
+from .geometry import (
+    PersonDetector,
+    prepare_control_image,
+    prepare_direct_rewrite,
+    restore_blurred_background,
+)
 
 
 MODULE_ROOT = Path(__file__).resolve().parent
@@ -89,15 +94,19 @@ class PASDGenerator:
     def prepare(self, image_path: str | Path) -> tuple[Image.Image, Image.Image, dict]:
         with Image.open(image_path) as image:
             source = image.convert("RGB")
-        detection = self.detector.detect(source)
-        control, geometry = prepare_control_image(
-            source,
-            detection,
-            target_size=(self.config.target_width, self.config.target_height),
-            margin=self.config.person_margin,
-            background_blur_radius=self.config.background_blur_radius,
-            foreground_feather_radius=self.config.foreground_feather_radius,
-        )
+        target_size = (self.config.target_width, self.config.target_height)
+        if self.config.geometry_mode == "direct_rewrite":
+            control, geometry = prepare_direct_rewrite(source, target_size)
+        else:
+            detection = self.detector.detect(source)
+            control, geometry = prepare_control_image(
+                source,
+                detection,
+                target_size=target_size,
+                margin=self.config.person_margin,
+                background_blur_radius=self.config.background_blur_radius,
+                foreground_feather_radius=self.config.foreground_feather_radius,
+            )
         return self._working_image(control), control, geometry
 
     def generate_views(
@@ -107,11 +116,29 @@ class PASDGenerator:
         seeds: list[int],
         modality: str,
         batch_size: int = 1,
+        *,
+        added_prompt: str | None = None,
+        negative_prompts: list[str] | None = None,
+        guidance_scale: float | None = None,
+        conditioning_scale: float | None = None,
     ) -> tuple[list[Image.Image], dict]:
         if len(captions) != len(seeds) or not captions:
             raise ValueError("captions and seeds must be non-empty lists of equal length")
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
+        if negative_prompts is not None and len(negative_prompts) != len(captions):
+            raise ValueError("negative_prompts must match captions")
+        prompt_suffix = (
+            self.config.added_prompt if added_prompt is None else str(added_prompt)
+        )
+        effective_guidance = (
+            self.config.guidance_scale if guidance_scale is None else float(guidance_scale)
+        )
+        effective_conditioning = (
+            self.config.conditioning_scale
+            if conditioning_scale is None
+            else float(conditioning_scale)
+        )
         working, source_background, geometry = self.prepare(image_path)
         args = SimpleNamespace(
             init_latent_with_noise=self.config.init_latent_with_noise,
@@ -125,10 +152,15 @@ class PASDGenerator:
         for start in range(0, len(captions), batch_size):
             caption_batch = captions[start : start + batch_size]
             seed_batch = seeds[start : start + batch_size]
+            negative_batch = (
+                [self.config.negative_prompt] * len(caption_batch)
+                if negative_prompts is None
+                else negative_prompts[start : start + batch_size]
+            )
             prompts = [
                 ", ".join(
                     part
-                    for part in (caption.strip(), self.config.added_prompt.strip())
+                    for part in (caption.strip(), prompt_suffix.strip())
                     if part
                 )
                 for caption in caption_batch
@@ -142,16 +174,17 @@ class PASDGenerator:
                 working,
                 num_inference_steps=self.config.num_inference_steps,
                 generator=generators,
-                guidance_scale=self.config.guidance_scale,
-                negative_prompt=[self.config.negative_prompt] * len(prompts),
-                conditioning_scale=self.config.conditioning_scale,
+                guidance_scale=effective_guidance,
+                negative_prompt=negative_batch,
+                conditioning_scale=effective_conditioning,
             ).images
             for image in generated:
                 image = wavelet_color_fix(image, working).resize(
                     (self.config.target_width, self.config.target_height),
                     Image.Resampling.LANCZOS,
                 )
-                image = restore_blurred_background(image, geometry, source_background)
+                if self.config.geometry_mode == "person_fit_blurred_background":
+                    image = restore_blurred_background(image, geometry, source_background)
                 if modality.lower() == "ir":
                     image = image.convert("L").convert("RGB")
                 results.append(image)

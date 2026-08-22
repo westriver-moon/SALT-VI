@@ -1,0 +1,47 @@
+schema_version: 1
+reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+candidate: /home/lab929/ybj/experiments/qri_imagination_control/eyeglasses_cam1_0001/stage12_20260822_v2/trimap_pixel_s085_t035/seed_20260821_raw_crop.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+crop_box_xyxy: [0, 0, 256, 256]
+inspection_roi_xyxy: [78, 0, 204, 78]
+variants:
+  - name: region_direct_f3
+    strategy: region
+    feather_px: 3.0
+    harmonize_strength: 0.0
+  - name: region_harmonized_f3
+    strategy: region
+    feather_px: 3.0
+    harmonize_strength: 0.65
+  - name: region_harmonized_f5
+    strategy: region
+    feather_px: 5.0
+    harmonize_strength: 0.8
+  - name: evidence_balanced
+    strategy: evidence
+    support_dilation_px: 9
+    anchor_dilation_px: 3
+    delta_quantile: 55.0
+    detail_quantile: 55.0
+    high_delta_quantile: 88.0
+    source_detail_ratio: 0.45
+    seed_dilation_px: 1
+    feather_px: 0.7
+  - name: evidence_precise
+    support_dilation_px: 8
+    anchor_dilation_px: 2
+    delta_quantile: 62.0
+    detail_quantile: 62.0
+    high_delta_quantile: 92.0
+    source_detail_ratio: 0.55
+    seed_dilation_px: 1
+    feather_px: 0.55
+  - name: evidence_complete
+    support_dilation_px: 11
+    anchor_dilation_px: 4
+    delta_quantile: 48.0
+    detail_quantile: 48.0
+    high_delta_quantile: 82.0
+    source_detail_ratio: 0.35
+    seed_dilation_px: 1
+    feather_px: 0.9

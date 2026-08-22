@@ -1,0 +1,111 @@
+schema_version: 1
+experiment_id: qri-glasses-gpu0-20260821
+inputs:
+  source: /home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg
+  swin_reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+  eye_mask: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-localized-eye-20260820/eye_soft_mask.png
+  eye_bbox_xyxy: [92, 0, 189, 45]
+prompt:
+  source: qwen_v2_visual_world
+  positive: >-
+    same pedestrian, same face and identity, thin black rectangular eyeglasses,
+    two clearly separated optical lenses around both eyes, a thin visible bridge
+    over the nose, symmetric dark temple arms, realistic prescription glasses,
+    photorealistic indoor surveillance photograph
+  added: >-
+    crisp localized eyewear detail, anatomically correct eyes, preserve the exact
+    head shape, hair, skin, pose, clothing, lighting and surrounding pixels
+  negative: >-
+    no glasses, bare eyes, sunglasses, goggles, visor, thick opaque lenses,
+    duplicated eyes, changed face, different person, distorted anatomy, mask,
+    mosaic, checkerboard, grid, high-frequency noise, text, cartoon, painting
+mask:
+  dilation_px: 2
+  feather_px: 1.5
+seeds: [20260821, 20260822]
+pasd:
+  process_size: 512
+  steps: 20
+  batch_size: 1
+  variants:
+    - name: preserve_c075_g7
+      context_scale: 1.25
+      guidance_scale: 7.0
+      conditioning_scale: 0.75
+    - name: balanced_c050_g9
+      context_scale: 1.10
+      guidance_scale: 9.0
+      conditioning_scale: 0.50
+    - name: prompt_c030_g10
+      context_scale: 1.10
+      guidance_scale: 10.0
+      conditioning_scale: 0.30
+sd15_inpaint:
+  model_source: stable-diffusion-v1-5/stable-diffusion-inpainting
+  crop_side_px: 256
+  process_size: 512
+  mask_dilation_px: 3
+  variants:
+    - name: preserve_s085_g75
+      strength: 0.85
+      guidance_scale: 7.5
+      steps: 30
+    - name: semantic_s100_g85
+      strength: 1.0
+      guidance_scale: 8.5
+      steps: 30
+sd15_inpaint_refine:
+  model_source: stable-diffusion-v1-5/stable-diffusion-inpainting
+  crop_side_px: 256
+  process_size: 512
+  mask_dilation_px: 2
+  seeds: [20260821]
+  variants:
+    - name: refine_s055_g75
+      strength: 0.55
+      guidance_scale: 7.5
+      steps: 30
+    - name: refine_s065_g75
+      strength: 0.65
+      guidance_scale: 7.5
+      steps: 30
+    - name: refine_s075_g75
+      strength: 0.75
+      guidance_scale: 7.5
+      steps: 30
+    - name: refine_s080_g75
+      strength: 0.80
+      guidance_scale: 7.5
+      steps: 30
+sd15_inpaint_strength_sweep:
+  model_source: stable-diffusion-v1-5/stable-diffusion-inpainting
+  crop_side_px: 256
+  process_size: 512
+  mask_dilation_px: 2
+  seeds: [20260821]
+  variants:
+    - name: sweep_s030_g75
+      strength: 0.30
+      guidance_scale: 7.5
+      steps: 30
+    - name: sweep_s045_g75
+      strength: 0.45
+      guidance_scale: 7.5
+      steps: 30
+    - name: sweep_s060_g75
+      strength: 0.60
+      guidance_scale: 7.5
+      steps: 30
+    - name: sweep_s075_g75
+      strength: 0.75
+      guidance_scale: 7.5
+      steps: 30
+    - name: sweep_s085_g75
+      strength: 0.85
+      guidance_scale: 7.5
+      steps: 30
+quality_gates:
+  min_inside_mean_abs_change: 3.0
+  max_outside_mean_abs_change: 0.1
+  max_lr_cycle_energy: 0.003
+  min_identity_cosine_to_swin: 0.96

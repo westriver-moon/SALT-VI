@@ -1,4 +1,4 @@
-extends: \${SALT_VI_ROOT}/configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+extends: ${SALT_VI_ROOT}/configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
 
 # QRI-v2 is isolated from QRI-v1 by config path, environment names, IDs and output roots.
 sysu_sr_backend: pasd_multiview

@@ -132,3 +132,38 @@ def roi_comparison_board(
     for tile, xy in zip(tiles, ((0, 0), (half, 0), (0, half), (half, half))):
         board.paste(tile, xy)
     return board
+
+
+def swin_roi_board(
+    swin: Image.Image,
+    region: Region,
+    size_px: int = 512,
+) -> Image.Image:
+    """Create a SwinIR-only board with tight and contextual ROI views."""
+
+    size_px = int(size_px)
+    if size_px < 256 or size_px % 2:
+        raise ValueError("ROI board size must be an even integer >= 256")
+    swin = swin.convert("RGB")
+    context = expanded_bbox(region.bbox_xyxy, swin.size)
+    half = size_px // 2
+    board = Image.new("RGB", (size_px, size_px), (64, 64, 64))
+    tiles = (
+        crop_on_canvas(
+            swin,
+            region.bbox_xyxy,
+            (half, size_px),
+            resample=RESAMPLING.LANCZOS,
+            label="SwinIR tight",
+        ),
+        crop_on_canvas(
+            swin,
+            context,
+            (half, size_px),
+            resample=RESAMPLING.LANCZOS,
+            label="SwinIR context",
+        ),
+    )
+    board.paste(tiles[0], (0, 0))
+    board.paste(tiles[1], (half, 0))
+    return board

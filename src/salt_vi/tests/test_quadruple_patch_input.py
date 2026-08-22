@@ -322,9 +322,41 @@ def test_phased_stage_a_config_resolves_with_branch_level_qct():
     assert config.pmt_mscm_qct_margin == 1.2
     assert config.pmt_mscm_qct_weight == 0.1
     assert config.pmt_mscm_qct_branch_weight == 0.25
+    assert config.pmt_mscm_msel_weight == 0.0
+    assert config.pmt_mscm_dcl_weight == 0.0
+    assert config.pmt_mscm_aux_start_factor == 0.0
     assert config.pmt_gradient_checkpoint_blocks == 7
     assert config.pmt_gradient_checkpoint_blocks_warmup == 3
     assert config.pmt_gradient_checkpoint_segments == 3
+
+
+def test_hybrid_loss_configs_cover_weight_grid_and_keep_acceleration(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("SALT_MSCM_HYBRID_OUTPUT_ROOT", str(tmp_path))
+    expected = {
+        "h1_balanced_025.yaml": (0.25, 0.25, 0.25),
+        "h2_dcl_050.yaml": (0.25, 0.50, 0.25),
+        "h3_qct_040.yaml": (0.25, 0.25, 0.40),
+        "h4_full_aux.yaml": (0.50, 0.50, 0.25),
+    }
+    for filename, weights in expected.items():
+        config = load_train_configs(
+            f"configs/stage_a/plugins/hybrid_loss/{filename}"
+        )
+        validate_runtime_config(config)
+        assert (
+            config.pmt_mscm_msel_weight,
+            config.pmt_mscm_dcl_weight,
+            config.pmt_mscm_qct_weight,
+        ) == weights
+        assert config.pmt_mscm_aux_start_factor == 0.25
+        assert config.batch_size == 32
+        assert config.pmt_attention_backend == "flash"
+        assert config.pmt_gradient_checkpointing is True
+        assert config.pmt_gradient_checkpoint_blocks == 7
+        assert config.pmt_gradient_checkpoint_blocks_warmup == 3
+        assert config.pmt_gradient_checkpoint_segments == 3
 
 
 def test_phased_evaluation_uses_template_only_before_switch():
@@ -457,6 +489,9 @@ class _PhasedRecipeModel:
             id_loss_weight=1.0,
             pmt_cross_modal_triplet_weight=1.0,
             pmt_mscm_qct_weight=0.1,
+            pmt_mscm_msel_weight=0.0,
+            pmt_mscm_dcl_weight=0.0,
+            pmt_mscm_aux_start_factor=0.0,
             pmt_mscm_transition_epochs=4,
         )
         self.base_model = _PhasedBase()
@@ -469,6 +504,8 @@ class _PhasedRecipeModel:
         self.cross_calls = 0
         self.pmt_qct_criterion = _FakeQCT()
         self.last_classifier_features = None
+        self.msel_calls = 0
+        self.dcl_calls = 0
 
     def _assert_pmt_batch_layout(self, label_rgb, label_ir):
         assert torch.equal(label_rgb, label_ir)
@@ -487,6 +524,17 @@ class _PhasedRecipeModel:
         del labels
         self.cross_calls += 1
         return (visible - infrared).square().mean()
+
+    def pmt_msel_criterion(self, features, labels):
+        del labels
+        self.msel_calls += 1
+        return features.square().mean()
+
+    def pmt_dcl_criterion(self, features, labels):
+        del labels
+        self.dcl_calls += 1
+        return features.square().mean()
+
 
 def test_phased_recipe_keeps_original_gray_warmup_before_epoch_six():
     model = _PhasedRecipeModel()
@@ -521,8 +569,12 @@ def test_phased_recipe_supervises_four_branches_without_feature_averaging():
     )
     assert result["pmt_stage"] == "mscm_quadruple"
     assert model.cross_calls == 4
-    assert "msel_loss" not in result
+    assert result["msel_loss"].item() == 0.0
+    assert result["dcl_loss"].item() == 0.0
+    assert model.msel_calls == 0
+    assert model.dcl_calls == 0
     assert result["pmt_mscm_transition_alpha"] == 0.0
+    assert result["pmt_mscm_auxiliary_alpha"] == 0.0
     assert result["pmt_mscm_qct_effective_weight"] == 0.0
     assert result["qct_loss"].item() == 0.0
     assert model.pmt_qct_criterion.last_shape == (2, 4, 2)
@@ -530,6 +582,38 @@ def test_phased_recipe_supervises_four_branches_without_feature_averaging():
         model.last_classifier_features[:, 0],
         torch.tensor([1.0, 1.0, 3.0, 3.0, 5.0, 5.0, 7.0, 7.0]),
     )
+
+
+def test_phased_hybrid_losses_start_at_one_quarter_weight_on_switch_epoch():
+    model = _PhasedRecipeModel()
+    model.args.pmt_mscm_msel_weight = 0.25
+    model.args.pmt_mscm_dcl_weight = 0.5
+    model.args.pmt_mscm_qct_weight = 0.25
+    model.args.pmt_mscm_aux_start_factor = 0.25
+    batch = {
+        "img_mscm_rgb1": torch.full((2, 3, 4, 2), 1.0),
+        "img_mscm_rgb2": torch.full((2, 3, 4, 2), 3.0),
+        "img_mscm_ir1": torch.full((2, 3, 4, 2), 5.0),
+        "img_mscm_ir2": torch.full((2, 3, 4, 2), 7.0),
+        "target_rgb": torch.zeros(2, dtype=torch.long),
+        "target_ir": torch.zeros(2, dtype=torch.long),
+    }
+
+    result = PMTMSCMPhasedRecipe().compute_losses(
+        model, batch, current_epoch=6
+    )
+
+    assert result["metric_objective"] == "hybrid_msel_dcl_qct"
+    assert result["pmt_mscm_transition_alpha"] == 0.0
+    assert result["pmt_mscm_auxiliary_alpha"] == 0.25
+    assert result["pmt_mscm_msel_effective_weight"] == 0.0625
+    assert result["pmt_mscm_dcl_effective_weight"] == 0.125
+    assert result["pmt_mscm_qct_effective_weight"] == 0.0625
+    assert result["msel_loss"].item() > 0.0
+    assert result["dcl_loss"].item() > 0.0
+    assert result["qct_loss"].item() > 0.0
+    assert model.msel_calls == 1
+    assert model.dcl_calls == 1
 
 
 def test_branch_aware_qct_is_finite_and_backpropagates_to_all_four_views():

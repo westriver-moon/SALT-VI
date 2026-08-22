@@ -1,0 +1,12 @@
+extends: common.yaml
+
+config_select: configs/stage_a/plugins/hybrid_loss/h4_full_aux.yaml
+experiment_name: stageA_mscm_hybrid_h4_full_aux_seed0
+output_root: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/h4_full_aux
+metric_experiment_id: pmt-mscm-hybrid-h4-full-aux-seed0
+metric_events_path: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/events/h4_full_aux.jsonl
+
+# Restore both original auxiliary strengths and add moderate QCT.
+pmt_mscm_msel_weight: 0.50
+pmt_mscm_dcl_weight: 0.50
+pmt_mscm_qct_weight: 0.25

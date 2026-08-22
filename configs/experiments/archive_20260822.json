@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "repo_root": "/home/lab929/ybj/SALT-VI",
+  "source_snapshot_root": "/home/lab929/ybj/experiments/archive/_shared/source/SALT-VI-worktree-20260822-1604",
+  "strong_asset_registry_root": "/home/lab929/ybj/experiments/archive/_shared/assets/SALT-VI-assets-20260822-strong-v1",
+  "experiments": {
+    "stage_a_hybrid_20260821": {
+      "kind": "stage_a_training_matrix",
+      "run_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821",
+      "archive_root": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821",
+      "launch_commands": [
+        "SALT_MSCM_HYBRID_OUTPUT_ROOT=/home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821 /home/lab929/ybj/.conda-envs/salt-vi-flash/bin/python3.9 -u scripts/experiments/run_pmt_mscm_hybrid_loss_scheduler.py --output-root /home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821 --python /home/lab929/ybj/.conda-envs/salt-vi-flash/bin/python3.9"
+      ],
+      "source_files": [
+        "configs/pipelines/sysu_pmt_mscm_hybrid_loss.yaml",
+        "configs/stage_a/plugins/hybrid_loss",
+        "scripts/experiments/run_pmt_mscm_hybrid_loss_scheduler.py",
+        "src/salt_vi"
+      ],
+      "completion": {
+        "scheduler_state": "scheduler/state.json",
+        "required_patterns": [
+          "results.json",
+          "events/h1_balanced_025.jsonl",
+          "events/h2_dcl_050.jsonl",
+          "events/h3_qct_040.jsonl",
+          "events/h4_full_aux.jsonl",
+          "h1_balanced_025/**/checkpoint_latest.pth",
+          "h2_dcl_050/**/checkpoint_latest.pth",
+          "h3_qct_040/**/checkpoint_latest.pth",
+          "h4_full_aux/**/checkpoint_latest.pth",
+          "h1_balanced_025/**/models/model_IR_*.pth",
+          "h2_dcl_050/**/models/model_IR_*.pth",
+          "h3_qct_040/**/models/model_IR_*.pth",
+          "h4_full_aux/**/models/model_IR_*.pth"
+        ],
+        "quiet_seconds": 120
+      }
+    },
+    "stage_a_h3_qct_040_e35_20260822": {
+      "kind": "stage_a_extended_training",
+      "run_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822",
+      "archive_root": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822",
+      "launch_commands": [
+        "CUDA_VISIBLE_DEVICES=1 PYTHONPATH=/home/lab929/ybj/SALT-VI/src:/home/lab929/ybj/SALT-VI /home/lab929/ybj/.conda-envs/salt-vi-flash/bin/python3.9 -u -m salt_vi.entrypoints.train --config_select /home/lab929/ybj/SALT-VI/configs/stage_a/plugins/hybrid_loss/h3_qct_040_e35.yaml --set gpu_id=0"
+      ],
+      "source_files": [
+        "configs/pipelines/sysu_pmt_mscm_hybrid_loss.yaml",
+        "configs/stage_a/plugins/hybrid_loss",
+        "src/salt_vi"
+      ],
+      "diagnostic_logs": [
+        "train.log",
+        "train_e35.log",
+        "train_e35_retry.log"
+      ],
+      "completion": {
+        "event_gate": {
+          "path": "events.jsonl",
+          "event_type": "eval_epoch",
+          "minimum_epoch": 34
+        },
+        "required_patterns": [
+          "events.jsonl",
+          "model_output/**/configs.yaml",
+          "model_output/**/run_manifest.json",
+          "model_output/**/checkpoint_latest.pth",
+          "model_output/**/models/model_IR_*.pth"
+        ],
+        "quiet_seconds": 180
+      }
+    },
+    "qri_acceleration_20260821": {
+      "kind": "qri_acceleration_pilot",
+      "run_root": "/home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821",
+      "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-fast-search-gpu0-20260821",
+      "launch_commands": [
+        "See reports/qri_acceleration/qri_fast_search_gpu0_20260821.md and the preserved logs; the selected flow is implemented by scripts/experiments/qri_acceleration/."
+      ],
+      "source_files": [
+        "configs/experiments/qri_acceleration",
+        "scripts/experiments/qri_acceleration",
+        "reports/qri_acceleration",
+        "plugins/qwen_imagination",
+        "pasd_plugin"
+      ],
+      "completion": {
+        "required_patterns": [
+          "artifacts/selected_flow_smoke/metrics/phase_a_summary.json",
+          "artifacts/selected_flow_smoke/metrics/phase_b_dry_run.json",
+          "metrics/quality_audit.json",
+          "metrics/qwen_pilot.json"
+        ],
+        "quiet_seconds": 120
+      }
+    },
+    "qri_glasses_20260821": {
+      "kind": "qri_glasses_single_image_validation",
+      "run_root": "/home/lab929/ybj/experiments/qri_glasses/qri-glasses-gpu0-20260821",
+      "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-glasses-gpu0-20260821",
+      "launch_commands": [
+        "See reports/qri_glasses/qri_glasses_gpu0_report.md and the preserved logs; runners and locked parameters are in scripts/experiments/qri_glasses/ and configs/experiments/qri_glasses/."
+      ],
+      "source_files": [
+        "configs/experiments/qri_glasses",
+        "scripts/experiments/qri_glasses",
+        "reports/qri_glasses",
+        "plugins/qwen_imagination",
+        "pasd_plugin"
+      ],
+      "completion": {
+        "required_patterns": [
+          "artifacts/pasd_sd15_batch1/metrics.json",
+          "artifacts/sd15_inpaint_strength_sweep_20260822/metrics.json",
+          "artifacts/sd15_inpaint_blend_refine/selection.json",
+          "artifacts/sd15_inpaint_blend_refine/qwen_visual_audit.json"
+        ],
+        "quiet_seconds": 120
+      }
+    },
+    "qri_imagination_control_20260822": {
+      "kind": "qri_pixel_control_negative_and_selected_evidence",
+      "run_root": "/home/lab929/ybj/experiments/qri_imagination_control",
+      "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-imagination-control-20260822",
+      "launch_commands": [
+        "See reports/qri_imagination_control/long_term_plan.md; each historical stage has its exact runner/config under scripts/experiments/qri_imagination_control/ and configs/experiments/qri_imagination_control/."
+      ],
+      "source_files": [
+        "configs/experiments/qri_imagination_control",
+        "scripts/experiments/qri_imagination_control",
+        "reports/qri_imagination_control",
+        "plugins/qwen_imagination",
+        "pasd_plugin"
+      ],
+      "completion": {
+        "required_patterns": [
+          "eyeglasses_cam1_0001/stage8_pasd_refine_20260822_v1/metrics.json",
+          "eyeglasses_cam1_0001/stage8_pasd_refine_20260822_v1/identity_audit.json",
+          "eyeglasses_cam1_0001/stage9_sam_20260822_v1/metrics.json",
+          "multisample_20260822_v1/white_sneakers/stage2_pasd/metrics.json"
+        ],
+        "quiet_seconds": 120
+      }
+    },
+    "qri_text_annotations_20260822": {
+      "kind": "qri_text_annotation_smoke_and_diagnostics",
+      "run_root": "/home/lab929/ybj/experiments/qri_text_annotations",
+      "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-text-annotations-smoke-20260822",
+      "launch_commands": [
+        "/home/lab929/ybj/SALT-VI/scripts/experiments/qri_text_annotations/run_exact_multi_gpu_3090.sh --gpu-ids 0,1,2 --split train --dry-run",
+        "The full production pass was intentionally not launched; see reports/qri_text_annotations/exact_multi_gpu_20260822.md."
+      ],
+      "source_files": [
+        "scripts/experiments/qri_text_annotations",
+        "reports/qri_text_annotations",
+        "plugins/qwen_imagination",
+        "pasd_plugin"
+      ],
+      "completion": {
+        "required_patterns": [
+          "sysu_exact_caption_v3_smoke/logs/exact_multi_gpu/*/summary.json",
+          "sysu_exact_caption_v3_compact_smoke/logs/exact_multi_gpu/*/summary.json",
+          "sysu_exact_caption_v3_smoke/manifests/*.summary.json",
+          "sysu_exact_caption_v3_compact_smoke/manifests/*.summary.json"
+        ],
+        "quiet_seconds": 120
+      }
+    },
+    "qri_text_imagination_20260822": {
+      "kind": "qri_text_imagination_thinking_ablation",
+      "run_root": "/home/lab929/ybj/experiments/qri_text_imagination/thinking_ablation_gpu0_20260822_v1",
+      "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-text-imagination-thinking-ablation-gpu0-20260822",
+      "launch_commands": [
+        "/home/lab929/ybj/.venvs/qri-v1/bin/python scripts/experiments/qri_text_imagination/text_only_planner.py --config configs/experiments/qri_text_imagination/thinking_ablation_gpu0.yaml"
+      ],
+      "source_files": [
+        "configs/experiments/qri_text_imagination",
+        "scripts/experiments/qri_text_imagination",
+        "reports/qri_text_imagination",
+        "plugins/qwen_imagination"
+      ],
+      "completion": {
+        "required_patterns": [
+          "metrics.json",
+          "records/no_thinking/*.json",
+          "records/thinking/*.json",
+          "boards/*.png"
+        ],
+        "quiet_seconds": 120
+      }
+    }
+  },
+  "external_assets": [
+    {
+      "id": "sysu_mm01_raw_dataset",
+      "path": "/home/cgv841/datasets/SYSU-MM01",
+      "mode": "metadata",
+      "required": true
+    },
+    {
+      "id": "sysu_pasd_derived_manifest",
+      "path": "/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "pmt_vit_initial_weight",
+      "path": "/home/cgv841/ybj/SALT-VI/pretrained/pmt_sysu/jx_vit_base_p16_224-80ecf9dd.pth",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "qwen3_8_27b_gguf",
+      "path": "/home/lab929/ybj/models/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "qwen3_8_mmproj",
+      "path": "/home/lab929/ybj/models/qwen3.8-27b-gguf/mmproj-F16.gguf",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "swinir_x2_weight",
+      "path": "/home/cgv841/weights/001_classicalSR_DF2K_s64w8_SwinIR-M_x2.pth",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "yolov8x_pose_weight",
+      "path": "/home/lab929/ybj/models/qri-v1/checkpoints/yolov8x-pose.pt",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "schp_lip_weight",
+      "path": "/home/lab929/ybj/models/qri-v1/checkpoints/schp_lip.pth",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "sam_vit_b_weight",
+      "path": "/home/lab929/ybj/models/qri-v1/checkpoints/sam_vit_b_01ec64.pth",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "sd15_inpainting_diffusers_tree",
+      "path": "/home/lab929/ybj/models/qri-diffusion-bases/stable-diffusion-v1-5-inpainting",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "pasd_sd15_base_tree",
+      "path": "/home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/stable-diffusion-v1-5",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "pasd_checkpoint_100000_tree",
+      "path": "/home/lab929/ybj/SALT-VI/pasd_plugin/checkpoints/pasd/checkpoint-100000",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "qri_identity_checkpoint",
+      "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "swinir_source_tree",
+      "path": "/home/cgv841/third_party/SwinIR-official-6545850-v2",
+      "mode": "git",
+      "required": true
+    },
+    {
+      "id": "llama_cpp_source_tree",
+      "path": "/home/lab929/ybj/models/qri-v1/sources/llama.cpp",
+      "mode": "git",
+      "required": true
+    },
+    {
+      "id": "schp_source_tree",
+      "path": "/home/lab929/ybj/models/qri-v1/sources/Self-Correction-Human-Parsing",
+      "mode": "git",
+      "required": true
+    },
+    {
+      "id": "sam_source_tree",
+      "path": "/home/lab929/ybj/models/qri-v1/sources/segment-anything",
+      "mode": "git",
+      "required": true
+    }
+  ],
+  "strong_external_assets": [
+    {
+      "id": "sysu_mm01_cam1_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam1",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_cam2_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam2",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_cam3_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam3",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_cam4_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam4",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_cam5_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam5",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_cam6_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/cam6",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_split_metadata_tree",
+      "path": "/home/cgv841/datasets/SYSU-MM01/exp",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_blip_rgb_captions",
+      "path": "/home/cgv841/datasets/SYSU-MM01/Text/Blip_RGB/caption_dict_Blip_RGB.json",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_mm01_blip_ir_captions",
+      "path": "/home/cgv841/datasets/SYSU-MM01/Text/Blip_IR/caption_dict_Blip_IR.json",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "sysu_precomputed_swinir_x2_tree",
+      "path": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+      "mode": "tree_sha256",
+      "required": true
+    },
+    {
+      "id": "llama_server_binary",
+      "path": "/home/lab929/ybj/models/qri-v1/sources/llama.cpp/build/bin/llama-server",
+      "mode": "file_sha256",
+      "required": true
+    },
+    {
+      "id": "swinir_source_tree_content",
+      "path": "/home/cgv841/third_party/SwinIR-official-6545850-v2",
+      "mode": "tree_sha256",
+      "required": true
+    }
+  ]
+}

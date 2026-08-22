@@ -78,6 +78,35 @@ def _expanded_bbox(
     )
 
 
+def prepare_direct_rewrite(
+    source: Image.Image,
+    target_size: tuple[int, int] = (256, 512),
+) -> tuple[Image.Image, dict]:
+    """Preserve an already canonical control canvas without crop or padding."""
+
+    source = source.convert("RGB")
+    target_width, target_height = (int(value) for value in target_size)
+    if source.size != (target_width, target_height):
+        raise ValueError(
+            f"direct_rewrite requires source size {target_size}, got {source.size}"
+        )
+    size = [target_width, target_height]
+    return source, {
+        "mode": "direct_rewrite",
+        "source_size": size,
+        "target_size": size,
+        "resized_size": size,
+        "padding": [0, 0, 0, 0],
+        "transform": {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+        },
+        "background_restoration": False,
+    }
+
+
 def prepare_control_image(
     source: Image.Image,
     detection: PersonDetection,

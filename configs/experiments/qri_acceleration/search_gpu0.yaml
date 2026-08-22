@@ -1,0 +1,21 @@
+schema_version: 1
+experiment_id: qri-fast-search-gpu0-20260821
+device: cuda:0
+run_root: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821
+pilot:
+  samples_per_camera: 2
+  tta_samples: 2
+  qwen_samples: 6
+  qwen_reference_samples: 2
+  pasd_samples: 3
+quality_gates:
+  qwen_positive_region_fraction: 1.0
+  qwen_unresolved_region_fraction: 1.0
+  pasd_min_inside_mean_abs_change: 3.0
+  pasd_max_outside_mean_abs_change: 0.1
+  pasd_max_lr_cycle_energy: 0.003
+  pasd_min_identity_cosine_to_swin: 0.96
+feasibility:
+  formal_source_count: 44745
+  target_hours: 48
+  target_seconds_per_source: 3.86

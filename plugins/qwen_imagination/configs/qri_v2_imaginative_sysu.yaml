@@ -1,6 +1,6 @@
 schema_version: 2
 plugin_version: qri-v2
-dataset_root: \${SALT_QRI_DATA_ROOT}
+dataset_root: ${SALT_QRI_DATA_ROOT}
 output_root: ${QRI_V2_OUTPUT_ROOT}
 modalities: [rgb, ir]
 source_size_hw: [256, 128]
@@ -24,45 +24,45 @@ seed: 20260819
 
 assets:
   qwen_model:
-    path: \${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf
+    path: ${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf
     sha256: bee238bbeb3dc0a34bde4d0dedbaee1f98c009e8bb4226f03070054c12fb1372
   qwen_mmproj:
-    path: \${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/mmproj-F16.gguf
+    path: ${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/mmproj-F16.gguf
     sha256: cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e
   swinir_model:
-    path: \${SALT_SWINIR_MODEL}
+    path: ${SALT_SWINIR_MODEL}
     sha256: 2032ebf8f401dd3ce2fae5f3852117cb72101ec6ed8358faa64c2a3fa09ed4ac
   identity_checkpoint:
-    path: \${SALT_QRI_IDENTITY_CHECKPOINT}
+    path: ${SALT_QRI_IDENTITY_CHECKPOINT}
     sha256: 00c581ff6965a93088ac4c807c5937db270378336702d16f38720949693e8171
   yolo_pose:
-    path: \${SALT_QRI_RUNTIME_ROOT}/checkpoints/yolov8x-pose.pt
+    path: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/yolov8x-pose.pt
     sha256: 7a9bf952c2fc1c07d4a1da00dbb4cfab5ed71f89cbe8824d51a8f7a61cee5825
   schp_lip:
-    path: \${SALT_QRI_RUNTIME_ROOT}/checkpoints/schp_lip.pth
+    path: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/schp_lip.pth
     sha256: 24fa3254ceeb74c8435458994a64b522fb439a3635b7b86ff470457e0413da00
   sam_vit_b:
-    path: \${SALT_QRI_RUNTIME_ROOT}/checkpoints/sam_vit_b_01ec64.pth
+    path: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/sam_vit_b_01ec64.pth
     sha256: ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912
 
 swinir:
-  root: \${SALT_SWINIR_ROOT}
+  root: ${SALT_SWINIR_ROOT}
   revision: 6545850fbf8df298df73d81f3e8cba638787c8bd
   network_sha256: 9e143898679ebeebc5d2fc94ad1b89c38aa4a4d43da4e0fcba0f93e476994913
 
 roi:
   device: cuda:1
-  schp_root: \${SALT_QRI_RUNTIME_ROOT}/sources/Self-Correction-Human-Parsing
+  schp_root: ${SALT_QRI_RUNTIME_ROOT}/sources/Self-Correction-Human-Parsing
   schp_revision: eb84c432cc697f494d99662a05f2335eb2f26095
-  sam_root: \${SALT_QRI_RUNTIME_ROOT}/sources/segment-anything
+  sam_root: ${SALT_QRI_RUNTIME_ROOT}/sources/segment-anything
   sam_revision: dca509fe793f601edb92606367a655c15ac00fdf
   category_stats_path: null
 
 qwen:
   model_id: third-party-qwen3.8-27b-ud-q4-k-xl
-  llama_root: \${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp
+  llama_root: ${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp
   llama_revision: 8ef78e644f559db4e8716b59bf76b8e11619337d
-  server_binary: \${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp/build/bin/llama-server
+  server_binary: ${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp/build/bin/llama-server
   server_sha256: db4c6950ae60f569f9fa5c4d6e0d60e9f220fa747853371900a64f43de4a8164
   gpu: 3
   host: 127.0.0.1
@@ -91,5 +91,5 @@ pasd:
     distorted anatomy, blurry, noise, cartoon, painting
 
 identity:
-  config_path: \${SALT_VI_ROOT}/configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
+  config_path: ${SALT_VI_ROOT}/configs/stage_a/safe_tricks/c3_b96_camera_diverse_cosine.yaml
   device: cuda:1

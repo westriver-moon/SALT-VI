@@ -49,6 +49,7 @@ def _load_yaml_with_extends(path, repo_root, seen=None):
     parent = payload.pop("extends", None)
     if not parent:
         return _expand_environment_values(payload)
+    parent = os.path.expandvars(str(parent))
     candidates = []
     if os.path.isabs(parent):
         candidates.append(parent)

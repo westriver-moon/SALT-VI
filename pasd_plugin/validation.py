@@ -14,6 +14,31 @@ from .generation import validate_record
 def validate_geometry(geometry: dict, config: PluginConfig) -> None:
     if not isinstance(geometry, dict):
         raise ValueError("missing geometry audit")
+    mode = geometry.get("mode")
+    if mode != config.geometry_mode:
+        raise ValueError(
+            f"geometry mode {mode!r} does not match config {config.geometry_mode!r}"
+        )
+    if mode == "direct_rewrite":
+        expected = [config.target_width, config.target_height]
+        if (
+            geometry.get("source_size") != expected
+            or geometry.get("target_size") != expected
+            or geometry.get("resized_size") != expected
+        ):
+            raise ValueError("direct rewrite geometry must preserve the target canvas")
+        if geometry.get("padding") != [0, 0, 0, 0]:
+            raise ValueError("direct rewrite geometry cannot add padding")
+        if geometry.get("transform") != {
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+        }:
+            raise ValueError("direct rewrite geometry requires identity coordinates")
+        if geometry.get("background_restoration") is not False:
+            raise ValueError("direct rewrite geometry cannot restore the background")
+        return
     source_width, source_height = geometry["source_size"]
     resized_width, resized_height = geometry["resized_size"]
     target_width, target_height = geometry["target_size"]

@@ -1,0 +1,37 @@
+schema_version: 1
+experiment_id: qri-multisample-drawstring-bag-pasd-20260822
+reference: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam1/0319/0004/swin.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/multisample_20260822_v1/drawstring_bag/edit_program.json
+roi_bbox_xyxy: [42, 72, 218, 300]
+seed: 20260831
+semantic_proposal:
+  candidate: /home/lab929/ybj/experiments/qri_imagination_control/multisample_20260822_v1/drawstring_bag/stage1_sd15/semantic_proposal/seed_20260831_raw_crop.png
+  crop_box_xyxy: [0, 48, 256, 304]
+  region_feather_px: 4.0
+  region_max_alpha: 1.0
+  proposal_blur_px: 0.0
+  harmonize_strength: 0.65
+prompt:
+  positive: >-
+    same pedestrian from behind, light blue drawstring backpack, two dark draw cords,
+    one small centered cartoon cat patch, realistic indoor surveillance photograph
+  added: >-
+    refine the supplied bag into one coherent natural object, preserve exact pose,
+    body outline, hair and monitoring-camera texture, no high-definition patch
+  negative: >-
+    missing bag, extra bag, detached cord, broken cord, giant logo, text, changed person,
+    changed pose, changed legs, changed hair, distorted anatomy, mosaic, checkerboard,
+    painting, glossy product photograph
+pasd:
+  process_size: 512
+  steps: 20
+  variants:
+    - name: semantic_c085_g6
+      control_source: semantic_proposal
+      context_scale: 1.25
+      guidance_scale: 6.0
+      conditioning_scale: 0.85
+      region_feather_px: 4.0
+      region_max_alpha: 0.78
+      proposal_blur_px: 0.2
+      harmonize_strength: 0.75

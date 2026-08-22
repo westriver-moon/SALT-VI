@@ -133,8 +133,11 @@ pmt_msel_weight: 0.5
 pmt_dcl_weight: 0.5
 pmt_mscm_qct_margin: 1.2
 pmt_mscm_qct_weight: 0.1
+pmt_mscm_msel_weight: 0.0
+pmt_mscm_dcl_weight: 0.0
 pmt_mscm_qct_branch_weight: 0.25
 pmt_mscm_transition_epochs: 4
+pmt_mscm_aux_start_factor: 0.0
 pmt_metric_loss: legacy
 hetero_center_margin: 0.1
 hetero_center_weight: 1.0

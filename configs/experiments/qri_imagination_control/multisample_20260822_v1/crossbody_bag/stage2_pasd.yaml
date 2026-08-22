@@ -1,0 +1,38 @@
+schema_version: 1
+experiment_id: qri-multisample-crossbody-bag-pasd-20260822
+reference: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam5/0114/0006/swin.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/multisample_20260822_v1/crossbody_bag/edit_program.json
+roi_bbox_xyxy: [52, 92, 218, 282]
+seed: 20260835
+semantic_proposal:
+  candidate: /home/lab929/ybj/experiments/qri_imagination_control/multisample_20260822_v1/crossbody_bag/stage1_sd15/semantic_proposal/seed_20260835_raw_crop.png
+  crop_box_xyxy: [0, 48, 256, 304]
+  region_feather_px: 4.0
+  region_max_alpha: 1.0
+  proposal_blur_px: 0.0
+  harmonize_strength: 0.65
+prompt:
+  positive: >-
+    same pedestrian from behind, black crossbody sling bag across lower back,
+    two zippered compartments, top buckle, one diagonal shoulder strap,
+    realistic outdoor surveillance photograph
+  added: >-
+    refine the supplied bag into one coherent natural object, preserve exact torso,
+    arm, shirt, shorts, pose, background and monitoring-camera texture
+  negative: >-
+    backpack, handbag, extra bag, detached strap, extra buckle, giant zipper, text,
+    changed shirt, changed shorts, changed arm, different person, distorted anatomy,
+    mosaic, checkerboard, painting, glossy product photograph
+pasd:
+  process_size: 512
+  steps: 20
+  variants:
+    - name: semantic_c085_g6
+      control_source: semantic_proposal
+      context_scale: 1.25
+      guidance_scale: 6.0
+      conditioning_scale: 0.85
+      region_feather_px: 4.0
+      region_max_alpha: 0.78
+      proposal_blur_px: 0.2
+      harmonize_strength: 0.75

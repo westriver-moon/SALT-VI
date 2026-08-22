@@ -1,0 +1,55 @@
+schema_version: 1
+annotation_version: qri-text-annotation-swin-separated-v3
+dataset_root: ${SALT_QRI_DATA_ROOT}
+output_root: ${QRI_EXACT_TEXT_ANNOTATION_OUTPUT_ROOT}
+modalities: [rgb, ir]
+source_size_hw: [256, 128]
+output_size_hw: [512, 256]
+selected_region_count: 3
+max_selected_region_count: 6
+roi_selection_threshold: 0.6
+roi_board_size_px: 512
+world_sample_count: 64
+max_worlds: 8
+probability_mode: deferred_empirical
+probability_spec: semantic_imagination/MATHEMATICAL_SPEC.md
+seed: 20260822
+strategy: exact
+exact_selection_mode: fast_blur_eye_guard
+precomputed_swinir_root: ${SALT_PRECOMPUTED_SWINIR_ROOT}
+
+assets:
+  qwen_model: ${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf
+  qwen_mmproj: ${SALT_QRI_MODEL_ROOT}/qwen3.8-27b-gguf/mmproj-F16.gguf
+  swinir_model: ${SALT_SWINIR_MODEL}
+  yolo_pose: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/yolov8x-pose.pt
+  schp_lip: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/schp_lip.pth
+  sam_vit_b: ${SALT_QRI_RUNTIME_ROOT}/checkpoints/sam_vit_b_01ec64.pth
+
+swinir:
+  root: ${SALT_SWINIR_ROOT}
+
+roi:
+  device: cuda:0
+  schp_root: ${SALT_QRI_RUNTIME_ROOT}/sources/Self-Correction-Human-Parsing
+  sam_root: ${SALT_QRI_RUNTIME_ROOT}/sources/segment-anything
+  category_stats_path: null
+
+qwen:
+  model_id: third-party-qwen3.8-27b-ud-q4-k-xl
+  llama_root: ${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp
+  server_binary: ${SALT_QRI_RUNTIME_ROOT}/sources/llama.cpp/build/bin/llama-server
+  gpu: 0
+  host: 127.0.0.1
+  port: 18080
+  context_size: 8192
+  endpoint: http://127.0.0.1:18080/v1/chat/completions
+  health_endpoint: http://127.0.0.1:18080/health
+  timeout_seconds: 360
+  thinking_mode: false
+  reasoning_effort: none
+  reasoning_budget: 0
+  temperature: 0.25
+  max_tokens: 1100
+  response_profile: swin_separated_v1
+  prompt_version: swin-only-separated-compact-repair-no-prob-v3
