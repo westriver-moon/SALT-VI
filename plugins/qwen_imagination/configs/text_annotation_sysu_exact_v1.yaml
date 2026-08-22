@@ -1,13 +1,17 @@
 schema_version: 1
-annotation_version: qri-text-annotation-swin-separated-v3
+annotation_version: qri-text-annotation-swin-separated-v4
 dataset_root: ${SALT_QRI_DATA_ROOT}
 output_root: ${QRI_EXACT_TEXT_ANNOTATION_OUTPUT_ROOT}
 modalities: [rgb, ir]
 source_size_hw: [256, 128]
 output_size_hw: [512, 256]
 selected_region_count: 3
-max_selected_region_count: 6
+max_selected_region_count: 8
 roi_selection_threshold: 0.6
+roi_category_priority_boosts:
+  carried_object: 0.25
+  wrist_accessory: 0.10
+  headwear: 0.05
 roi_board_size_px: 512
 world_sample_count: 64
 max_worlds: 8
@@ -52,4 +56,4 @@ qwen:
   temperature: 0.25
   max_tokens: 1100
   response_profile: swin_separated_v1
-  prompt_version: swin-only-separated-compact-repair-no-prob-v3
+  prompt_version: swin-only-separated-priority-compact-repair-no-prob-v4

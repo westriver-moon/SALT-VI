@@ -234,6 +234,47 @@ def test_threshold_selection_keeps_all_qualified_regions_up_to_cap(tmp_path):
     assert "threshold-0.600-min-2-max-5" in rule
 
 
+def test_semantic_priority_can_retain_discriminative_low_blur_roi(tmp_path):
+    config = _config(tmp_path)
+    config.selected_region_count = 2
+    config.max_selected_region_count = 4
+    config.roi_selection_threshold = 0.6
+    config.roi_category_priority_boosts = {
+        "carried_object": 0.25,
+        "wrist_accessory": 0.10,
+    }
+    pipeline = TextAnnotationPipeline(
+        config, swin=_FakeSwin(), roi=_FakeROI(), reasoner=_FakeReasoner()
+    )
+    eyes = _region("eyes", 5)
+    eyes.category = "eyewear"
+    clothing = _region("upper_torso", 35)
+    clothing.category = "clothing_detail"
+    carried = _region("left_carried", 65)
+    carried.category = "carried_object"
+    wrist = _region("right_wrist", 95)
+    wrist.category = "wrist_accessory"
+    regions = [eyes, clothing, carried, wrist]
+    scores = {
+        "eyes": 0.2,
+        "upper_torso": 0.8,
+        "left_carried": 0.4,
+        "right_wrist": 0.51,
+    }
+    for region in regions:
+        region.u_swin_normalized = scores[region.region_id]
+        region.u_blur = scores[region.region_id]
+    selected, rule = pipeline._select_regions(regions)
+    assert [region.region_id for region in selected] == [
+        "eyes",
+        "upper_torso",
+        "left_carried",
+        "right_wrist",
+    ]
+    assert pipeline._selection_score(carried) == 0.65
+    assert "semantic-priority-adjusted" in rule
+
+
 def test_deferred_empirical_mode_writes_no_self_reported_world_sampling(tmp_path):
     config = _config(tmp_path)
     config.probability_mode = "deferred_empirical"
@@ -263,7 +304,7 @@ class _CountingPipeline:
     def process(self, source):
         self.calls += 1
         regions = [_region(f"r{index}", 10 + index * 40) for index in range(3)]
-        return {
+        record = {
             "schema_version": 1,
             "annotation_version": self.config.annotation_version,
             "run_signature": self.config.run_signature(),
@@ -276,10 +317,19 @@ class _CountingPipeline:
             "status": "complete",
             "selected_region_ids": [region.region_id for region in regions],
             "annotation": _annotation(regions),
-            "sampled_text_worlds": sample_joint_text_worlds(
-                _annotation(regions)["regions"], sample_count=16, max_worlds=4, seed=3
-            ),
         }
+        if self.config.probability_mode == "deferred_empirical":
+            record["probability_design"] = {
+                "mode": "deferred_empirical",
+                "specification": self.config.probability_spec,
+                "vlm_self_reported_probability": False,
+                "status": "deferred",
+            }
+        else:
+            record["sampled_text_worlds"] = sample_joint_text_worlds(
+                _annotation(regions)["regions"], sample_count=16, max_worlds=4, seed=3
+            )
+        return record
 
 
 def test_run_writes_per_image_records_manifest_and_resumes(tmp_path):
@@ -321,6 +371,36 @@ def test_run_writes_per_image_records_manifest_and_resumes(tmp_path):
     row = json.loads(manifest.read_text(encoding="utf-8").strip())
     assert row["global"]["caption"].startswith("a person")
     assert row["sampled_text_worlds"]["worlds"]
+
+
+def test_run_consolidates_deferred_probability_records_without_sampled_worlds(
+    tmp_path,
+):
+    config = _config(tmp_path)
+    config.probability_mode = "deferred_empirical"
+    config.probability_spec = "semantic_imagination/MATHEMATICAL_SPEC.md"
+    _write_split(config.dataset_root)
+    pipeline = _CountingPipeline(config)
+    summary = run(
+        config,
+        split="train",
+        shard_index=0,
+        num_shards=1,
+        limit=1,
+        fail_fast=True,
+        overwrite=False,
+        pipeline=pipeline,
+    )
+    assert summary["complete"] is True
+    manifest = (
+        config.output_root
+        / "manifests"
+        / "train.shard-00000-of-00001.jsonl"
+    )
+    row = json.loads(manifest.read_text(encoding="utf-8").strip())
+    assert "sampled_text_worlds" not in row
+    assert row["probability_design"]["mode"] == "deferred_empirical"
+    assert row["probability_design"]["vlm_self_reported_probability"] is False
 
 
 class _CountingTrackPipeline:

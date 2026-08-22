@@ -40,6 +40,7 @@ class TextAnnotationConfig:
     selected_region_count: int = 3
     max_selected_region_count: int = 6
     roi_selection_threshold: float = 0.6
+    roi_category_priority_boosts: dict[str, float] = field(default_factory=dict)
     roi_board_size_px: int = 512
     world_sample_count: int = 64
     max_worlds: int = 8
@@ -73,6 +74,13 @@ class TextAnnotationConfig:
             )
         if not 0.0 <= float(self.roi_selection_threshold) <= 1.0:
             raise ValueError("roi_selection_threshold must be within [0, 1]")
+        for category, boost in self.roi_category_priority_boosts.items():
+            if not str(category).strip():
+                raise ValueError("roi_category_priority_boosts keys must be non-empty")
+            if not 0.0 <= float(boost) <= 1.0:
+                raise ValueError(
+                    "roi_category_priority_boosts values must be within [0, 1]"
+                )
         if int(self.roi_board_size_px) < 256 or int(self.roi_board_size_px) % 2:
             raise ValueError("roi_board_size_px must be an even integer >= 256")
         if int(self.world_sample_count) < 1:
@@ -126,6 +134,12 @@ class TextAnnotationConfig:
             "selected_region_count": int(self.selected_region_count),
             "max_selected_region_count": int(self.max_selected_region_count),
             "roi_selection_threshold": float(self.roi_selection_threshold),
+            "roi_category_priority_boosts": {
+                str(category): float(boost)
+                for category, boost in sorted(
+                    self.roi_category_priority_boosts.items()
+                )
+            },
             "roi_board_size_px": int(self.roi_board_size_px),
             "world_sample_count": int(self.world_sample_count),
             "max_worlds": int(self.max_worlds),

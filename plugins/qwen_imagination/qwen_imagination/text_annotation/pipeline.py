@@ -106,10 +106,17 @@ class TextAnnotationPipeline:
                 region.u_blur, median, iqr
             )
 
+    def _selection_score(self, region: Region) -> float:
+        boost = float(
+            self.config.roi_category_priority_boosts.get(region.category, 0.0)
+        )
+        return min(1.0, max(0.0, float(region.u_swin_normalized)) + boost)
+
     def _select_regions(self, regions: list[Region]) -> tuple[list[Region], str]:
         ranked = sorted(
             regions,
             key=lambda region: (
+                -self._selection_score(region),
                 -region.u_swin_normalized,
                 -region.u_blur,
                 region.region_id,
@@ -119,7 +126,7 @@ class TextAnnotationPipeline:
         qualified = [
             region
             for region in ranked
-            if float(region.u_swin_normalized)
+            if self._selection_score(region)
             >= float(self.config.roi_selection_threshold)
         ]
         selected = [eyes] if eyes is not None else []
@@ -136,7 +143,7 @@ class TextAnnotationPipeline:
             else "normalized-regional-blur"
         )
         return selected, (
-            f"eyes-guard-plus-{score_name}-threshold-"
+            f"eyes-guard-plus-semantic-priority-adjusted-{score_name}-threshold-"
             f"{float(self.config.roi_selection_threshold):.3f}-"
             f"min-{int(self.config.selected_region_count)}-"
             f"max-{int(self.config.max_selected_region_count)}"
@@ -238,6 +245,12 @@ class TextAnnotationPipeline:
                 {
                     **region.manifest(),
                     "selected": region.region_id in selected_ids,
+                    "roi_category_priority_boost": float(
+                        self.config.roi_category_priority_boosts.get(
+                            region.category, 0.0
+                        )
+                    ),
+                    "roi_selection_score": self._selection_score(region),
                     "mask_area_fraction": float(np.asarray(region.mask).mean()),
                 }
                 for region in regions

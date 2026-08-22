@@ -213,6 +213,8 @@ def test_swin_separated_instruction_keeps_global_and_roi_outputs_independent():
     assert '"s":"4-14 word independent ROI caption"' in instruction
     assert '"p":' not in instruction
     assert "without repeating slots" in instruction
+    assert "cannot both be true" in instruction
+    assert "object and its attribute" in instruction
 
 
 def test_swin_separated_rejects_missing_or_modal_roi_caption():

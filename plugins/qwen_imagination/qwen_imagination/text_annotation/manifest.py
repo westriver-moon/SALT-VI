@@ -99,11 +99,14 @@ def consolidate_shard(
                 {
                     "global": record["annotation"]["global"],
                     "regions": record["annotation"]["regions"],
-                    "sampled_text_worlds": record["sampled_text_worlds"],
                     "selected_region_ids": record["selected_region_ids"],
                     "annotation_provenance": record.get("annotation_provenance"),
                 }
             )
+            if "sampled_text_worlds" in record:
+                row["sampled_text_worlds"] = record["sampled_text_worlds"]
+            if "probability_design" in record:
+                row["probability_design"] = record["probability_design"]
         else:
             row["failure"] = record.get("failure")
         rows.append(row)

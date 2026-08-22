@@ -1,6 +1,6 @@
 # SALT-VI 2026-08-21/22 实验可复现归档计划
 
-最后更新：2026-08-22 18:54 CST（H3-35 按用户要求留给服务器 watcher 运行至次日）
+最后更新：2026-08-22 19:28 CST（本次交付明确排除 H3-35；不再轮询）
 服务器：`lab929-3090`
 仓库：`/home/lab929/ybj/SALT-VI`
 分支：`codex/pmt-mscm-phased-pasd-20260821-v2`
@@ -8,8 +8,11 @@
 
 ## 1. 目标与不可违反的约束
 
-本次归档覆盖 PMT-MSCM 混合损失训练、H3 QCT-0.40 的 35 epoch 独立延长实验，以及
-2026-08-21/22 的 QRI 加速、眼镜验证、像素控制、文本标注和文本想象实验。归档必须满足：
+本次交付覆盖已稳定的 PMT-MSCM 混合损失训练矩阵，以及 2026-08-21/22 的 QRI 加速、
+眼镜验证、像素控制、文本想象实验和已完成部分的文本标注证据；独立 H3 QCT-0.40 的
+35 epoch 延长实验明确排除，不轮询、不干预、不封存。QRI text annotations 的 v4 priority
+smoke 也在本轮审计时仍在写入，因此只保留其已同步的活动前快照，并明确标注为非最终状态。
+归档必须满足：
 
 1. 完整保留每个实验实际使用的源码、原始配置、解析后的 `configs.yaml`、
    `run_manifest.json`、启动命令、日志、事件、指标、checkpoint 和最终模型；
@@ -23,29 +26,26 @@
 
 ## 2. 当前仓库审计
 
-审计时分支与远端 `origin/codex/pmt-mscm-phased-pasd-20260821-v2` 完全同步，ahead/behind
-为 `0/0`；无 staged 文件、无冲突，`git diff --check` 和 `git diff --cached --check` 通过。
-
-工作区仍不干净：20 个已跟踪文件被修改，86 个文件未跟踪。未跟踪内容约 400 KB，按
-一级目录分为 38 个 `configs/`、28 个 `scripts/`、11 个 `plugins/`、7 个 `reports/`
-和 2 个 `pasd_plugin/` 测试文件。没有 checkpoint、训练日志、大模型或异常大文件误入
-仓库。主要风险不是垃圾文件，而是实验代码和配置尚未被 Git 提交，单靠 HEAD 无法复现。
+稳定审计前分支 `codex/pmt-mscm-phased-pasd-20260821-v2` 与远端保持同步；当前工作区
+有 7 个已跟踪 Qwen text-annotation v4 文件修改，来源是正在进行的 priority smoke 代码与
+配置扩展，不能回退或覆盖。没有新增 checkpoint、训练日志、大模型或异常大文件进入 Git。
+这些改动将在完成当前证据保全后作为可审阅变更提交；H3-35 不参与本次提交门禁。
 
 ## 3. 归档对象与完成门禁
 
 | 归档 ID | 原目录 | 目标目录 | 完成门禁 |
 |---|---|---|---|
 | `stage_a_hybrid_20260821` | `experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821` | `experiments/archive/stage_a/SALT-VI-pmt-mscm-hybrid-loss-20260821` | scheduler 为 completed、无 running/failed、`results.json` 存在、H1-H4 均有至少一个最佳 `model_IR_*.pth` 和最终 latest checkpoint、目录静默 120 秒 |
-| `stage_a_h3_qct_040_e35_20260822` | `experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822` | `experiments/archive/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822` | `eval_epoch=34`、至少一个最佳 `model_IR_*.pth`、最终 latest checkpoint、resolved config 和 run manifest 均存在、目录静默 180 秒 |
+| `stage_a_h3_qct_040_e35_20260822` | `experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822` | 本次明确不创建归档目标 | 按用户指令排除；保留原目录与历史诊断，不轮询、不干预 |
 | `qri_acceleration_20260821` | `experiments/qri_acceleration/qri-fast-search-gpu0-20260821` | `experiments/archive/qri/qri-fast-search-gpu0-20260821` | Phase A、Phase B dry-run、Qwen pilot 和质量审计 JSON 完整 |
 | `qri_glasses_20260821` | `experiments/qri_glasses/qri-glasses-gpu0-20260821` | `experiments/archive/qri/qri-glasses-gpu0-20260821` | PASD、SD1.5 sweep、融合选择和 Qwen 视觉审计结果完整 |
 | `qri_imagination_control_20260822` | `experiments/qri_imagination_control` | `experiments/archive/qri/qri-imagination-control-20260822` | Stage 8/9 与多样本验证的指标和身份审计完整；保留否定结果 |
-| `qri_text_annotations_20260822` | `experiments/qri_text_annotations` | `experiments/archive/qri/qri-text-annotations-smoke-20260822` | v3 与 v3 compact smoke 的 worker summary 和 shard summary 完整；明确标注生产全量任务未启动 |
+| `qri_text_annotations_20260822` | `experiments/qri_text_annotations` | `experiments/archive/qri/qri-text-annotations-smoke-20260822` | 已同步首次归档后新增的 73 个文件；v4 priority smoke 仍运行，活动尾部不作为最终结果 |
 | `qri_text_imagination_20260822` | `experiments/qri_text_imagination/thinking_ablation_gpu0_20260822_v1` | `experiments/archive/qri/qri-text-imagination-thinking-ablation-gpu0-20260822` | thinking/no-thinking 六次记录、boards 和权威 `metrics.json` 完整 |
 
-H3-35 当前仍由服务器 watcher 运行，按用户要求本轮不干预；完成后再执行下述门禁。其 `train.log`、`train_e35.log` 是两次启动失败诊断，成功训练日志是
-`train_e35_retry.log`。三者都保留，并额外复制到 `provenance/launch_diagnostics/`；启动失败
-不能混入最终科学指标。
+H3-35 本轮明确排除。其原始目录、`train.log`、`train_e35.log`、`train_e35_retry.log` 和历史
+watcher 说明仍保留；不把中间 checkpoint、epoch 9 指标或启动失败诊断混入本次最终科学
+指标，也不执行轮询、停止或重启。
 
 训练默认 `max_save_model_num=1`，`model_IR_<epoch>.pth` 只在 Rank-1 创新高时写入，
 因此最佳模型的文件名不一定等于最后 epoch。最终训练状态以 `checkpoint_latest.pth` 和
@@ -157,23 +157,29 @@ $PY scripts/experiments/archive_research_runs.py status
 # 3. 归档已满足门禁的对象
 $PY scripts/experiments/archive_research_runs.py archive --id <archive-id>
 
-# 4. 监视仍运行的实验，通过门禁后自动复制和校验
-$PY scripts/experiments/archive_research_runs.py watch \
-  --poll-seconds 300 --max-hours 36
+# 4. 本次不启动 watch；H3-35 按范围决策排除且不再轮询
 
 # 5. 独立重算归档 SHA-256
 $PY scripts/experiments/archive_research_runs.py verify --id <archive-id>
 
-# 6. 全部对象完成后，执行原目录/归档载荷/源码配置/资产引用的最终审计
+# 6. 对本次交付范围执行稳定审计；H3-35 与活动中的 QRI v4 尾部不列入 ID
 $PY scripts/experiments/archive_research_runs.py audit \
-  --output /home/lab929/ybj/experiments/archive/final_audit_20260822.json
+  --id stage_a_hybrid_20260821 \
+  --id qri_acceleration_20260821 \
+  --id qri_glasses_20260821 \
+  --id qri_imagination_control_20260822 \
+  --id qri_text_imagination_20260822 \
+  --output /home/lab929/ybj/experiments/archive/final_audit_20260822_excluding_h3_stable.json
 ```
 
 监视器只能执行清单中的固定目标，若门禁缺文件、scheduler 失败、最终 epoch 不足、目标
 已存在但缺少 inventory，都会停止该对象并报告错误，不覆盖既有目录。
 
-本轮状态：H4 归档已生成并通过 `verification.json`；五个 QRI 归档均已通过独立校验。H3-35
-仍是外部运行中的未封存对象，不得因为代码、文档或 CSV 已推送而标记为完成。
+本轮稳定状态：Stage-A H1–H4 矩阵和 4 个稳定 QRI 对象已通过
+`final_audit_20260822_excluding_h3_stable.json`（顶层 `ok=true`）。QRI text annotations 的
+归档已同步 73 个后续文件并通过自身 inventory，但 v4 priority smoke 仍在原目录写入，
+所以活动尾部不计入稳定审计。H3-35 按用户指令排除，不得因为代码、文档或 CSV 已推送
+而标记为完成。
 
 ## 8. 验收标准
 
