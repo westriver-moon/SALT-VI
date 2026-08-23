@@ -1,5 +1,5 @@
 schema_version: 1
-annotation_version: qri-text-annotation-swin-separated-v4
+annotation_version: qri-text-annotation-swin-separated-v5
 dataset_root: ${SALT_QRI_DATA_ROOT}
 output_root: ${QRI_EXACT_TEXT_ANNOTATION_OUTPUT_ROOT}
 modalities: [rgb, ir]
@@ -13,10 +13,11 @@ roi_category_priority_boosts:
   wrist_accessory: 0.10
   headwear: 0.05
 roi_board_size_px: 512
+atomic_sample_count: 8
 world_sample_count: 64
 max_worlds: 8
-probability_mode: deferred_empirical
-probability_spec: semantic_imagination/MATHEMATICAL_SPEC.md
+sampling_similarity_threshold: 0.85
+sampling_max_attempts: 4
 seed: 20260822
 strategy: exact
 exact_selection_mode: fast_blur_eye_guard
@@ -54,6 +55,7 @@ qwen:
   reasoning_effort: none
   reasoning_budget: 0
   temperature: 0.25
+  atomic_temperature: 0.75
   max_tokens: 1100
   response_profile: swin_separated_v1
-  prompt_version: swin-only-separated-priority-compact-repair-no-prob-v4
+  prompt_version: swin-only-separated-priority-empirical-atomic-v5

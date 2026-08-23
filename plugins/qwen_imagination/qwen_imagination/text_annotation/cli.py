@@ -12,7 +12,8 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 SALT_ROOT = PLUGIN_ROOT.parents[2]
 SRC_ROOT = SALT_ROOT / "src"
-for candidate in (SALT_ROOT, SRC_ROOT, PLUGIN_ROOT):
+SEMANTIC_ROOT = SALT_ROOT / "semantic_imagination"
+for candidate in (SALT_ROOT, SRC_ROOT, PLUGIN_ROOT, SEMANTIC_ROOT):
     if str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
@@ -76,6 +77,7 @@ def _build_reasoner(config: TextAnnotationConfig) -> TextAnnotationReasoner:
         model_id=str(config.qwen["model_id"]),
         timeout_seconds=float(config.qwen.get("timeout_seconds", 360)),
         enable_thinking=bool(config.qwen.get("thinking_mode", False)),
+        atomic_temperature=float(config.qwen.get("atomic_temperature", 0.75)),
         reasoning_effort=str(config.qwen.get("reasoning_effort", "none")),
         temperature=float(config.qwen.get("temperature", 0.35)),
         max_tokens=int(config.qwen.get("max_tokens", 2048)),

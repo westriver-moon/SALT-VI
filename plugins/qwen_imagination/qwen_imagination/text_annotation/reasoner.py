@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import json
-import math
-import random
 import re
 import time
 import urllib.request
-from collections import Counter
 from typing import Any
 
 from PIL import Image
@@ -14,6 +11,7 @@ from PIL import Image
 from ..regional.qwen import _data_url, _json_object
 from ..regional.schema import Region
 from ..regional.visual_context import roi_comparison_board, swin_roi_board
+from ..taxonomy import CATEGORY_STATES
 
 
 EVIDENCE_BASES = {"visual_evidence", "world_knowledge", "mixed", "unresolved"}
@@ -72,7 +70,6 @@ def _observations(value: object) -> list[dict[str, str]]:
 def normalize_hypotheses(
     value: object,
     *,
-    probability_mode: str = "required",
     exact_count: int | None = None,
 ) -> list[dict[str, Any]]:
     if not isinstance(value, list) or len(value) < 2:
@@ -83,8 +80,6 @@ def normalize_hypotheses(
         raise ValueError(
             f"each selected ROI must return exactly {int(exact_count)} hypotheses"
         )
-    if probability_mode not in {"required", "forbidden"}:
-        raise ValueError(f"unsupported hypothesis probability mode {probability_mode}")
     rows = []
     for index, raw in enumerate(value):
         if not isinstance(raw, dict):
@@ -95,11 +90,9 @@ def normalize_hypotheses(
         basis = str(_field(raw, "basis", "b", "unresolved")).strip().lower()
         if basis not in EVIDENCE_BASES:
             raise ValueError(f"hypothesis {index} has unsupported basis {basis}")
-        if probability_mode == "forbidden" and (
-            "probability" in raw or "p" in raw
-        ):
+        if "probability" in raw or "p" in raw:
             raise ValueError(
-                "Swin-only separated hypotheses must not contain VLM-reported probabilities"
+                "hypotheses must not contain self-reported probabilities"
             )
         row = {
             "description": description,
@@ -109,17 +102,7 @@ def normalize_hypotheses(
             ).strip(),
             "uncertainty": str(_field(raw, "uncertainty", "u", "")).strip(),
         }
-        if probability_mode == "required":
-            row["probability"] = max(
-                0.0, float(_field(raw, "probability", "p", 0.0))
-            )
         rows.append(row)
-    if probability_mode == "required":
-        total = sum(float(row["probability"]) for row in rows)
-        if total <= 0.0:
-            raise ValueError("hypothesis probabilities must contain positive mass")
-        for row in rows:
-            row["probability"] = float(row["probability"]) / total
     return rows
 
 
@@ -284,9 +267,6 @@ def normalize_annotation(
                 )
         hypotheses = normalize_hypotheses(
             _field(raw, "hypotheses", "h"),
-            probability_mode=(
-                "forbidden" if require_swin_separated else "required"
-            ),
             exact_count=2 if require_swin_separated else None,
         )
         if require_swin_separated:
@@ -345,80 +325,6 @@ def normalize_annotation(
     return {"global": global_result, "regions": normalized_regions}
 
 
-def sample_joint_text_worlds(
-    regions: list[dict[str, Any]],
-    *,
-    sample_count: int,
-    max_worlds: int,
-    seed: int,
-) -> dict[str, Any]:
-    if sample_count < 1:
-        raise ValueError("sample_count must be positive")
-    if not 1 <= max_worlds <= sample_count:
-        raise ValueError("max_worlds must be within [1, sample_count]")
-    rng = random.Random(int(seed))
-    draws = []
-    for _ in range(int(sample_count)):
-        assignment = []
-        for region in regions:
-            hypotheses = region["hypotheses"]
-            index = rng.choices(
-                range(len(hypotheses)),
-                weights=[float(row["probability"]) for row in hypotheses],
-                k=1,
-            )[0]
-            assignment.append(index)
-        draws.append(tuple(assignment))
-    counts = Counter(draws)
-    accepted = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[
-        : int(max_worlds)
-    ]
-    selected_count = sum(count for _, count in accepted)
-    worlds = []
-    for world_index, (indices, count) in enumerate(accepted):
-        assignments = []
-        for region, hypothesis_index in zip(regions, indices):
-            hypothesis = region["hypotheses"][hypothesis_index]
-            assignments.append(
-                {
-                    "region_id": region["region_id"],
-                    "category": region["category"],
-                    "hypothesis_index": int(hypothesis_index),
-                    "description": hypothesis["description"],
-                    "basis": hypothesis["basis"],
-                    "source_probability": float(hypothesis["probability"]),
-                }
-            )
-        worlds.append(
-            {
-                "world_id": f"w{world_index:02d}",
-                "assignments": assignments,
-                "sample_count": int(count),
-                "sample_frequency": count / float(sample_count),
-                "selected_weight": count / float(selected_count),
-            }
-        )
-    return {
-        "seed": int(seed),
-        "sample_count": int(sample_count),
-        "unique_world_count": len(counts),
-        "retained_world_count": len(worlds),
-        "retained_sample_mass": selected_count / float(sample_count),
-        "worlds": worlds,
-    }
-
-
-def normalized_entropy(hypotheses: list[dict[str, Any]]) -> float:
-    if len(hypotheses) <= 1:
-        return 0.0
-    entropy = -sum(
-        float(row["probability"])
-        * math.log(max(float(row["probability"]), 1e-12))
-        for row in hypotheses
-    )
-    return float(entropy / math.log(len(hypotheses)))
-
-
 class TextAnnotationReasoner:
     """One-call global plus multi-ROI text annotation client."""
 
@@ -431,6 +337,7 @@ class TextAnnotationReasoner:
         enable_thinking: bool = False,
         reasoning_effort: str = "none",
         temperature: float = 0.35,
+        atomic_temperature: float = 0.75,
         max_tokens: int = 2048,
         response_profile: str = "detailed_v1",
         roi_board_size_px: int = 512,
@@ -440,6 +347,7 @@ class TextAnnotationReasoner:
         self.timeout_seconds = float(timeout_seconds)
         self.enable_thinking = bool(enable_thinking)
         self.reasoning_effort = str(reasoning_effort)
+        self.atomic_temperature = float(atomic_temperature)
         self.temperature = float(temperature)
         self.max_tokens = int(max_tokens)
         self.response_profile = str(response_profile)
@@ -524,14 +432,11 @@ class TextAnnotationReasoner:
                 "distinctive detail. If a slot is not visible, explicitly say it is not "
                 "clearly visible instead of omitting or guessing it. Do not promote ambiguous "
                 "dark hair or head pixels into a cap or hat. After the main clause, append one "
-                "concise hypothesis for EVERY listed ROI, even when its top probability is "
-                "high. Each addendum must begin with possible, may, might, or appears, must be "
-                "2-5 words, and must remain inside the 22-35 word total. Copy the exact same "
-                "addenda into g.x, one per ROI; validation requires every g.x phrase to occur "
-                "verbatim in g.c. Also return each slot as a grammar-ready phrase in g.a. Give exactly "
-                "2 mutually exclusive hypotheses per ROI with probabilities summing to "
-                "one. Do not turn a vague edge, band, shadow, or SwinIR-only texture into an "
-                "accessory. Output no reasoning or prose. "
+                "For every listed ROI, return exactly two direct neutral candidate descriptions; "
+                "do not attach scores, probabilities, or confidence. Candidates answer the same "
+                "ROI question, remain mutually exclusive, and are sampled independently in a "
+                "later empirical semantic-clustering stage. Do not turn a vague edge, band, "
+                "shadow, or SwinIR-only texture into an accessory. Output no reasoning or prose. "
                 + color_rule
                 + " JSON only, using this compact contract: "
                 '{"g":{"c":"22-35 word caption","a":{"hd":"head phrase",'
@@ -542,7 +447,7 @@ class TextAnnotationReasoner:
                 '"u":["unresolved"]},"r":[{"id":"region_id","s":"summary",'
                 '"o":[{"c":"claim","s":"strong|weak","e":"evidence"}],'
                 '"k":[{"i":"inference","k":"knowledge","r":"relation"}],'
-                '"h":[{"d":"description","p":0.0,'
+                '"h":[{"d":"description",'
                 '"b":"visual_evidence|world_knowledge|mixed|unresolved",'
                 '"e":"support","u":"uncertainty"}],"u":["unresolved"]}]}. '
                 "Use <=2 global observations, <=1 observation and <=1 knowledge item per "
@@ -554,20 +459,19 @@ class TextAnnotationReasoner:
             return (
                 "Annotate this low-resolution person for re-identification. Image A is "
                 "authoritative; Image B and B tiles are non-authoritative SwinIR proposals. "
-                "Never edit pixels. Give one <=30-word global caption, concise visible "
-                "observations, and exactly 2 or 3 mutually exclusive hypotheses per listed "
-                "ROI with probabilities summing to one. Separate evidence from world "
-                "knowledge, keep blur alternatives, and output no reasoning or prose. "
-                "Do not turn a vague edge, band, shadow, or SwinIR-only texture into an "
-                "accessory. When direct evidence is weak, prefer a no-object or unresolved "
-                "alternative and lower the positive-object probability. "
+                "Never edit pixels. Give one <=30-word global caption and concise visible "
+                "observations. Return exactly two or three neutral candidates per ROI; do "
+                "not attach scores, probabilities, or confidence. Repeated independent "
+                "sampling, semantic clustering, and frequency weights are computed later. "
+                "Keep blur alternatives and never turn a vague edge, band, shadow, or "
+                "SwinIR-only texture into an accessory. Output no reasoning or prose. "
                 + color_rule
                 + " JSON only, using this compact contract: "
                 '{"g":{"c":"caption","o":[{"c":"claim","s":"strong|weak",'
                 '"e":"evidence"}],"u":["unresolved"]},"r":[{"id":"region_id",'
                 '"s":"summary","o":[{"c":"claim","s":"strong|weak",'
                 '"e":"evidence"}],"k":[{"i":"inference","k":"knowledge",'
-                '"r":"relation"}],"h":[{"d":"description","p":0.0,'
+                '"r":"relation"}],"h":[{"d":"description",'
                 '"b":"visual_evidence|world_knowledge|mixed|unresolved",'
                 '"e":"support","u":"uncertainty"}],"u":["unresolved"]}]}. '
                 "Use <=3 global observations, <=2 observations and <=1 knowledge item per "
@@ -580,14 +484,10 @@ class TextAnnotationReasoner:
             "Image B and every B tile are non-authoritative SwinIR proposals. First produce "
             "a compact English global person caption covering stable hair, clothing, footwear, "
             "carried items and distinctive visible structure. Limit it to 35 words. Then annotate every listed ROI. "
-            "For each ROI separate observations, world knowledge and unresolved content, and "
-            "return exactly 2 or 3 mutually exclusive hypotheses with probabilities summing to one. Use "
-            "abstract world knowledge when visible abstraction supports a familiar object or "
-            "design, while retaining plausible alternatives for blur. Never force a positive "
-            "object or treat SwinIR detail as fact. Keep claims concise and do not return chain "
-            "of thought. Use no more than 4 observations globally or per ROI, 2 world-knowledge "
-            "items per ROI, and 3 unresolved items. Keep every claim, support, uncertainty, "
-            "knowledge and hypothesis description under 18 words. "
+            "For each ROI separate observations, world knowledge and unresolved content. Return "
+            "exactly two or three neutral candidates without scores, probabilities, or confidence. "
+            "Use world knowledge only when visible abstraction supports it, retain blur alternatives, "
+            "never force a positive object or treat SwinIR detail as fact, and keep all claims concise. "
             + color_rule
             + " Return JSON only with contract: "
             '{"global":{"caption":"...","observations":[{"claim":"...",'
@@ -597,7 +497,7 @@ class TextAnnotationReasoner:
             '"evidence_strength":"strong|weak","evidence":"..."}],'
             '"world_knowledge":[{"inference":"...","knowledge_used":"...",'
             '"evidence_relation":"..."}],"hypotheses":[{"description":"...",'
-            '"probability":0.0,"basis":"visual_evidence|world_knowledge|mixed|unresolved",'
+            '"basis":"visual_evidence|world_knowledge|mixed|unresolved",'
             '"observable_support":"...","uncertainty":"..."}],'
             '"unresolved":["..."]}]}. Selected ROIs: '
             + json.dumps(board, separators=(",", ":"))
@@ -660,28 +560,26 @@ class TextAnnotationReasoner:
             )
         return content
 
-    def annotate(
+    def _request_json(
         self,
-        lr: Image.Image,
-        swin: Image.Image,
-        regions: list[Region],
+        messages: list[dict[str, Any]],
         *,
-        modality: str,
+        temperature: float,
         seed: int,
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        max_tokens: int,
+        enable_thinking: bool,
+        reasoning_effort: str,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str, float]:
         payload = {
             "model": self.model_id,
-            "messages": [
-                {"role": "system", "content": self._instruction(regions, modality)},
-                {"role": "user", "content": self._content(lr, swin, regions)},
-            ],
-            "temperature": self.temperature,
+            "messages": messages,
+            "temperature": float(temperature),
             "top_p": 0.9,
             "seed": int(seed),
-            "max_tokens": self.max_tokens,
+            "max_tokens": int(max_tokens),
             "response_format": {"type": "json_object"},
-            "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
-            "reasoning_effort": self.reasoning_effort,
+            "chat_template_kwargs": {"enable_thinking": bool(enable_thinking)},
+            "reasoning_effort": str(reasoning_effort),
         }
         request = urllib.request.Request(
             self.endpoint,
@@ -709,6 +607,95 @@ class TextAnnotationReasoner:
                 errors.append(f"{field}:{type(error).__name__}")
         if parsed is None:
             raise ValueError(f"Qwen returned no final JSON ({', '.join(errors)})")
+        return parsed, document, message, str(response_field), elapsed
+
+    def _atomic_content(self, swin: Image.Image, region: Region) -> list[dict[str, Any]]:
+        board = swin_roi_board(swin, region, size_px=self.roi_board_size_px)
+        return [
+            {"type": "text", "text": "SwinIR full image and target ROI board."},
+            {"type": "image_url", "image_url": {"url": _data_url(swin)}},
+            {"type": "text", "text": f"Target ROI {region.region_id} / {region.category}."},
+            {"type": "image_url", "image_url": {"url": _data_url(board)}},
+        ]
+
+    def sample_atomic(
+        self,
+        swin: Image.Image,
+        region: Region,
+        *,
+        modality: str,
+        observed: str,
+        instruction: str,
+        seed: int,
+    ) -> str:
+        category = region.category
+        allowed_states = ", ".join(sorted(CATEGORY_STATES[category]))
+        color_rule = (
+            "Use only colors visible in the SwinIR image."
+            if modality == "rgb"
+            else "This is infrared input; do not invent visible-spectrum colors."
+        )
+        prompt = (
+            "Perform one independent semantic imagination draw for a single ROI. "
+            f"Target category: {category}. Allowed states: {allowed_states}. "
+            "Return exactly one JSON object with key atom. The atom must use this exact "
+            "format: ATOM | category | state | short value | location. Use the target "
+            "category exactly, one allowed state, and a concrete value and body location. "
+            "For absent or no_additional_detail use value and location none. Never return "
+            "a sentence, multiple details, a second candidate, a score, a probability, "
+            "or a confidence. Do not repeat an observed fact unless the draw identifies a "
+            "genuinely different atomic alternative. Keep every field free of | and ;. "
+            + color_rule
+            + " No reasoning or prose. Sampler instruction: "
+            + str(instruction)
+        )
+        parsed, _, _, _, _ = self._request_json(
+            [
+                {"role": "system", "content": prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Observed facts: {observed or 'none recorded.'}",
+                        },
+                        *self._atomic_content(swin, region),
+                    ],
+                },
+            ],
+            temperature=self.atomic_temperature,
+            seed=seed,
+            max_tokens=min(220, self.max_tokens),
+            enable_thinking=False,
+            reasoning_effort="none",
+        )
+        atom = str(_field(parsed, "atom", "a", "")).strip()
+        if not atom:
+            raise ValueError("Qwen atomic sample returned an empty atom")
+        return atom
+
+
+    def annotate(
+        self,
+        lr: Image.Image,
+        swin: Image.Image,
+        regions: list[Region],
+        *,
+        modality: str,
+        seed: int,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        started = time.perf_counter()
+        parsed, document, message, response_field, _request_elapsed = self._request_json(
+            [
+                {"role": "system", "content": self._instruction(regions, modality)},
+                {"role": "user", "content": self._content(lr, swin, regions)},
+            ],
+            temperature=self.temperature,
+            seed=seed,
+            max_tokens=self.max_tokens,
+            enable_thinking=self.enable_thinking,
+            reasoning_effort=self.reasoning_effort,
+        )
         require_swin_separated = self.response_profile == "swin_separated_v1"
         caption_repair = None
         try:
@@ -726,9 +713,9 @@ class TextAnnotationReasoner:
                 "caption": str(_field(global_raw, "caption", "c", "")).strip(),
                 "attributes": _field(global_raw, "attributes", "a", {}),
             }
-            repair_payload = {
-                "model": self.model_id,
-                "messages": [
+            repair_started = time.perf_counter()
+            repair_parsed, repair_document, _, _, _ = self._request_json(
+                [
                     {
                         "role": "system",
                         "content": (
@@ -744,38 +731,12 @@ class TextAnnotationReasoner:
                         "content": json.dumps(repair_input, separators=(",", ":")),
                     },
                 ],
-                "temperature": 0.0,
-                "top_p": 0.9,
-                "seed": int(seed),
-                "max_tokens": min(220, self.max_tokens),
-                "response_format": {"type": "json_object"},
-                "chat_template_kwargs": {"enable_thinking": False},
-                "reasoning_effort": "none",
-            }
-            repair_request = urllib.request.Request(
-                self.endpoint,
-                data=json.dumps(repair_payload, separators=(",", ":")).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method="POST",
+                temperature=0.0,
+                seed=seed,
+                max_tokens=min(220, self.max_tokens),
+                enable_thinking=False,
+                reasoning_effort="none",
             )
-            repair_started = time.perf_counter()
-            with urllib.request.urlopen(
-                repair_request, timeout=self.timeout_seconds
-            ) as response:
-                repair_document = json.loads(response.read().decode("utf-8"))
-            repair_message = repair_document["choices"][0]["message"]
-            repair_parsed = None
-            for field in ("content", "reasoning_content"):
-                text = repair_message.get(field)
-                if not text:
-                    continue
-                try:
-                    repair_parsed = _json_object(str(text))
-                    break
-                except ValueError:
-                    continue
-            if repair_parsed is None:
-                raise ValueError("Qwen caption repair returned no final JSON") from error
             repaired_caption = str(
                 _field(repair_parsed, "caption", "c", "")
             ).strip()

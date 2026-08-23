@@ -161,7 +161,7 @@ VLM 输出分为四层：
 前者已能以 0.75 概率识别“樱桃小丸子”式背包图案；后者主要改善模糊携带物的概率
 校准和眼镜组成拆分，但没有稳定提高具体识别，并引入过度解释风险。因此生产默认固定为
 `no_thinking`，只对高价值且首轮假设接近、未决质量高或证据冲突的少量 ROI 触发一次
-thinking 复核。完整结果见 `reports/qri_text_imagination/thinking_ablation_gpu0_20260822.md`。
+thinking 复核。完整结果见 `docs/history/qri/qri_text_imagination_thinking_ablation_gpu0_20260822.md`。
 
 文本阶段成功标准：
 

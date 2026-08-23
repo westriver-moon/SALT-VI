@@ -103,10 +103,10 @@ def consolidate_shard(
                     "annotation_provenance": record.get("annotation_provenance"),
                 }
             )
-            if "sampled_text_worlds" in record:
-                row["sampled_text_worlds"] = record["sampled_text_worlds"]
-            if "probability_design" in record:
-                row["probability_design"] = record["probability_design"]
+            if "semantic_sampling" in record:
+                row["semantic_sampling"] = record["semantic_sampling"]
+            if "sampling_design" in record:
+                row["sampling_design"] = record["sampling_design"]
         else:
             row["failure"] = record.get("failure")
         rows.append(row)

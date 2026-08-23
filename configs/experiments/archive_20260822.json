@@ -75,7 +75,7 @@
       "run_root": "/home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821",
       "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-fast-search-gpu0-20260821",
       "launch_commands": [
-        "See reports/qri_acceleration/qri_fast_search_gpu0_20260821.md and the preserved logs; the selected flow is implemented by scripts/experiments/qri_acceleration/."
+        "See docs/history/qri/qri_fast_search_gpu0_20260821.md and the preserved logs; the selected flow is implemented by scripts/experiments/qri_acceleration/."
       ],
       "source_files": [
         "configs/experiments/qri_acceleration",
@@ -99,7 +99,7 @@
       "run_root": "/home/lab929/ybj/experiments/qri_glasses/qri-glasses-gpu0-20260821",
       "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-glasses-gpu0-20260821",
       "launch_commands": [
-        "See reports/qri_glasses/qri_glasses_gpu0_report.md and the preserved logs; runners and locked parameters are in scripts/experiments/qri_glasses/ and configs/experiments/qri_glasses/."
+        "See docs/history/qri/qri_glasses_gpu0_report.md and the preserved logs; runners and locked parameters are in scripts/experiments/qri_glasses/ and configs/experiments/qri_glasses/."
       ],
       "source_files": [
         "configs/experiments/qri_glasses",
@@ -123,7 +123,7 @@
       "run_root": "/home/lab929/ybj/experiments/qri_imagination_control",
       "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-imagination-control-20260822",
       "launch_commands": [
-        "See reports/qri_imagination_control/long_term_plan.md; each historical stage has its exact runner/config under scripts/experiments/qri_imagination_control/ and configs/experiments/qri_imagination_control/."
+        "See docs/plans/qri_imagination_control.md; each historical stage has its exact runner/config under scripts/experiments/qri_imagination_control/ and configs/experiments/qri_imagination_control/."
       ],
       "source_files": [
         "configs/experiments/qri_imagination_control",
@@ -148,7 +148,7 @@
       "archive_root": "/home/lab929/ybj/experiments/archive/qri/qri-text-annotations-smoke-20260822",
       "launch_commands": [
         "/home/lab929/ybj/SALT-VI/scripts/experiments/qri_text_annotations/run_exact_multi_gpu_3090.sh --gpu-ids 0,1,2 --split train --dry-run",
-        "The full production pass was intentionally not launched; see reports/qri_text_annotations/exact_multi_gpu_20260822.md."
+        "The full production pass was intentionally not launched; see docs/history/qri/qri_text_annotations_exact_multi_gpu_20260822.md."
       ],
       "source_files": [
         "scripts/experiments/qri_text_annotations",

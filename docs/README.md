@@ -1,7 +1,25 @@
 # SALT-VI 统一项目指南
 
-本文档是 SALT-VI 当前架构、数据契约、训练入口和实验解释的统一指南。当前实验结果入口是 [`../reports/EXPERIMENT_STATUS_20260822.md`](../reports/EXPERIMENT_STATUS_20260822.md)；历史决策和逐实验叙述保留在 `reports/`，但不再承担当前状态或排行榜职责。
-本轮架构审计、模块边界和清理计划统一记录在 [ARCHITECTURE_AND_RESTRUCTURE.md](ARCHITECTURE_AND_RESTRUCTURE.md)。
+本文档是 SALT-VI 人工维护文档的唯一入口。当前实验结果入口是
+[实验状态](status/README.md)；历史决策和逐实验叙述统一归入
+`docs/history/`，`reports/` 只保存 CSV、JSON、压缩证据等结构化或机器生成产物。
+
+## 文档地图
+
+- 当前状态：[`status/`](status/README.md)
+- 架构与清理：[`architecture/`](architecture/restructure_20260819.md)
+- 当前及历史计划：[`plans/`](plans/)
+- 运行与归档规范：[`operations/`](operations/archive_plan_20260822.md)
+- 实验叙述和负面结果：[`history/`](history/)
+- 字段及接口参考：[`reference/`](reference/experiment_registry.md)
+- 组件接口：[`pasd_plugin`](../pasd_plugin/README.md)、
+  [`semantic_imagination`](../semantic_imagination/README.md)、
+  [`qwen_imagination`](../plugins/qwen_imagination/README.md)、
+  [`feature_analysis`](../feature_analysis/README.md)
+
+根目录 `README.md` 只承担项目入口职责；组件 README 只承担就近接口说明，禁止复制
+排行榜或另建“当前状态”。本轮目录重整记录见
+[`operations/cleanup_20260824.md`](operations/cleanup_20260824.md)。
 
 ## 1. 当前研究主线
 
@@ -76,7 +94,7 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 
 该插件把一个模糊观测转换为若干语义等价簇：VLM 进行多次扰动采样，文本嵌入聚类，簇内 medoid 作为代表，簇频率作为 `hypothesis_weight`。权重会原样进入 PASD manifest，并由 SALT sampler 加权采样。
 
-当前代码已支持 `sysu_sr_views_per_image: 0` 的动态视图数，但所有活跃训练 YAML 仍使用单视图 `1`；当前 geometry-matched 数据的权重均为 1。因此 Semantic Imagination 是下一阶段接口，不是当前运行实验的自变量。数学语义和不变量见 [`../semantic_imagination/MATHEMATICAL_SPEC.md`](../semantic_imagination/MATHEMATICAL_SPEC.md)。
+当前代码已支持 `sysu_sr_views_per_image: 0` 的动态视图数，但所有活跃训练 YAML 仍使用单视图 `1`；当前 geometry-matched 数据的权重均为 1。因此 Semantic Imagination 是下一阶段接口，不是当前运行实验的自变量。数学语义和不变量见 [`reference/semantic_imagination_mathematical_spec.md`](reference/semantic_imagination_mathematical_spec.md)。
 
 ## 5. 仓库与资产位置
 
@@ -142,26 +160,20 @@ python scripts/train.py --config_select <config.yaml>
 
 历史专项 Markdown 不删除：其中包含失败结果、负面结论、当时路径和协议等可复核证据；但它们不再作为平行的当前状态页面。历史事实和当前结果分别从以下位置读取：
 
-1. 当前状态：`reports/EXPERIMENT_STATUS_20260822.md`；
+1. 当前状态：`docs/status/README.md`；
 2. 结构化总表：`reports/experiment_registry/experiment_registry.csv`；
-3. 历史专项证据：`reports/stage_a_*.md`、`reports/qri_*.md`、`reports/autoresearch_*.md`；
+3. 历史专项叙述：`docs/history/stage_a/`、`docs/history/qri/` 与 `docs/history/`；
 4. Git 历史、`configs/experiments/reproduction/`、`experiments/`、`logs/raw/` 和结构化 runtime manifests。
 
 这些原始实验产物不是当前运行说明；当前页面只引用它们的证据位置，不复制出第二份排行榜。
 
 ## 9. 文档规则
 
-当前人工维护的项目文档只有：
+人工维护的跨模块文档必须放在 `/docs/` 的对应分类中。`/README.md` 和组件 README
+是允许保留在代码旁的入口文件；实验总表继续位于
+`reports/experiment_registry/experiment_registry.csv`，其字段说明位于
+`docs/reference/experiment_registry.md`。`reports/` 不再接收人工 Markdown。
 
-- `/README.md`：项目入口和状态摘要；
-- `/docs/README.md`：本统一指南；
-- `/reports/EXPERIMENT_STATUS_20260822.md`：当前批次实验状态与归档总览；
-- `/pasd_plugin/README.md`：统一 PASD 插件接口；
-- `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
-- `/feature_analysis/README.md`：特征分析模块；
-- `/reports/experiment_registry/README.md`：总表字段和维护边界；
-- `/reports/PROJECT_REMEDIATION_PLAN.md`：历史修复计划及其完成边界；
-- `/reports/archive_plan_20260822.md`：当前批次可复现归档规范与验收证据；
-- vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
-
-新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交，历史过程只留在 Git。
+新的运行过程不要再建立平行的“当前状态”“修复报告”或“结果汇总”；当前事实写入
+`docs/status/`，长期设计写入 `docs/plans/`，结束后的叙述移入 `docs/history/`，指标写入
+结构化结果和实验总表。

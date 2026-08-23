@@ -18,8 +18,8 @@ from qwen_imagination.text_annotation.pipeline import TextAnnotationPipeline
 from qwen_imagination.text_annotation.reasoner import (
     normalize_annotation,
     normalize_hypotheses,
-    sample_joint_text_worlds,
 )
+from qwen_imagination.text_annotation.empirical import build_empirical_sampling
 from qwen_imagination.text_annotation.track_anchor import (
     TrackAnchorTextAnnotationPipeline,
 )
@@ -81,14 +81,12 @@ def _annotation(regions: list[Region]) -> dict:
                 "hypotheses": [
                     {
                         "description": f"{region.region_id} bag",
-                        "probability": 0.7,
                         "basis": "mixed",
                         "observable_support": "dark hanging shape",
                         "uncertainty": "blur",
                     },
                     {
                         "description": f"{region.region_id} unresolved",
-                        "probability": 0.3,
                         "basis": "unresolved",
                         "observable_support": "coarse pixels",
                         "uncertainty": "high",
@@ -121,12 +119,23 @@ def _write_split(root: Path) -> None:
 def test_hypotheses_are_normalized_without_adding_candidates():
     rows = normalize_hypotheses(
         [
-            {"description": "specific bag", "probability": 3, "basis": "mixed"},
-            {"description": "unresolved", "probability": 1, "basis": "unresolved"},
+            {"description": "specific bag", "basis": "mixed"},
+            {"description": "unresolved", "basis": "unresolved"},
         ]
     )
     assert len(rows) == 2
-    assert [row["probability"] for row in rows] == [0.75, 0.25]
+    assert all("probability" not in row for row in rows)
+    try:
+        normalize_hypotheses(
+            [
+                {"description": "specific bag", "probability": 0.7},
+                {"description": "unresolved"},
+            ]
+        )
+    except ValueError as error:
+        assert "self-reported" in str(error)
+    else:
+        raise AssertionError("self-reported probabilities must be rejected")
 
 
 def test_annotation_requires_every_selected_roi():
@@ -140,13 +149,24 @@ def test_annotation_requires_every_selected_roi():
         raise AssertionError("missing ROI must be rejected")
 
 
-def test_joint_world_sampling_is_deterministic_and_probability_weighted():
-    regions = _annotation([_region("r0", 10), _region("r1", 50)])["regions"]
-    first = sample_joint_text_worlds(regions, sample_count=64, max_worlds=4, seed=17)
-    second = sample_joint_text_worlds(regions, sample_count=64, max_worlds=4, seed=17)
-    assert first == second
-    assert first["sample_count"] == 64
-    assert abs(sum(row["selected_weight"] for row in first["worlds"]) - 1.0) < 1e-9
+def test_empirical_sampling_clusters_repeated_atomic_draws():
+    result = build_empirical_sampling(
+        _FakeReasoner(),
+        Image.new("RGB", (256, 512)),
+        [_region("r0", 10), _region("r1", 50)],
+        modality="rgb",
+        source_key="sample.jpg",
+        observed="a person wearing dark clothing",
+        atomic_sample_count=8,
+        world_sample_count=16,
+        max_worlds=4,
+        seed=17,
+        similarity_threshold=0.85,
+        max_attempts=2,
+    )
+    assert result["weights_source"] == "repeated_atomic_samples_cluster_frequency"
+    assert result["worlds"]["sample_count"] == 16
+    assert all(region["clusters"] for region in result["regions"])
 
 
 def test_sysu_train_eval_iteration_and_sharding(tmp_path):
@@ -183,6 +203,10 @@ class _FakeReasoner:
     def annotate(self, lr, swin, regions, *, modality, seed):
         return _annotation(regions), {"elapsed_seconds": 0.01, "usage": {}}
 
+    def sample_atomic(self, swin, region, *, modality, observed, instruction, seed):
+        if int(seed) % 2:
+            return f"ATOM | {region.category} | backpack | black backpack | left shoulder"
+
 
 def test_pipeline_auto_roi_top3_and_text_only_result(tmp_path):
     config = _config(tmp_path)
@@ -197,7 +221,7 @@ def test_pipeline_auto_roi_top3_and_text_only_result(tmp_path):
     assert record["selected_region_ids"] == ["r0", "r1", "r2"]
     assert record["annotation"]["global"]["caption"].startswith("a person")
     assert len(record["annotation"]["regions"]) == 3
-    assert record["sampled_text_worlds"]["sample_count"] == 64
+    assert record["semantic_sampling"]["worlds"]["sample_count"] == 64
     assert not config.output_root.exists()
 
 
@@ -275,10 +299,8 @@ def test_semantic_priority_can_retain_discriminative_low_blur_roi(tmp_path):
     assert "semantic-priority-adjusted" in rule
 
 
-def test_deferred_empirical_mode_writes_no_self_reported_world_sampling(tmp_path):
+def test_empirical_mode_writes_no_self_reported_weights(tmp_path):
     config = _config(tmp_path)
-    config.probability_mode = "deferred_empirical"
-    config.probability_spec = "semantic_imagination/MATHEMATICAL_SPEC.md"
     source_path = tmp_path / "source.jpg"
     Image.new("RGB", (128, 256), (70, 80, 90)).save(source_path)
     source = SourceItem("cam1/0001/0001.jpg", source_path, "0001", "cam1", "rgb")
@@ -286,13 +308,13 @@ def test_deferred_empirical_mode_writes_no_self_reported_world_sampling(tmp_path
         config, swin=_FakeSwin(), roi=_FakeROI(), reasoner=_FakeReasoner()
     )
     record = pipeline.process(source)
-    assert "sampled_text_worlds" not in record
-    assert record["probability_design"] == {
-        "mode": "deferred_empirical",
-        "specification": "semantic_imagination/MATHEMATICAL_SPEC.md",
-        "vlm_self_reported_probability": False,
-        "status": "deferred",
-    }
+    assert record["semantic_sampling"]["version"] == "empirical-atomic-v1"
+    assert record["sampling_design"]["vlm_weights"] is False
+    assert all(
+        "probability" not in hypothesis
+        for regional in record["annotation"]["regions"]
+        for hypothesis in regional["hypotheses"]
+    )
     assert record["annotation_provenance"]["vlm_visual_input"] == "swinir_only"
 
 
@@ -317,18 +339,19 @@ class _CountingPipeline:
             "status": "complete",
             "selected_region_ids": [region.region_id for region in regions],
             "annotation": _annotation(regions),
+            "semantic_sampling": {
+                "worlds": {
+                    "sample_count": 16,
+                    "worlds": [{"world_id": "w00"}],
+                }
+            },
+            "sampling_design": {
+                "mode": "empirical_atomic",
+                "weights_source": "repeated_atomic_samples_cluster_frequency",
+                "vlm_weights": False,
+                "specification": "docs/reference/semantic_imagination_mathematical_spec.md",
+            },
         }
-        if self.config.probability_mode == "deferred_empirical":
-            record["probability_design"] = {
-                "mode": "deferred_empirical",
-                "specification": self.config.probability_spec,
-                "vlm_self_reported_probability": False,
-                "status": "deferred",
-            }
-        else:
-            record["sampled_text_worlds"] = sample_joint_text_worlds(
-                _annotation(regions)["regions"], sample_count=16, max_worlds=4, seed=3
-            )
         return record
 
 
@@ -370,15 +393,13 @@ def test_run_writes_per_image_records_manifest_and_resumes(tmp_path):
     assert manifest.is_file()
     row = json.loads(manifest.read_text(encoding="utf-8").strip())
     assert row["global"]["caption"].startswith("a person")
-    assert row["sampled_text_worlds"]["worlds"]
+    assert row["semantic_sampling"]["worlds"]["worlds"]
 
 
-def test_run_consolidates_deferred_probability_records_without_sampled_worlds(
+def test_run_consolidates_empirical_sampling_records(
     tmp_path,
 ):
     config = _config(tmp_path)
-    config.probability_mode = "deferred_empirical"
-    config.probability_spec = "semantic_imagination/MATHEMATICAL_SPEC.md"
     _write_split(config.dataset_root)
     pipeline = _CountingPipeline(config)
     summary = run(
@@ -398,9 +419,9 @@ def test_run_consolidates_deferred_probability_records_without_sampled_worlds(
         / "train.shard-00000-of-00001.jsonl"
     )
     row = json.loads(manifest.read_text(encoding="utf-8").strip())
-    assert "sampled_text_worlds" not in row
-    assert row["probability_design"]["mode"] == "deferred_empirical"
-    assert row["probability_design"]["vlm_self_reported_probability"] is False
+    assert row["semantic_sampling"]["worlds"]["worlds"]
+    assert row["sampling_design"]["mode"] == "empirical_atomic"
+    assert row["sampling_design"]["vlm_weights"] is False
 
 
 class _CountingTrackPipeline:

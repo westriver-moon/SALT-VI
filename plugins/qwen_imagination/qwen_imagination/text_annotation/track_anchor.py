@@ -18,7 +18,7 @@ from ..regional.sysu_sources import load_train_source_records
 from ..regional.tta import blur_information, robust_category_normalize
 from .config import TextAnnotationConfig
 from .manifest import atomic_json
-from .reasoner import normalized_entropy, sample_joint_text_worlds
+from .empirical import build_empirical_sampling
 
 
 BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
@@ -36,6 +36,17 @@ class AnnotationReasoner(Protocol):
         modality: str,
         seed: int,
     ) -> tuple[dict[str, Any], dict[str, Any]]: ...
+
+    def sample_atomic(
+        self,
+        swin: Image.Image,
+        region: Region,
+        *,
+        modality: str,
+        observed: str,
+        instruction: str,
+        seed: int,
+    ) -> str: ...
 
 
 class PrecomputedSwinIRStore:
@@ -331,16 +342,25 @@ class TrackAnchorTextAnnotationPipeline:
             modality=anchor.source.modality,
             seed=anchor_seed,
         )
-        for regional in annotation["regions"]:
-            regional["normalized_entropy"] = normalized_entropy(
-                regional["hypotheses"]
-            )
+        semantic_sampling = build_empirical_sampling(
+            self.reasoner,
+            anchor.reference,
+            selected_anchor_regions,
+            modality=anchor.source.modality,
+            source_key=anchor.source.source_key,
+            observed=annotation["global"]["caption"],
+            atomic_sample_count=int(self.config.atomic_sample_count),
+            world_sample_count=int(self.config.world_sample_count),
+            max_worlds=int(self.config.max_worlds),
+            seed=anchor_seed,
+            similarity_threshold=float(self.config.sampling_similarity_threshold),
+            max_attempts=int(self.config.sampling_max_attempts),
+        )
         track_key = "/".join(track_keys.pop())
         records = []
         summary_by_key = {item["source_key"]: item for item in summaries}
         for source in sources:
             item = summary_by_key[source.source_key]
-            source_seed = _source_seed(self.config, source.source_key)
             source_annotation = copy.deepcopy(annotation)
             regions_by_id = {
                 region["region_id"]: region for region in item["roi_candidates"]
@@ -371,6 +391,7 @@ class TrackAnchorTextAnnotationPipeline:
                         "direct_vlm": direct_vlm,
                         "semantic_scope": "camera_identity_track",
                         "roi_geometry_scope": "source_image",
+                        "sampling_scope": "camera_identity_track",
                     },
                     "selection_rule": (
                         "top-3-by-track-median-fast-swin-residual-plus-blur"
@@ -384,12 +405,13 @@ class TrackAnchorTextAnnotationPipeline:
                         for region in item["roi_candidates"]
                     ],
                     "annotation": source_annotation,
-                    "sampled_text_worlds": sample_joint_text_worlds(
-                        source_annotation["regions"],
-                        sample_count=int(self.config.world_sample_count),
-                        max_worlds=int(self.config.max_worlds),
-                        seed=source_seed,
-                    ),
+                    "semantic_sampling": copy.deepcopy(semantic_sampling),
+                    "sampling_design": {
+                        "mode": "empirical_atomic",
+                        "weights_source": "repeated_atomic_samples_cluster_frequency",
+                        "vlm_weights": False,
+                        "specification": "docs/reference/semantic_imagination_mathematical_spec.md",
+                    },
                     "telemetry": {
                         "preparation_elapsed_seconds": (
                             item["preparation_elapsed_seconds"]

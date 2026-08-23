@@ -29,14 +29,12 @@ def test_compact_annotation_expands_to_canonical_schema():
                 "h": [
                     {
                         "d": "ordinary item",
-                        "p": 0.75,
                         "b": "mixed",
                         "e": "shape support",
                         "u": "blur",
                     },
                     {
                         "d": "image artifact",
-                        "p": 0.25,
                         "b": "unresolved",
                         "e": "weak edge",
                         "u": "low resolution",
@@ -64,7 +62,6 @@ def test_compact_annotation_expands_to_canonical_schema():
     ]
     assert result["regions"][0]["hypotheses"][0] == {
         "description": "ordinary item",
-        "probability": 0.75,
         "basis": "mixed",
         "observable_support": "shape support",
         "uncertainty": "blur",
@@ -81,9 +78,8 @@ def test_compact_reasoner_instruction_uses_alias_contract():
     instruction = reasoner._instruction(regions, "rgb")
     assert '"g"' in instruction
     assert '"h"' in instruction
-    assert "probabilities summing to one" in instruction
-    assert "prefer a no-object or unresolved" in instruction
-    assert "lower the positive-object probability" in instruction
+    assert "do not attach scores, probabilities, or confidence" in instruction
+    assert "Repeated independent sampling" in instruction
 
 
 def _separated_payload(caption: str):
@@ -183,7 +179,7 @@ def test_swin_separated_caption_rejects_combination_and_vlm_probabilities():
         "carried item and a red chest design."
     )
     payload["r"][0]["h"][0]["p"] = 0.6
-    with pytest.raises(ValueError, match="must not contain VLM-reported probabilities"):
+    with pytest.raises(ValueError, match="self-reported probabilities"):
         normalize_annotation(payload, selected, require_swin_separated=True)
 
 

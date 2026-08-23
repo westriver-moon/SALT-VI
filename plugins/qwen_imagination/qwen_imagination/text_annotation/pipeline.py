@@ -17,7 +17,7 @@ from ..regional.tta import (
     swin_instability,
 )
 from .config import TextAnnotationConfig
-from .reasoner import normalized_entropy, sample_joint_text_worlds
+from .empirical import build_empirical_sampling
 
 
 BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
@@ -35,6 +35,17 @@ class AnnotationReasoner(Protocol):
         modality: str,
         seed: int,
     ) -> tuple[dict[str, Any], dict[str, Any]]: ...
+
+    def sample_atomic(
+        self,
+        swin: Image.Image,
+        region: Region,
+        *,
+        modality: str,
+        observed: str,
+        instruction: str,
+        seed: int,
+    ) -> str: ...
 
 
 class ReferenceStore(Protocol):
@@ -196,19 +207,21 @@ class TextAnnotationPipeline:
             modality=source.modality,
             seed=source_seed,
         )
+        semantic_sampling = build_empirical_sampling(
+            self.reasoner,
+            reference,
+            selected,
+            modality=source.modality,
+            source_key=source.source_key,
+            observed=annotation["global"]["caption"],
+            atomic_sample_count=int(self.config.atomic_sample_count),
+            world_sample_count=int(self.config.world_sample_count),
+            max_worlds=int(self.config.max_worlds),
+            seed=source_seed,
+            similarity_threshold=float(self.config.sampling_similarity_threshold),
+            max_attempts=int(self.config.sampling_max_attempts),
+        )
         qwen_ready = time.perf_counter()
-        sampled = None
-        if self.config.probability_mode == "vlm_reported":
-            sampled = sample_joint_text_worlds(
-                annotation["regions"],
-                sample_count=int(self.config.world_sample_count),
-                max_worlds=int(self.config.max_worlds),
-                seed=source_seed,
-            )
-            for regional in annotation["regions"]:
-                regional["normalized_entropy"] = normalized_entropy(
-                    regional["hypotheses"]
-                )
         finished = time.perf_counter()
         telemetry["pipeline"] = {
             "lr_load_seconds": lr_ready - process_started,
@@ -237,6 +250,7 @@ class TextAnnotationPipeline:
             "annotation_provenance": {
                 "anchor_source_key": source.source_key,
                 "direct_vlm": True,
+                "sampling_scope": "source_image",
                 "semantic_scope": "source_image",
                 "roi_geometry_scope": "source_image",
                 "vlm_visual_input": "swinir_only",
@@ -256,20 +270,13 @@ class TextAnnotationPipeline:
                 for region in regions
             ],
             "annotation": annotation,
-            "probability_design": {
-                "mode": self.config.probability_mode,
-                "specification": self.config.probability_spec,
-                "vlm_self_reported_probability": (
-                    self.config.probability_mode == "vlm_reported"
-                ),
-                "status": (
-                    "available"
-                    if self.config.probability_mode == "vlm_reported"
-                    else "deferred"
-                ),
+            "semantic_sampling": semantic_sampling,
+            "sampling_design": {
+                "mode": "empirical_atomic",
+                "weights_source": "repeated_atomic_samples_cluster_frequency",
+                "vlm_weights": False,
+                "specification": "docs/reference/semantic_imagination_mathematical_spec.md",
             },
             "telemetry": telemetry,
         }
-        if sampled is not None:
-            record["sampled_text_worlds"] = sampled
         return record

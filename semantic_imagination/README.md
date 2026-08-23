@@ -2,7 +2,7 @@
 
 该离线插件把一幅模糊行人图像转换为带经验权重的语义假设集合，并将其导出为 PASD source records。它不导入 SALT 训练代码或 PASD 模型代码。
 
-权威数学语义和实现不变量见 [`MATHEMATICAL_SPEC.md`](MATHEMATICAL_SPEC.md)。当前验证契约和剩余限制在本文固定；实现可以替换 VLM、扰动、文本嵌入和聚类后端，但不能改变其中定义的概率解释。
+权威数学语义和实现不变量见 [`semantic_imagination_mathematical_spec.md`](../docs/reference/semantic_imagination_mathematical_spec.md)。当前验证契约和剩余限制在本文固定；实现可以替换 VLM、扰动、文本嵌入和聚类后端，但不能改变其中定义的概率解释。
 
 ## 工作流
 
@@ -92,5 +92,5 @@ record = to_pasd_record(manifest, output_dir="images/cam1/0001/person")
 `experiments/run_internvl_sampling.py`。它仍是离线生成插件，没有活跃训练 YAML
 自动启用动态视图；当前 geometry-matched Stage-A 数据仍是一视图、权重1。
 旧校验器和一次性 smoke 产物不属于源码主线；当前规范只保留在本 README 与
-`MATHEMATICAL_SPEC.md`。新的采样、审计和 smoke 输出写入 `reports/`，但不提交到
+`docs/reference/semantic_imagination_mathematical_spec.md`。新的采样、审计和 smoke 输出写入 `reports/`，但不提交到
 Git。

@@ -42,10 +42,11 @@ class TextAnnotationConfig:
     roi_selection_threshold: float = 0.6
     roi_category_priority_boosts: dict[str, float] = field(default_factory=dict)
     roi_board_size_px: int = 512
+    atomic_sample_count: int = 8
     world_sample_count: int = 64
     max_worlds: int = 8
-    probability_mode: str = "vlm_reported"
-    probability_spec: str | None = None
+    sampling_similarity_threshold: float = 0.85
+    sampling_max_attempts: int = 4
     seed: int = 20260822
     strategy: str = "track_anchor"
     exact_selection_mode: str = "full_tta"
@@ -83,20 +84,18 @@ class TextAnnotationConfig:
                 )
         if int(self.roi_board_size_px) < 256 or int(self.roi_board_size_px) % 2:
             raise ValueError("roi_board_size_px must be an even integer >= 256")
+        if int(self.atomic_sample_count) < 2:
+            raise ValueError("atomic_sample_count must be at least 2")
         if int(self.world_sample_count) < 1:
             raise ValueError("world_sample_count must be positive")
         if not 1 <= int(self.max_worlds) <= int(self.world_sample_count):
             raise ValueError("max_worlds must be within [1, world_sample_count]")
+        if not 0.0 <= float(self.sampling_similarity_threshold) <= 1.0:
+            raise ValueError("sampling_similarity_threshold must be within [0, 1]")
+        if int(self.sampling_max_attempts) < 1:
+            raise ValueError("sampling_max_attempts must be positive")
         if self.strategy not in {"exact", "track_anchor"}:
             raise ValueError("strategy must be exact or track_anchor")
-        if self.probability_mode not in {"vlm_reported", "deferred_empirical"}:
-            raise ValueError(
-                "probability_mode must be vlm_reported or deferred_empirical"
-            )
-        if self.probability_mode == "deferred_empirical" and not self.probability_spec:
-            raise ValueError(
-                "deferred_empirical probability mode requires probability_spec"
-            )
         if self.exact_selection_mode not in {"full_tta", "fast_blur_eye_guard"}:
             raise ValueError(
                 "exact_selection_mode must be full_tta or fast_blur_eye_guard"
@@ -141,10 +140,11 @@ class TextAnnotationConfig:
                 )
             },
             "roi_board_size_px": int(self.roi_board_size_px),
+            "atomic_sample_count": int(self.atomic_sample_count),
             "world_sample_count": int(self.world_sample_count),
             "max_worlds": int(self.max_worlds),
-            "probability_mode": self.probability_mode,
-            "probability_spec": self.probability_spec,
+            "sampling_similarity_threshold": float(self.sampling_similarity_threshold),
+            "sampling_max_attempts": int(self.sampling_max_attempts),
             "seed": int(self.seed),
             "strategy": self.strategy,
             "exact_selection_mode": self.exact_selection_mode,
