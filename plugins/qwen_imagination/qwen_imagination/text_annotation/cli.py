@@ -82,6 +82,7 @@ def _build_reasoner(config: TextAnnotationConfig) -> TextAnnotationReasoner:
         temperature=float(config.qwen.get("temperature", 0.35)),
         max_tokens=int(config.qwen.get("max_tokens", 2048)),
         response_profile=str(config.qwen.get("response_profile", "detailed_v1")),
+        prompt_version=str(config.qwen.get("prompt_version", "legacy-unspecified")),
         roi_board_size_px=int(config.roi_board_size_px),
     )
 

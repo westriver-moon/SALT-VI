@@ -68,7 +68,7 @@ python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.y
         │
         ├─ pasd_plugin/ ──> SYSU/RegDB/LLCM 的 PASD RGB+IR/NIR manifests
         │
-        ├─ semantic_imagination/ ──> 动态加权语义假设（尚未进入活跃配置）
+        ├─ semantic_imagination.v6 ──> 联合语义世界、频率权重与改写 caption
         │
         ▼
 Stage A：RGB/IR image-only 视觉表征
@@ -90,11 +90,18 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 - `src/salt_vi/entrypoints/train.py`：唯一训练入口实现；外部使用 `scripts/train.py`。
 - `pasd_plugin/` 与 `semantic_imagination/` 是离线包，不导入训练包。
 
-## 4. Semantic Imagination 的当前边界
+## 4. QRI-v6 Semantic Imagination 的当前边界
 
-该插件把一个模糊观测转换为若干语义等价簇：VLM 进行多次扰动采样，文本嵌入聚类，簇内 medoid 作为代表，簇频率作为 `hypothesis_weight`。权重会原样进入 PASD manifest，并由 SALT sampler 加权采样。
+当前接口版本统一为 `qri-v6`。VLM 每次直接抽取包含全部目标 ROI 的联合语义
+世界，避免从区域边缘分布独立组合出未被模型联合提出的世界。相同 state
+signature 内使用完整 value/location 表示执行 complete-link；簇频率直接成为
+经验质量。每个代表世界再通过注入的 LLM 接口与共同观测改写成完整 caption。
 
-当前代码已支持 `sysu_sr_views_per_image: 0` 的动态视图数，但所有活跃训练 YAML 仍使用单视图 `1`；当前 geometry-matched 数据的权重均为 1。因此 Semantic Imagination 是下一阶段接口，不是当前运行实验的自变量。数学语义和不变量见 [`reference/semantic_imagination_mathematical_spec.md`](reference/semantic_imagination_mathematical_spec.md)。
+VLM、语义编码器与 LLM 改写器当前只定义接口，尚未绑定真实模型。所有活跃训练
+YAML 仍使用单视图数据，因此 QRI-v6 是已实现并经过契约测试的下一阶段接口，
+不是当前运行实验的自变量。接口字段见
+[`reference/qri_v6_contract.md`](reference/qri_v6_contract.md)，数学语义见
+[`reference/semantic_imagination_mathematical_spec.md`](reference/semantic_imagination_mathematical_spec.md)。
 
 ## 5. 仓库与资产位置
 

@@ -340,6 +340,7 @@ class TextAnnotationReasoner:
         atomic_temperature: float = 0.75,
         max_tokens: int = 2048,
         response_profile: str = "detailed_v1",
+        prompt_version: str = "legacy-unspecified",
         roi_board_size_px: int = 512,
     ):
         self.endpoint = str(endpoint)
@@ -351,6 +352,7 @@ class TextAnnotationReasoner:
         self.temperature = float(temperature)
         self.max_tokens = int(max_tokens)
         self.response_profile = str(response_profile)
+        self.prompt_version = str(prompt_version)
         if self.response_profile not in {
             "detailed_v1",
             "compact_v1",

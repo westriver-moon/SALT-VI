@@ -115,15 +115,15 @@ a production output root, and start the configured Qwen 3.8 server. Then:
 
 ```bash
 salt-qwen-text-annotation \
-  --config plugins/qwen_imagination/configs/text_annotation_sysu_v1.yaml \
+  --config plugins/qwen_imagination/configs/legacy/text_annotation_sysu_v2_track_anchor.yaml \
   preflight
 
 salt-qwen-text-annotation \
-  --config plugins/qwen_imagination/configs/text_annotation_sysu_v1.yaml \
+  --config plugins/qwen_imagination/configs/legacy/text_annotation_sysu_v2_track_anchor.yaml \
   run --split train --num-shards 1 --shard-index 0 --device cuda:0
 
 salt-qwen-text-annotation \
-  --config plugins/qwen_imagination/configs/text_annotation_sysu_v1.yaml \
+  --config plugins/qwen_imagination/configs/legacy/text_annotation_sysu_v2_track_anchor.yaml \
   run --split evaluation --num-shards 1 --shard-index 0 --device cuda:0
 ```
 

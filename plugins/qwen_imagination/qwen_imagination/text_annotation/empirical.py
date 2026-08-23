@@ -49,7 +49,7 @@ def _hashed_embedding(texts: Sequence[str], dimensions: int = 128) -> list[list[
 
 
 class _AtomicBackend:
-    """Adapter from the V4 Qwen reasoner to the canonical atomic sampler."""
+    """Legacy V5 adapter retained for historical text-annotation reproduction."""
 
     def __init__(
         self,
@@ -70,7 +70,7 @@ class _AtomicBackend:
         return self.observed
 
     def perturb(self, image: Path, seed: int) -> Image.Image:
-        # V4 keeps one authoritative SwinIR image. Independent Qwen seeds provide
+        # V5 keeps one authoritative SwinIR image. Independent Qwen seeds provide
         # the decoding randomness; the identity perturbation is recorded in the
         # sampling contract instead of inventing additional pixel evidence.
         return self.swin
@@ -124,10 +124,27 @@ def _region_manifest(
         similarity_threshold=float(similarity_threshold),
         compose=lambda _observed, hypothesis: hypothesis,
         contract={
-            "pipeline": "qri-v4-swin-only",
+            "pipeline": "legacy-qri-v5-swin-only",
             "perturbation": "identity-authoritative-swinir-v1",
             "sampling": "canonical-semantic-imagination-atomic-v1",
             "category": region.category,
+            "prompt_version": str(
+                getattr(backend.reasoner, "prompt_version", "legacy-unspecified")
+            ),
+            "roi_board_size_px": int(
+                getattr(backend.reasoner, "roi_board_size_px", 512)
+            ),
+            "decoding": {
+                "temperature": float(
+                    getattr(backend.reasoner, "atomic_temperature", 0.75)
+                ),
+                "top_p": 0.9,
+                "max_tokens": min(
+                    220, int(getattr(backend.reasoner, "max_tokens", 2048))
+                ),
+                "thinking": False,
+                "reasoning_effort": "none",
+            },
         },
         cluster_linkage="complete",
         sampling_strata=(region.category,),

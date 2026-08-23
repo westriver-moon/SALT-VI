@@ -1,84 +1,48 @@
-# Centralized Qwen imagination plugins
+# Qwen imagination plugins
 
-This directory is the sole source location for versioned Qwen imagination
-implementations used by SALT-VI. SALT training code calls the stable bridge in
-src/salt_vi/imagination.py and does not import QRI internals directly.
+本目录是 SALT-VI 的版本化 QRI 插件入口。当前接口版本统一为 `qri-v6`；
+`qri-v1` 与 `qri-v2` 只用于历史结果复现。V4 是 2026-08-22 的 smoke
+产物版本，V5 是未完成的 text-annotation 过渡实现，两者都不是当前插件版本。
 
-The qwen_imagination/api.py file defines the request and result contract.
-The registry selects qri-v1, qri-v2, or a future version lazily.
-The versions directory contains one adapter per version.
-The regional directory contains shared regional engine code.
-The configs and tests remain inside this plugin area.
+## QRI-v6
 
-Model weights, third-party source repositories, and experiment outputs are
-runtime assets, not plugin source. They remain outside this directory.
+标准入口如下：
 
-The existing QRI checkout remains a migration baseline until both versions
-pass the contract and regional tests.
+- 版本适配器：`qwen_imagination/versions/qri_v6.py`
+- 插件 manifest：`versions/qri-v6/plugin.yaml`
+- 默认配置：`configs/qri_v6_semantic_sysu.yaml`
+- 权威核心：`semantic_imagination/semantic_imagination/v6/`
+- 契约说明：`docs/reference/qri_v6_contract.md`
 
-## Dataset-scale text annotation
+V6 只要求运行方注入三个带完整 descriptor 的后端接口：
 
-`salt-qwen-text-annotation` is the image-generation-free annotation mode. It
-reuses the regional plugin's SYSU-MM01 source traversal, human ROI stack,
-SwinIR comparison data and four-tile ROI comparison board. The default
-`track_anchor` strategy performs source-specific ROI geometry and fast
-SwinIR-residual/blur scoring for every image, selects a representative frame
-for each `(split, camera, identity)` track, and makes one Qwen 3.8 request per
-track for the global caption and selected Top-3 regional annotations. Every
-source record states its anchor and whether it was directly seen by Qwen.
+1. `VLMBackend`：一次稳定观测和多次完整联合语义世界采样；
+2. `SemanticEncoder`：编码完整联合世界，用于完全链接聚类；
+3. `RewriteBackend`：把共同观测与一个代表世界改写为完整 caption。
 
-`--strategy exact` retains the expensive diagnostic mode: 12-view SwinIR
-instability and one Qwen request per source. It is useful for spot checks, not
-the full SYSU-MM01 annotation run. Qwen is always the configured Qwen 3.8
-vision model; a smaller text-only LLM is intentionally deferred to the later
-caption-composition stage.
+插件不内置或猜测具体 VLM/LLM。模型 ID、权重/代码 revision、prompt
+版本、temperature、top-p、token 限制等影响分布的参数由 descriptor 进入
+run signature 和 sampling contract。`load_plugin("qri-v6")` 返回未绑定插件；
+调用 `bind(vlm=..., encoder=..., rewriter=...)` 后得到可运行的 `V6Pipeline`。
 
-Each source record contains:
+V6 每次 VLM 抽样直接返回所有目标 ROI 的联合赋值，不再从区域边缘分布做
+独立笛卡尔采样。联合样本经过真正生效的 complete-link 聚类，簇频率直接形成
+经验质量；没有第二次 Monte Carlo 世界采样。每个保留簇只调用一次改写接口。
 
-- one evidence-grounded global person description;
-- every candidate ROI and its uncertainty score;
-- Top-3 regional observations, world knowledge, mutually exclusive hypotheses
-  and normalized probabilities;
-- deterministic joint text-world samples;
-- latency and token telemetry without persisted chain of thought.
-
-It never imports PASD or diffusers and does not materialize candidate images.
-Records are written atomically below one output root:
+默认输出根由 `QRI_V6_OUTPUT_ROOT` 显式提供，记录固定写入：
 
 ```text
-<output_root>/
-├── metadata/<camera>/<identity>/<image>.json
-├── prescan/<camera>/<identity>/<image>.json
-└── manifests/
-    ├── <split>.shard-<index>-of-<count>.jsonl
-    └── <split>.shard-<index>-of-<count>.summary.json
+<output_root>/metadata/<source_key-with-json-suffix>
 ```
 
-Resolve the environment variables used by
-`configs/text_annotation_sysu_v1.yaml`, start the existing remote Qwen server,
-and preflight before a run:
+测试只使用 pytest 的临时目录，不在仓库内生成 smoke 或缓存产物。
 
-```bash
-salt-qwen-text-annotation \
-  --config plugins/qwen_imagination/configs/text_annotation_sysu_v1.yaml \
-  preflight
-```
+## 历史版本
 
-Run one deterministic shard, or use `--num-shards N` with distinct
-`--shard-index` values for parallel workers. Track-anchor sharding keeps every
-camera/identity track on one worker; `--limit` counts tracks in this mode and
-individual sources in exact mode:
+- `qri-v1`、`qri-v2`：保留的 regional QRI 适配器与配置；
+- `qwen_imagination/text_annotation/`：V2/V5 历史数据标注实现，不属于 V6；
+- `configs/legacy/text_annotation_sysu_v2_track_anchor.yaml`：历史 track-anchor 配置；
+- `configs/legacy/text_annotation_sysu_v5_exact.yaml`：历史 V5 exact 配置。
 
-```bash
-salt-qwen-text-annotation \
-  --config plugins/qwen_imagination/configs/text_annotation_sysu_v1.yaml \
-  run --split all --num-shards 8 --shard-index 0
-```
-
-Completed records with the same run signature are reused. Failed records are
-retained with their exception and retried on the next run. Per-image prescans
-are cached separately, so a failed Qwen request only rebuilds its representative
-frame. `--overwrite` explicitly regenerates completed records. Caption
-compilation, probability sampling for training, and CLIP tokenization are
-deliberately downstream concerns; this mode preserves the complete global and
-regional annotation first.
+历史 launcher 仍可复现实验，但不得把其 per-ROI 独立组合、自报概率或
+`empirical-atomic-v1` 输出登记为 QRI-v6。

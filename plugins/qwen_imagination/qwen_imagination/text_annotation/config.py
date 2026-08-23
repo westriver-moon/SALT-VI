@@ -157,6 +157,9 @@ class TextAnnotationConfig:
             "qwen_thinking": bool(self.qwen.get("thinking_mode", False)),
             "qwen_reasoning_effort": str(self.qwen.get("reasoning_effort", "none")),
             "qwen_temperature": float(self.qwen.get("temperature", 0.35)),
+            "qwen_atomic_temperature": float(
+                self.qwen.get("atomic_temperature", 0.75)
+            ),
             "qwen_max_tokens": int(self.qwen.get("max_tokens", 2048)),
             "qwen_response_profile": str(
                 self.qwen.get("response_profile", "detailed_v1")

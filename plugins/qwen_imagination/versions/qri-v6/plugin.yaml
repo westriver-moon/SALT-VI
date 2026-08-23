@@ -1,0 +1,6 @@
+id: qri-v6
+display_name: Qwen Regional Imagination v6
+api_version: 1
+implementation: qwen_imagination.versions.qri_v6:QRIv6Plugin
+config: configs/qri_v6_semantic_sysu.yaml
+status: current_interface

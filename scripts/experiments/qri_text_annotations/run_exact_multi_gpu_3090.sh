@@ -24,6 +24,6 @@ export LD_LIBRARY_PATH="${cuda_libraries}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
 python=/home/lab929/ybj/.venvs/qri-v1/bin/python
 launcher="${repository}/scripts/experiments/qri_text_annotations/run_exact_multi_gpu.py"
-config="${repository}/plugins/qwen_imagination/configs/text_annotation_sysu_exact_v1.yaml"
+config="${repository}/plugins/qwen_imagination/configs/legacy/text_annotation_sysu_v5_exact.yaml"
 
 exec "${python}" "${launcher}" --config "${config}" "$@"

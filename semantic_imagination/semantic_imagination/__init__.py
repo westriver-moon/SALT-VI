@@ -7,6 +7,24 @@ from .plugin import (
 from .schema import AtomicHypothesis, ValidationIssue, ValidationResult
 from .taxonomy import CATEGORY_STATES, DEFAULT_SAMPLING_STRATA
 from .validator import validate_atomic_response
+from .v6 import (
+    AtomicDetail as V6AtomicDetail,
+    BackendDescriptor as V6BackendDescriptor,
+    BackendResult as V6BackendResult,
+    JointWorld as V6JointWorld,
+    Observation as V6Observation,
+    QRI_V6,
+    RegionObservation as V6RegionObservation,
+    RegionSpec as V6RegionSpec,
+    RewriteBackend as V6RewriteBackend,
+    SemanticEncoder as V6SemanticEncoder,
+    SourceSpec as V6SourceSpec,
+    V6Config,
+    V6Engine,
+    V6Pipeline,
+    VLMBackend as V6VLMBackend,
+    load_v6_config,
+)
 
 __all__ = [
     "ImaginationBackend",
@@ -19,4 +37,20 @@ __all__ = [
     "CATEGORY_STATES",
     "DEFAULT_SAMPLING_STRATA",
     "validate_atomic_response",
+    "QRI_V6",
+    "V6AtomicDetail",
+    "V6BackendDescriptor",
+    "V6BackendResult",
+    "V6Config",
+    "V6Engine",
+    "V6JointWorld",
+    "V6Observation",
+    "V6Pipeline",
+    "V6RegionObservation",
+    "V6RegionSpec",
+    "V6RewriteBackend",
+    "V6SemanticEncoder",
+    "V6SourceSpec",
+    "V6VLMBackend",
+    "load_v6_config",
 ]

@@ -12,10 +12,12 @@ from .api import ImaginationPlugin
 _PLUGIN_SPECS = {
     "qri-v1": ("qwen_imagination.versions.qri_v1", "QRIv1Plugin"),
     "qri-v2": ("qwen_imagination.versions.qri_v2", "QRIv2Plugin"),
+    "qri-v6": ("qwen_imagination.versions.qri_v6", "QRIv6Plugin"),
 }
 _DEFAULT_CONFIGS = {
     "qri-v1": "qri_v1_sysu.yaml",
     "qri-v2": "qri_v2_imaginative_sysu.yaml",
+    "qri-v6": "qri_v6_semantic_sysu.yaml",
 }
 
 
