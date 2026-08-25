@@ -1,0 +1,10 @@
+extends: ../safe_tricks/b5_hard_loss_ramp.yaml
+
+config_select: configs/stage_b/b5_tricks_grid_20260824/cosine_only.yaml
+metric_experiment_id: C3-B5-COSINE-ONLY
+metric_events_path: ${SALT_B5_TRICKS_OUTPUT_ROOT}/cosine_only/events.jsonl
+output_root: ${SALT_B5_TRICKS_OUTPUT_ROOT}/cosine_only/model_output
+
+sampler_type: identity_auto_replace
+normalized_classifier: true
+cosine_softmax_scale: 30.0

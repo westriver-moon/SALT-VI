@@ -1,0 +1,8 @@
+extends: ../safe_tricks/b5_hard_loss_ramp.yaml
+
+config_select: configs/stage_b/b5_tricks_grid_20260824/label_smoothing_010.yaml
+metric_experiment_id: C3-B5-LABEL-SMOOTHING-010
+metric_events_path: ${SALT_B5_TRICKS_OUTPUT_ROOT}/label_smoothing_010/events.jsonl
+output_root: ${SALT_B5_TRICKS_OUTPUT_ROOT}/label_smoothing_010/model_output
+
+label_smoothing: 0.10
