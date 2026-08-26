@@ -3,8 +3,8 @@ from collections.abc import Mapping
 
 
 NAME = "ir_to_rgb_text"
+RESULT_KEYS = ("IR-RGBText",)
 RESULT_KEY = "IR-RGBText"
-IS_LEGACY = False
 TRAIN_TEXT_MODALITIES = ("rgb",)
 QUERY_CAPTION_LOOKUP = None
 GALLERY_CAPTION_LOOKUP = "image"
@@ -110,14 +110,14 @@ def training_losses(
 
 
 def encode_query(model, batch_dict, device):
-    image = batch_dict["img"].to(device)
+    image = batch_dict["img"].to(device, non_blocking=True)
     visual = model.encode_image_featmap(image, "ir")
     return model.classifier(model.extract_global_feat(visual), "IR")
 
 
 def encode_gallery(model, batch_dict, device):
-    image = batch_dict["img"].to(device)
-    text = batch_dict["text"].to(device).long()
+    image = batch_dict["img"].to(device, non_blocking=True)
+    text = batch_dict["text"].to(device, non_blocking=True).long()
     return model.classifier(model.encode_fusion(text, image, mode="rgb"), "Fusion")
 
 

@@ -1,0 +1,35 @@
+extends: ../vision_text_encoder_stage_a_current_best.yaml
+
+config_select: configs/stage_a/plugins/quadruple_patch_pasd_512x256_b32.yaml
+experiment_name: stageA_quadruple_patch_pasd_512x256_b32_seed0
+output_root: train_outputs/stage_a_plugins/quadruple_patch_pasd_512x256_b32_seed0
+CUDA_VISIBLE_DEVICES: "1"
+gpu_id: "0"
+
+img_h: 512
+img_w: 256
+img_size: [512, 256]
+sysu_source_size: [256, 128]
+batch_size: 32
+
+sysu_sr_data_root: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_backend: pasd_multiview
+sysu_sr_view_manifest: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl
+sysu_sr_views_per_image: 1
+sysu_sr_view_sampling: paired
+sysu_sr_eval_view_index: 0
+sysu_sr_exact_size: true
+
+visual_input_backend: quadruple_patch
+quadruple_branch_order:
+  - visible_global
+  - visible_channel
+  - infrared_global
+  - infrared_channel
+
+# Four independent standard patch embeddings replace fused MBPatch. The exact
+# original MSCMNet four-view operators run only after paired PASD SR sampling.
+pmt_patch_embed: null
+pmt_attention_backend: flash
+pmt_gradient_checkpointing: true

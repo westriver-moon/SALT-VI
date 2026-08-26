@@ -24,6 +24,8 @@ from salt_vi.utils import (
     CrossModalPMTTripletLoss,
     PMTMSEL,
     PMTDCL,
+    PMTQuadrupleCenterTripletLoss,
+    HeteroCenterTripletLoss,
     LabelSmoothingCrossEntropy,
 )
 
@@ -197,14 +199,15 @@ def build_adaptive_gate(input_dim, hidden_dim, output_dim, dropout):
 
 
 class Classifier(nn.Module):
-    def __init__(self, pid_num, dim=512, Return_B4_BN=False, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion'):
+    def __init__(self, pid_num, dim=512, uni_BN=False, joint_mode='uni',modal='RGB,IR,Text,Fusion', normalized=False, scale=30.0):
         super(Classifier, self, ).__init__()
         self.pid_num = pid_num
         # self.GAP = GeneralizedMeanPoolingP()
-        self.Return_B4_BN = Return_B4_BN
         self.modal = modal
         self.uni_BN = uni_BN
         self.joint_mode = joint_mode
+        self.normalized = bool(normalized)
+        self.scale = float(scale)
         if uni_BN:
             assert joint_mode == 'uni'
             if joint_mode == 'uni':
@@ -257,43 +260,19 @@ class Classifier(nn.Module):
         else:
             bn_features = self.BN(bn_input)
 
-        cls_score = self.classifier(bn_features)
+        if self.normalized:
+            cls_score = self.scale * F.linear(
+                F.normalize(bn_features, dim=1),
+                F.normalize(self.classifier.weight, dim=1),
+            )
+        else:
+            cls_score = self.classifier(bn_features)
 
         if self.training:
             return features, cls_score
         else:
-            # if self.Return_B4_BN:
-            #     return features
             return self.l2_norm(bn_features)
 
-
-class FM_cat(nn.Module):
-    def __init__(self,in_channels):
-        super(FM_cat, self).__init__()
-
-        self.W = nn.Sequential(
-            nn.Conv2d(in_channels * 2, in_channels,
-                      kernel_size=1, stride=1, padding=0, bias=True),
-            nn.BatchNorm2d(in_channels)
-        )
-        nn.init.normal_(self.W[1].weight.data, 1.0, 0.01)
-        nn.init.zeros_(self.W[1].bias.data)
-
-
-        # self.bottleneck = nn.BatchNorm1d(in_channels)
-        # self.bottleneck.bias.requires_grad_(False)  # no shift
-
-        # nn.init.normal_(self.bottleneck.weight.data, 1.0, 0.01)
-        # nn.init.zeros_(self.bottleneck.bias.data)
-
-    def forward(self,f):
-
-        f = f.view(f.size(0),f.size(1),1,1)
-        f = self.W(f)
-        f = f.view(f.size(0),-1)
-        # f = self.bottleneck(f+feat)
-
-        return f
 
 class CLIP2ReID(nn.Module):
     def __init__(self, args, num_classes=11003):
@@ -302,7 +281,7 @@ class CLIP2ReID(nn.Module):
         validate_runtime_config(args)
         validate_fusion_compatibility(args.training_mode, args.joint_mode, args.fusion_way)
         self.retrieval_protocol = get_retrieval_protocol(
-            getattr(args, "retrieval_backend", "legacy")
+            getattr(args, "retrieval_backend", "identity_text")
         )
         self.training_recipe = build_training_recipe(args, self.retrieval_protocol)
         self.max_save_model_num = args.max_save_model_num
@@ -315,7 +294,6 @@ class CLIP2ReID(nn.Module):
 
         self._set_task()
 
-        # self.Return_B4_BN = args.Return_B4_BN
         self.base_model, base_cfg = build_CLIP_from_openai_pretrained(
             args.pretrain_choice,
             args.img_size,
@@ -337,8 +315,23 @@ class CLIP2ReID(nn.Module):
             pmt_gradient_checkpointing=getattr(
                 self.args, "pmt_gradient_checkpointing", False
             ),
+            pmt_gradient_checkpoint_blocks=getattr(
+                self.args, "pmt_gradient_checkpoint_blocks", None
+            ),
+            pmt_gradient_checkpoint_segments=getattr(
+                self.args, "pmt_gradient_checkpoint_segments", None
+            ),
             pmt_attention_backend=getattr(
-                self.args, "pmt_attention_backend", "legacy"
+                self.args, "pmt_attention_backend", "manual"
+            ),
+            visual_input_backend=getattr(
+                self.args, "visual_input_backend", "single"
+            ),
+            quadruple_branch_order=getattr(
+                self.args, "quadruple_branch_order", None
+            ),
+            quadruple_template_trainable=getattr(
+                self.args, "quadruple_template_trainable", False
             ),
         )
         self.embed_dim = base_cfg['embed_dim']
@@ -375,7 +368,14 @@ class CLIP2ReID(nn.Module):
             nn.init.normal_(self.cross_attn.out_proj.weight, std=proj_std)
 
         # Loss definition
-        self.classifier = Classifier(self.num_classes,self.embed_dim,args.Return_B4_BN,args.uni_BN,args.joint_mode)
+        self.classifier = Classifier(
+            self.num_classes,
+            self.embed_dim,
+            args.uni_BN,
+            args.joint_mode,
+            normalized=getattr(args, "normalized_classifier", False),
+            scale=getattr(args, "cosine_softmax_scale", 30.0),
+        )
         self.pid_criterion = LabelSmoothingCrossEntropy(getattr(args, "label_smoothing", 0.0))
         self.tri_criterion = TripletLoss_WRT()
         self.pmt_tri_criterion = PMTTripletLoss(
@@ -388,6 +388,13 @@ class CLIP2ReID(nn.Module):
         )
         self.pmt_msel_criterion = PMTMSEL(getattr(args, "num_pos", 4), feat_norm="no")
         self.pmt_dcl_criterion = PMTDCL(getattr(args, "num_pos", 4), feat_norm="no")
+        self.pmt_qct_criterion = PMTQuadrupleCenterTripletLoss(
+            margin=getattr(args, "pmt_mscm_qct_margin", 1.2),
+            branch_weight=getattr(args, "pmt_mscm_qct_branch_weight", 0.25),
+        )
+        self.hetero_center_criterion = HeteroCenterTripletLoss(
+            margin=getattr(args, "hetero_center_margin", 0.1)
+        )
         self.adaptive_alpha = None
         self.adaptive_gate = None
         self.raw_pa = None
@@ -407,6 +414,8 @@ class CLIP2ReID(nn.Module):
         self._fixed_visual_parallel_enabled = False
         self._fixed_visual_parallel_devices = ()
         self._fixed_visual_parallel_replicas = []
+        self._phased_quadruple_synced = False
+        self._evaluation_epoch = None
         self._configure_fix_visual_training()
 
     def _init_device(self):
@@ -425,6 +434,23 @@ class CLIP2ReID(nn.Module):
         for replica in self._fixed_visual_parallel_replicas:
             replica.eval()
         self.training = False
+
+    def set_evaluation_epoch(self, current_epoch):
+        self._evaluation_epoch = (
+            None if current_epoch is None else int(current_epoch)
+        )
+
+    def _resolve_evaluation_visual_mode(self, mode):
+        if (
+            str(getattr(self.args, "pmt_recipe_variant", "original")).lower()
+            == "mscm_phased"
+            and self._evaluation_epoch is not None
+            and self._evaluation_epoch
+            < int(getattr(self.args, "pmt_progressive_epoch", 6))
+            and str(mode).lower() in {"rgb", "visible", "ir", "infrared", "thermal"}
+        ):
+            return "shared_template"
+        return mode
 
     def configure_fixed_visual_data_parallel(self):
         """Create persistent read-only visual replicas after the primary model is placed."""
@@ -821,10 +847,7 @@ class CLIP2ReID(nn.Module):
             raise ValueError("saving mode must be in ['Fusion', 'IR', 'Text']")
         if is_best:
             model_file_path = os.path.join(self.save_model_path, f'model_{mode}_{save_epoch}.pth')
-            if self.args.DataParallel:
-                torch.save(self.module.state_dict(), model_file_path)
-            else:
-                torch.save(self.state_dict(), model_file_path)
+            torch.save(self.state_dict(), model_file_path)
 
         if self.max_save_model_num > 0:
             root, _, files = os_walk(self.save_model_path)
@@ -846,10 +869,7 @@ class CLIP2ReID(nn.Module):
             return dict(self._metric_checkpoint_paths)
         model_file_path = os.path.join(self.save_model_path, f'model_{mode}_epoch_{save_epoch}.pth')
         if not os.path.isfile(model_file_path):
-            if self.args.DataParallel:
-                torch.save(self.module.state_dict(), model_file_path)
-            else:
-                torch.save(self.state_dict(), model_file_path)
+            torch.save(self.state_dict(), model_file_path)
         for metric in improved_metrics:
             if metric not in ('Rank-1', 'mAP', 'mINP'):
                 raise ValueError(f'Unsupported selection metric: {metric}')
@@ -863,48 +883,6 @@ class CLIP2ReID(nn.Module):
                 if candidate not in referenced:
                     os.remove(candidate)
         return dict(self._metric_checkpoint_paths)
-
-
-    def resume_last_model(self,mode='Fusion'):
-        if mode not in ('Fusion', 'IR', 'Text'):
-            raise ValueError("mode must be in ['Fusion', 'IR', 'Text']")
-        root, _, files = os_walk(self.save_model_path)
-        valid_epochs = sorted(
-            {
-                epoch
-                for file in files
-                for epoch in [_checkpoint_epoch(file, mode)]
-                if epoch is not None
-            }
-        )
-        if not valid_epochs:
-            return 0
-        latest_epoch = valid_epochs[-1]
-        self.resume_model(latest_epoch, mode)
-        return latest_epoch
-
-    def resume_model(self, resume_epoch, mode='Fusion'):
-        candidates = (
-            os.path.join(self.save_model_path, f'model_{mode}_epoch_{resume_epoch}.pth'),
-            os.path.join(self.save_model_path, f'model_{mode}_{resume_epoch}.pth'),
-        )
-        model_path = next((path for path in candidates if os.path.isfile(path)), None)
-        if model_path is None:
-            raise FileNotFoundError(
-                f"No {mode} checkpoint for epoch {resume_epoch}; checked {list(candidates)}"
-            )
-        print('Resume model from {}'.format(model_path))
-        checkpoint = torch.load(model_path, map_location=self.device)
-        if isinstance(checkpoint, dict) and "model" in checkpoint:
-            checkpoint = checkpoint["model"]
-        elif isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-            checkpoint = checkpoint["model_state_dict"]
-        # A resume checkpoint was produced by this model and must be complete.
-        # Historical/warm-start migrations use the audited compatibility loader
-        # in main.py instead of silently accepting partial resume state here.
-        self.load_state_dict(checkpoint, strict=True)
-        print('Successfully resume model from {}'.format(model_path))
-
 
     def _set_task(self):
         loss_names = self.args.loss_names
@@ -931,6 +909,7 @@ class CLIP2ReID(nn.Module):
         return x
 
     def encode_image_featmap(self, image, mode=None):
+        mode = self._resolve_evaluation_visual_mode(mode)
         if self.args.Fix_Visual and not self._visual_unfrozen:
             x = self._encode_fixed_visual(image, mode)
         else:
@@ -943,6 +922,7 @@ class CLIP2ReID(nn.Module):
         return x #[torch.arange(x.shape[0]), text.argmax(dim=-1)].float()
 
     def encode_image_feat(self, image, mode=None): # return [B, 512]
+        mode = self._resolve_evaluation_visual_mode(mode)
         x = self.base_model.encode_image(image,mode=mode)
         return self._get_visual_embedding(x)
 
@@ -963,8 +943,6 @@ class CLIP2ReID(nn.Module):
 
     def encode_filtered_fusion(self, text, filter, ir):
         # 获取 id 形式的文本原始数据
-        caption_ids = text
-        filter_caption_ids = filter
         # 获取文本Tensor特征
         text_feat = self.encode_text_feat(text)
         # 获取filter Tensor特征
@@ -1044,6 +1022,59 @@ class CLIP2ReID(nn.Module):
             mode=mode,
             current_epoch=current_epoch,
         )
+
+    def sync_phased_quadruple_patch_embeddings(self):
+        if self._phased_quadruple_synced:
+            return False
+        visual = self.base_model.visual
+        if not hasattr(visual, "sync_input_plugin_from_template"):
+            raise RuntimeError("phased MSCM recipe requires PMTViTVisual")
+        visual.sync_input_plugin_from_template()
+        self._phased_quadruple_synced = True
+        return True
+
+    def prepare_pmt_mscm_phase(self, current_epoch, optimizer):
+        """Synchronize four branches and their Adam state without rebuilding it."""
+        if str(getattr(self.args, "pmt_recipe_variant", "original")).lower() != "mscm_phased":
+            return None
+        switch_epoch = int(getattr(self.args, "pmt_progressive_epoch", 6))
+        visual = self.base_model.visual
+        configured_blocks = int(
+            getattr(self.args, "pmt_gradient_checkpoint_blocks", 0) or 0
+        )
+        warmup_blocks = getattr(
+            self.args, "pmt_gradient_checkpoint_blocks_warmup", None
+        )
+        visual.gradient_checkpoint_blocks = (
+            int(warmup_blocks)
+            if int(current_epoch) < switch_epoch and warmup_blocks is not None
+            else configured_blocks
+        )
+        if int(current_epoch) != switch_epoch or self._phased_quadruple_synced:
+            return None
+
+        template = visual.vit.patch_embed
+        self.sync_phased_quadruple_patch_embeddings()
+        template_parameters = dict(template.named_parameters())
+        copied_states = 0
+        missing_states = []
+        for branch_index, branch in enumerate(visual.input_plugin.patch_embeds):
+            for name, target_parameter in branch.named_parameters():
+                source_parameter = template_parameters[name]
+                if source_parameter not in optimizer.state:
+                    missing_states.append(name)
+                    continue
+                optimizer.state[target_parameter] = deepcopy(
+                    optimizer.state[source_parameter]
+                )
+                copied_states += 1
+        return {
+            "epoch": int(current_epoch),
+            "optimizer": type(optimizer).__name__,
+            "reused_optimizer": True,
+            "copied_parameter_states": copied_states,
+            "template_parameters_without_state": sorted(set(missing_states)),
+        }
 
 def build_model(config):
     model = CLIP2ReID(config, num_classes=config.pid_num)

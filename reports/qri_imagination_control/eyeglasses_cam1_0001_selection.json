@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "sample": "/home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg",
+  "reference": "/home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png",
+  "selected_stage": "stage8_pasd_refine_20260822_v1",
+  "selected_variant": "semantic_c085_g6",
+  "selected_output": "/home/lab929/ybj/experiments/qri_imagination_control/eyeglasses_cam1_0001/stage8_pasd_refine_20260822_v1/semantic_c085_g6/seed_20260821_composite.png",
+  "pipeline": [
+    "VLM-style category-agnostic EditSpec",
+    "high-strength contextual SD1.5 semantic proposal",
+    "PASD photo-conditioned refinement with conditioning_scale=0.85 and guidance_scale=6.0",
+    "bounded coherent-region write-back with color harmonization"
+  ],
+  "metrics": {
+    "semantic_proposal_seconds": 2.326,
+    "pasd_refinement_seconds": 5.352061564102769,
+    "layout_mean_abs_change": 9.545237513950893,
+    "edit_region_mean_abs_change": 7.16293321287604,
+    "outside_edit_region_mean_abs_change": 0.009228415175480674,
+    "identity_cosine_to_swin": 0.9751306772232056
+  },
+  "multimodal_visual_audit": {
+    "target_semantics_clear": true,
+    "two_lenses_visible": true,
+    "bridge_visible": true,
+    "temple_relationship_visible": true,
+    "non_target_structure_preserved": true,
+    "overall_style_consistent_at_native_resolution": true,
+    "note": "Minor rim-light asymmetry remains visible only under enlarged crop; it is not a structural failure at the native dataset resolution."
+  },
+  "rejected": [
+    "constant per-step source locking suppressed target semantics",
+    "fixed layout stencil exposed mechanical geometry",
+    "layout-draft initialization had no stable naturalization interval",
+    "direct PASD layout conditioning copied the abstract sketch or mosaicked",
+    "SAM write-back included protected eye pixels and produced block artifacts"
+  ]
+}

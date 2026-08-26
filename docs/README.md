@@ -1,35 +1,47 @@
 # SALT-VI 统一项目指南
 
-本文档是 SALT-VI 当前项目状态、架构、数据契约、训练入口和实验解释的唯一综合说明。历史决策和逐实验叙述不再维护为独立文档；需要追溯时使用 Git 历史、配置快照、原始日志和实验总表。
+本文档是 SALT-VI 人工维护文档的唯一入口。当前实验结果入口是
+[实验状态](status/README.md)；历史决策和逐实验叙述统一归入
+`docs/history/`，`reports/` 只保存 CSV、JSON、压缩证据等结构化或机器生成产物。
+
+## 文档地图
+
+- 当前状态：[`status/`](status/README.md)
+- 架构与清理：[`architecture/`](architecture/restructure_20260819.md)
+- 当前及历史计划：[`plans/`](plans/)
+- 运行与归档规范：[`operations/`](operations/archive_plan_20260822.md)
+- 实验叙述和负面结果：[`history/`](history/)
+- 字段及接口参考：[`reference/`](reference/experiment_registry.md)
+- 组件接口：[`pasd_plugin`](../pasd_plugin/README.md)、
+  [`semantic_imagination`](../semantic_imagination/README.md)、
+  [`qwen_imagination`](../plugins/qwen_imagination/README.md)、
+  [`feature_analysis`](../feature_analysis/README.md)
+
+根目录 `README.md` 只承担项目入口职责；组件 README 只承担就近接口说明，禁止复制
+排行榜或另建“当前状态”。本轮目录重整记录见
+[`operations/cleanup_20260824.md`](operations/cleanup_20260824.md)。
 
 ## 1. 当前研究主线
 
-当前工作的核心不是继续堆叠 Stage-B 文本融合模块，而是先修复其上游视觉域：PASD 生成后的 RGB 与原始 IR 在分辨率、人物尺度和背景布局上不一致，会把预处理偏差混入跨模态差异。
+统一 PASD 插件负责生成跨模态的派生图像，而不改变既有训练加载器。它覆盖 SYSU-MM01、RegDB 与 LLCM，显式保留各自官方索引和评估归属，避免把评估协议混入训练数据。
 
 当前数据集为：
 
 ```text
-/home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+/home/lab929/datasets/derived/PASD-v2/<dataset>-rgb-ir-512x256-1view
 ```
 
 数据契约：
 
-- 共 44,745 个源图像视图：RGB 29,033，IR 15,712。
-- RGB 使用单视图 PASD 输出；IR 不做语义生成。
-- 两种模态均保持人物比例，以相同的 blurred-background 几何方式适配到 256×512。
-- `manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 共同固定来源、大小、校验和与完整性；当前校验错误数为 0。
-- 训练配置使用 `sysu_sr_backend: pasd_multiview`、`sysu_sr_modalities: [rgb, ir]`、`sysu_sr_view_sampling: paired` 和 `sysu_sr_exact_size: true`。
+- 覆盖 SYSU-MM01、RegDB、LLCM 的官方训练与评估索引；RegDB 每张源图只生成一次，并记录全部 10 个 trial 归属。
+- RGB 与 IR/NIR 均使用单视图 PASD；IR/NIR 输出在生成后转换为三通道灰度图。
+- 两种模态均以保持比例的 `fit` 几何适配到 256×512，空白区域使用同源 cover-crop 模糊背景填充。
+- `records.jsonl`、`manifest.jsonl`、`manifest.json`、`build.json` 和 `validation-report.json` 固定来源、大小、校验和、几何参数和协议归属。
+- 本轮只生成与验证派生产物；训练加载器保持不变，后续接入必须只消费 `train` 归属。
 
-已完成两种 RN50 Stage-A 适配路线的工程比较：
+RN50 Direct 已完成并保留最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。两条路线同时改变初始化、batch size、学习率和调度，因此只是工程路线比较，不是严格单因素消融。PMT-ViT、No-MBPatch 的已完成结果也已登记；精确指标、选择 epoch、配置和 checkpoint 身份只查实验总表。
 
-| 路线 | 配置 | 初始化与调度 | 归档最佳 SYSU 结果 |
-| --- | --- | --- | --- |
-| Direct | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_direct.yaml` | ImageNet RN50 初始化；120 epoch，batch 32 | Rank-1 71.5698%，mAP 67.8598%，mINP 53.9621%（epoch 115；完成 120 epoch） |
-| PostTrain60 | `configs/stage_a/reproduction/source_core/stage_a_tvilfm_rn50_pasd_rgb_ir_geomatched_512x256_posttrain_60ep.yaml` | `pretrained/tvi_lfm/sysu/VI_sysu_BASE.pth`；60 epoch，batch 16，低学习率 | Rank-1 66.6448%，mAP 61.9430%，mINP 46.6493%（epoch 19；在 epoch 28 停止） |
-
-Direct 已完成并保留 epoch 115 最佳 checkpoint；PostTrain60 已停止、删除实验权重并按失败归档。由于两条路线的初始化、batch size、学习率和调度同时不同，它们是工程路线比较，不是只隔离“是否 warm start”的严格单因素消融。
-
-已完成的 PMT-ViT、No-MBPatch、geometry-matched PASD 单视图 Stage-A 结果为 Rank-1 67.9174%、mAP 64.9257%、mINP 51.3045%（epoch 23）。对应实验 `SALTVI-STAGEA-PASD-NOMB-B16-20260811` 已归档到总表。
+保留的 RN50 Direct Stage-A 初始化已经接入 geometry-matched PASD Stage-B，30 epoch 运行已完成，配置归档于 `configs/experiments/reproduction/archived_configs/stage_b_rn50_pasd_r_text_visual_30.yaml`。后续两阶段网格表明，24 epoch ID+WRT 对齐后接 16 epoch all-pairs 跨模态细化的 r3 是组内最佳并保留唯一结果权重。PMT-ViT、No-MBPatch、batch 128、FlashAttention 的 24 epoch 修复版与 70 epoch 延长版均已从 TensorBoard 同 step 指标恢复；24 epoch 最佳模型已保留，70 epoch 版本未替代它。精确指标和证据路径只记录在实验总表。
 
 ## 2. 正式默认与活跃研究的区别
 
@@ -45,18 +57,18 @@ configs/stage_b/r_text_visual_20260729.yaml
 python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.yaml
 ```
 
-`SALT_R_TEXT_VISUAL` 冻结视觉分支，使用离线 RGB+IR SwinIR x2 输入、RGB-IR/RGB-Text/IR-Text direct pair loss、双分支 patch embedding 和 learnable PatchGeM，不启用 LLM caption augmentation。其保留结果来自 SYSU-MM01 all-search、single-shot、10 gallery trials、单 seed：Rank-1 84.0783%、mAP 81.4334%、mINP 71.7899（epoch 23）。
+`SALT_R_TEXT_VISUAL` 冻结视觉分支，使用离线 RGB+IR SwinIR x2 输入、RGB-IR/RGB-Text/IR-Text direct pair loss、双分支 patch embedding 和 learnable PatchGeM，不启用 LLM caption augmentation。其保留结果来自 SYSU-MM01 all-search、single-shot、10 gallery trials、单 seed；精确指标和选择 epoch 只查实验总表。
 
-它是结果引用和 Stage-B 复现的正式默认；当前 geometry-matched Stage-A 工作是在寻找更好的上游视觉初始化，尚未替代该默认。
+它只用于历史结果引用。当前 Stage-B 主线是 PASD-RN50 衔接方案；可运行候选配置位于 `configs/stage_b/` 根目录，已完成运行的精确快照位于 `configs/experiments/reproduction/archived_configs/`，两者的结果统一查实验总表。
 
 ## 3. 系统架构
 
 ```text
 原始 SYSU 图像与 captions
         │
-        ├─ pasd_offline/ ──> PASD RGB / geometry-only IR manifests
+        ├─ pasd_plugin/ ──> SYSU/RegDB/LLCM 的 PASD RGB+IR/NIR manifests
         │
-        ├─ semantic_imagination/ ──> 动态加权语义假设（尚未进入活跃配置）
+        ├─ semantic_imagination.v6 ──> 联合语义世界、频率权重与改写 caption
         │
         ▼
 Stage A：RGB/IR image-only 视觉表征
@@ -76,26 +88,34 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 - `src/salt_vi/training/`：活跃训练 recipe。
 - `src/salt_vi/retrieval/`：活跃检索后端；未登记别名不作为入口。
 - `src/salt_vi/entrypoints/train.py`：唯一训练入口实现；外部使用 `scripts/train.py`。
-- `pasd_offline/` 与 `semantic_imagination/` 是离线包，不导入训练包。
+- `pasd_plugin/` 与 `semantic_imagination/` 是离线包，不导入训练包。
 
-## 4. Semantic Imagination 的当前边界
+## 4. QRI-v6 Semantic Imagination 的当前边界
 
-该插件把一个模糊观测转换为若干语义等价簇：VLM 进行多次扰动采样，文本嵌入聚类，簇内 medoid 作为代表，簇频率作为 `hypothesis_weight`。权重会原样进入 PASD manifest，并由 SALT sampler 加权采样。
+当前接口版本统一为 `qri-v6`。VLM 每次直接抽取包含全部目标 ROI 的联合语义
+世界，避免从区域边缘分布独立组合出未被模型联合提出的世界。相同 state
+signature 内使用完整 value/location 表示执行 complete-link；簇频率直接成为
+经验质量。每个代表世界再通过注入的 LLM 接口与共同观测改写成完整 caption。
 
-当前代码已支持 `sysu_sr_views_per_image: 0` 的动态视图数，但所有活跃训练 YAML 仍使用单视图 `1`；当前 geometry-matched 数据的权重均为 1。因此 Semantic Imagination 是下一阶段接口，不是当前运行实验的自变量。数学语义和不变量见 [`../semantic_imagination/MATHEMATICAL_SPEC.md`](../semantic_imagination/MATHEMATICAL_SPEC.md)。
+VLM、语义编码器与 LLM 改写器当前只定义接口，尚未绑定真实模型。所有活跃训练
+YAML 仍使用单视图数据，因此 QRI-v6 是已实现并经过契约测试的下一阶段接口，
+不是当前运行实验的自变量。接口字段见
+[`reference/qri_v6_contract.md`](reference/qri_v6_contract.md)，数学语义见
+[`reference/semantic_imagination_mathematical_spec.md`](reference/semantic_imagination_mathematical_spec.md)。
 
 ## 5. 仓库与资产位置
 
 | 路径 | 作用 |
 | --- | --- |
 | `src/salt_vi/` | 当前实现 |
-| `configs/stage_a/`、`configs/stage_b/` | 活跃阶段配置 |
-| `configs/experiments/reproduction/` | 历史运行配置快照；不能因存在而视为可运行 |
-| `scripts/` | 训练、验证、分析、归档入口 |
-| `pasd_offline/` | PASD records、生成、验证和 geometry-matched 构建 |
+| `configs/stage_a/`、`configs/stage_b/`、`configs/super_resolution/` | 当前可运行配置；配置根目录是主线入口 |
+| 配置目录内的 `reproduction/`、`configs/experiments/reproduction/` | 历史运行的解析配置与证据快照；不作为新实验入口 |
+| `scripts/train.py` | SALT-VI 两阶段训练入口 |
+| `scripts/vision_text/super_resolution/` | 当前独立视觉超分消融的预检与启动入口 |
+| `pasd_plugin/` | 统一 PASD records、生成、验证与免拉伸几何构建 |
 | `semantic_imagination/` | 离线语义假设与 PASD record 导出 |
 | `feature_analysis/` | 特征提取和分析 |
-| `experiments/` | 运行元数据与归档材料 |
+| `experiments/` | 运行元数据、归档材料及已完成实验的一次性 `source/` |
 | `reports/experiment_registry/experiment_registry.csv` | 唯一实验总表 |
 | `checkpoints/`、`pretrained/`、`logs/`、`runtime/` | 服务器本地运行资产 |
 | `vendor/` | 上游来源和许可证边界 |
@@ -107,9 +127,22 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 ```bash
 python -m pip install -e ".[test]"
 python -m pytest src/salt_vi/tests
-PYTHONPATH=pasd_offline python -m pytest pasd_offline/tests
+PYTHONPATH=. python -m pytest -q pasd_plugin/tests
 python -m pytest semantic_imagination/tests
 ```
+
+### 合规 trick 候选管线
+
+`configs/pipelines/sysu_safe_tricks.yaml` 固定了不含 TTA、re-ranking、query expansion 和测试指标选模的 SYSU 两阶段候选管线。Stage-A 使用 512×256 bridge；Stage-B 的 `b1`–`b6` 分别只改变 CLS+GeM、末两层解冻、LLRD/no-weight-decay、QBN、hard-loss ramp 和 RGB 双视图一致性。`b3` 只与 `b2` 比较，其余变体只与 `b0` 比较，不自动叠加胜出项。
+
+```bash
+python scripts/experiments/run_safe_tricks_pipeline.py list
+python scripts/experiments/run_safe_tricks_pipeline.py stage-a --execute
+python scripts/experiments/run_safe_tricks_pipeline.py stage-b \
+  --variant b1 --stage-a-checkpoint /absolute/path/to/stage_a.pth --execute
+```
+
+不加 `--execute` 时只解析配置并打印运行计划。Stage-B 启动器会把 Stage-A checkpoint 的绝对路径和 SHA-256 注入配置，输出统一写到仓库外的 `/home/lab929/ybj/experiments/SALT-VI-safe-tricks/`。
 
 训练统一使用显式 YAML：
 
@@ -132,25 +165,22 @@ python scripts/train.py --config_select <config.yaml>
 
 `reports/experiment_registry/experiment_registry.csv` 是唯一跨阶段总表，不从 README 复制出第二份排行榜。每次完成实验时，保存配置快照、代码提交、运行命令、指标文件、日志、checkpoint 路径和校验值，再更新总表。
 
-历史 Markdown 已删除，因为它们包含重复结果、失效路径和过期“当前状态”。历史事实仍可从以下位置恢复：
+历史专项 Markdown 不删除：其中包含失败结果、负面结论、当时路径和协议等可复核证据；但它们不再作为平行的当前状态页面。历史事实和当前结果分别从以下位置读取：
 
-1. Git 历史；
-2. `reports/experiment_registry/experiment_registry.csv` 及 source tables；
-3. `configs/experiments/reproduction/`；
-4. `experiments/`、`logs/raw/` 和结构化 runtime manifests。
+1. 当前状态：`docs/status/README.md`；
+2. 结构化总表：`reports/experiment_registry/experiment_registry.csv`；
+3. 历史专项叙述：`docs/history/stage_a/`、`docs/history/qri/` 与 `docs/history/`；
+4. Git 历史、`configs/experiments/reproduction/`、`experiments/`、`logs/raw/` 和结构化 runtime manifests。
 
-这些原始实验产物不是当前运行说明，不应重新链接成平行文档体系。
+这些原始实验产物不是当前运行说明；当前页面只引用它们的证据位置，不复制出第二份排行榜。
 
 ## 9. 文档规则
 
-当前人工维护的项目文档只有：
+人工维护的跨模块文档必须放在 `/docs/` 的对应分类中。`/README.md` 和组件 README
+是允许保留在代码旁的入口文件；实验总表继续位于
+`reports/experiment_registry/experiment_registry.csv`，其字段说明位于
+`docs/reference/experiment_registry.md`。`reports/` 不再接收人工 Markdown。
 
-- `/README.md`：项目入口和状态摘要；
-- `/docs/README.md`：本统一指南；
-- `/pasd_offline/README.md`：PASD 独立模块；
-- `/semantic_imagination/README.md` 与 `MATHEMATICAL_SPEC.md`：语义想象接口和数学规范；
-- `/feature_analysis/README.md`：特征分析模块；
-- `/reports/experiment_registry/README.md`：总表字段和维护边界；
-- vendor/source 与 checkpoint 放置说明：第三方和运行资产边界。
-
-新的运行过程不要再建立独立的“当前状态”“修复报告”“结果汇总”Markdown；将事实写入配置、结构化结果、总表和 Git 提交。
+新的运行过程不要再建立平行的“当前状态”“修复报告”或“结果汇总”；当前事实写入
+`docs/status/`，长期设计写入 `docs/plans/`，结束后的叙述移入 `docs/history/`，指标写入
+结构化结果和实验总表。

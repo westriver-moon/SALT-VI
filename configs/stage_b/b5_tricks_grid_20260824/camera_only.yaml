@@ -1,0 +1,9 @@
+extends: ../safe_tricks/b5_hard_loss_ramp.yaml
+
+config_select: configs/stage_b/b5_tricks_grid_20260824/camera_only.yaml
+metric_experiment_id: C3-B5-CAMERA-ONLY
+metric_events_path: ${SALT_B5_TRICKS_OUTPUT_ROOT}/camera_only/events.jsonl
+output_root: ${SALT_B5_TRICKS_OUTPUT_ROOT}/camera_only/model_output
+
+sampler_type: identity_camera_diverse
+normalized_classifier: false

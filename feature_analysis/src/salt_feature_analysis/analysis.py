@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from .plotting import plot_comparison, plot_feature_diagnostics
 from .reporting import write_csv, write_report

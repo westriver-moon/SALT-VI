@@ -1,0 +1,27 @@
+evaluations:
+  - id: sysu-rn50-stageb-r3-switch24-fullpairs-ir-fusion-text
+    config_path: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
+    checkpoint_path: /home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/stage_b_rn50_two_stage_grid_40_20260815/r3_switch24_fullpairs/best/model_Fusion_epoch_6.pth
+    overrides:
+      retrieval_backend: identity_text
+      test_modality: IR,Fusion,Text
+      test_model_type: Fusion
+      eval_caption_seed: 0
+  - id: sysu-rn50-stageb-r3-switch24-fullpairs-multi-shot
+    config_path: configs/experiments/reproduction/archived_configs/stage_b_rn50_two_stage_grid_40/phase2_fullpairs.yaml
+    checkpoint_path: /home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/stage_b_rn50_two_stage_grid_40_20260815/r3_switch24_fullpairs/best/model_Fusion_epoch_6.pth
+    overrides:
+      retrieval_backend: identity_text
+      test_modality: Fusion
+      test_model_type: Fusion
+      gall_mode: multi
+      gallery_trials: 1
+      eval_caption_seed: 0
+  - id: sysu-ir-to-rgbtext-fusion84-30
+    config_path: configs/experiments/reproduction/archived_configs/ir_to_rgb_text_fusion84_30_20260809.yaml
+    checkpoint_path: /home/lab929/ybj/SALT-VI/checkpoints/stage_b/experiments/ir_to_rgb_text_fusion84_30_20260809/best/model_Fusion_epoch_10.pth
+    overrides:
+      retrieval_backend: ir_to_rgb_text
+      test_modality: IR-RGBText
+      test_model_type: Fusion
+      eval_caption_seed: 0

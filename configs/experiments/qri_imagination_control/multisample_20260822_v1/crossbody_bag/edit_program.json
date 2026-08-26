@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "target_semantics": "a black crossbody sling bag across the lower back, with two zippered compartments, a top buckle and one diagonal shoulder strap",
+  "appearance": "same pedestrian from behind, matte black nylon, soft outdoor surveillance texture",
+  "evaluation_roi_xyxy": [52, 92, 218, 282],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "bag_region", "type": "polygon", "points": [[67, 130], [178, 112], [216, 169], [195, 250], [91, 266], [53, 211]], "fill": true},
+      {"id": "strap_region", "type": "polyline", "points": [[59, 83], [92, 127], [152, 173]], "stroke_width": 18.0}
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "bag_body", "type": "polygon", "points": [[79, 148], [177, 134], [201, 174], [184, 233], [98, 247], [69, 211]], "stroke_width": 3.0},
+      {"id": "front_zip", "type": "polyline", "points": [[87, 192], [179, 181]], "stroke_width": 2.0},
+      {"id": "top_zip", "type": "polyline", "points": [[84, 158], [172, 146]], "stroke_width": 2.0},
+      {"id": "shoulder_strap", "type": "polyline", "points": [[57, 83], [86, 122], [142, 167]], "stroke_width": 7.0}
+    ]
+  }
+}

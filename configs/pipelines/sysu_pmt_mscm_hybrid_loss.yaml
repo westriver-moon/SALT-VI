@@ -1,0 +1,59 @@
+schema_version: 2
+experiment_id: pmt-mscm-hybrid-loss-4x-20260821
+dataset: sysu
+protocol: all-search-single-shot-10-gallery-trials
+base_config: configs/stage_a/plugins/pmt_mscm_phased_pasd_512x256_b32.yaml
+seed: 0
+total_train_epoch: 24
+
+fixed:
+  data: PASD-rgb-ir-geomatched-512x256-1view-v1
+  batch_size: 32
+  attention_backend: flash
+  gradient_checkpointing: true
+  gradient_checkpoint_blocks: 7
+  gradient_checkpoint_blocks_warmup: 3
+  gradient_checkpoint_segments: 3
+  progressive_epoch: 6
+  transition_epochs: 4
+  qct_margin: 1.2
+  qct_branch_weight: 0.25
+  auxiliary_start_factor: 0.25
+
+variants:
+  h1_balanced_025:
+    config: configs/stage_a/plugins/hybrid_loss/h1_balanced_025.yaml
+    metric_events: events/h1_balanced_025.jsonl
+    terminal_weights: {msel: 0.25, dcl: 0.25, qct: 0.25}
+    purpose: central balanced mixture
+  h2_dcl_050:
+    config: configs/stage_a/plugins/hybrid_loss/h2_dcl_050.yaml
+    metric_events: events/h2_dcl_050.jsonl
+    terminal_weights: {msel: 0.25, dcl: 0.50, qct: 0.25}
+    purpose: isolate restored DCL strength
+  h3_qct_040:
+    config: configs/stage_a/plugins/hybrid_loss/h3_qct_040.yaml
+    metric_events: events/h3_qct_040.jsonl
+    terminal_weights: {msel: 0.25, dcl: 0.25, qct: 0.40}
+    purpose: isolate stronger QCT
+  h4_full_aux:
+    config: configs/stage_a/plugins/hybrid_loss/h4_full_aux.yaml
+    metric_events: events/h4_full_aux.jsonl
+    terminal_weights: {msel: 0.50, dcl: 0.50, qct: 0.25}
+    purpose: restore both legacy auxiliaries plus moderate QCT
+
+schedule:
+  jobs_per_gpu: 1
+  queues:
+    "1":
+      - h1_balanced_025
+      - h3_qct_040
+    "2":
+      - h2_dcl_050
+      - h4_full_aux
+
+selection:
+  automatic_promotion: false
+  primary_metric: Rank-1
+  secondary_metrics: [mAP, mINP]
+  rule: compare fixed final epoch 23 and report every raw aggregate result

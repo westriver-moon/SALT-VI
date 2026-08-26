@@ -1,0 +1,9 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/a3_hetero_center.yaml
+metric_experiment_id: SAFE-A3-PMT-HETERO-CENTER
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/a3.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a3_hetero_center
+pmt_metric_loss: hetero_center
+hetero_center_margin: 0.3
+hetero_center_weight: 1.0

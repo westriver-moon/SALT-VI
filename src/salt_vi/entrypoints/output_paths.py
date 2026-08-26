@@ -31,8 +31,6 @@ def build_experiment_name(config) -> str:
             name += f"_LLM_{config.llm_aug_prob}"
     if config.loss_names:
         name += f"_{config.loss_names}"
-    if config.Return_B4_BN:
-        name += "_Return_B4_BN"
     if config.uni_BN:
         name += "_uni_BN"
     if config.Fix_Visual:
@@ -45,7 +43,7 @@ def build_experiment_name(config) -> str:
 def resolve_run_directory(config) -> str:
     if config.DEBUG:
         return str(Path(config.DEBUG_DIR).expanduser())
-    is_resume = bool(config.auto_resume_training_from_lastest_step) or config.resume_train_epoch >= 0
+    is_resume = bool(config.auto_resume_training_from_lastest_step)
     if config.mode == "test" or is_resume:
         if not getattr(config, "output_path", None):
             raise ValueError("test and resume require the final output_path")
@@ -60,3 +58,26 @@ def resolve_run_directory(config) -> str:
         / _variant_directory(config)
         / experiment_name
     )
+
+
+def ensure_fresh_run_directory(config) -> None:
+    """Reject a fresh training run that would mix with existing artifacts."""
+    if bool(getattr(config, "DEBUG", False)) or str(getattr(config, "mode", "")) != "train":
+        return
+    is_resume = bool(
+        getattr(config, "auto_resume_training_from_lastest_step", False)
+    )
+    if is_resume:
+        return
+
+    output_path = Path(config.output_path).expanduser()
+    if not output_path.exists():
+        return
+    entries = sorted(path.name for path in output_path.iterdir())
+    if entries:
+        preview = ", ".join(entries[:5])
+        raise FileExistsError(
+            "Fresh training refuses non-empty output directory {}: {}".format(
+                output_path, preview
+            )
+        )

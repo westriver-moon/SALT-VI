@@ -1,0 +1,9 @@
+extends: ../safe_tricks/b5_hard_loss_ramp.yaml
+
+config_select: configs/stage_b/b5_tricks_grid_20260824/ema_0999.yaml
+metric_experiment_id: C3-B5-EMA-0999
+metric_events_path: ${SALT_B5_TRICKS_OUTPUT_ROOT}/ema_0999/events.jsonl
+output_root: ${SALT_B5_TRICKS_OUTPUT_ROOT}/ema_0999/model_output
+
+ema_enabled: true
+ema_decay: 0.999

@@ -4,8 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "salt-semantic-imagination"
-version = "0.1.0"
+version = "0.6.0"
 requires-python = ">=3.10"
+dependencies = ["PyYAML>=6"]
 
-[tool.setuptools]
-packages = ["semantic_imagination"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["semantic_imagination*"]

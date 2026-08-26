@@ -18,10 +18,16 @@ def handle_nonfinite_gradients(scaler, optimizer, nonfinite_gradients):
     return previous_scale, float(scaler.get_scale())
 
 
-def train(base, loaders, scaler, config, optimizer, current_epoch=None):
+def train(base, loaders, scaler, config, optimizer, current_epoch=None, ema=None):
     base.set_train()
     base.configure_qbn_running_stats(current_epoch)
     meter = MultiItemAverageMeter()
+    if hasattr(base, "prepare_pmt_mscm_phase"):
+        transition = base.prepare_pmt_mscm_phase(current_epoch, optimizer)
+        if transition is not None:
+            print(f"PMT-MSCM phase transition: {transition}")
+    if hasattr(loaders, "set_training_epoch"):
+        loaders.set_training_epoch(current_epoch)
     loader = loaders.get_train_loader()
     consecutive_amp_overflows = 0
     amp_skipped_steps = 0
@@ -46,9 +52,12 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
         # text = text.to(base.device).long()
 
         # data preparing
-        batch_dict = {key: value.to(base.device) for key, value in batch_dict.items()}
+        batch_dict = {
+            key: value.to(base.device, non_blocking=True)
+            for key, value in batch_dict.items()
+        }
         # 清空所有梯度
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
 
         # feature and loss computing. Prefer torch.amp on modern PyTorch while
         # retaining a warning-free fallback for the validated legacy runtime.
@@ -72,27 +81,33 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
         # backward
         scaler.scale(total_loss).backward()
         scaler.unscale_(optimizer)
-        gradients_seen = 0
-        nonfinite_gradients = []
-        for name, parameter in base.named_parameters():
-            if parameter.grad is None:
-                continue
-            gradients_seen += 1
-            if not torch.isfinite(parameter.grad).all():
-                nonfinite_gradients.append(name)
-        if gradients_seen == 0:
+        if not any(parameter.grad is not None for parameter in base.parameters()):
             raise RuntimeError("No gradients were produced for any trainable parameter")
-        if nonfinite_gradients:
-            previous_scale, current_scale = handle_nonfinite_gradients(
-                scaler, optimizer, nonfinite_gradients
-            )
+        if not scaler.is_enabled():
+            nonfinite_gradients = [
+                name
+                for name, parameter in base.named_parameters()
+                if parameter.grad is not None
+                and not torch.isfinite(parameter.grad).all()
+            ]
+            if nonfinite_gradients:
+                handle_nonfinite_gradients(
+                    scaler, optimizer, nonfinite_gradients
+                )
+        clip_norm = float(getattr(config, "gradient_clip_norm", 0.0))
+        if clip_norm > 0:
+            torch.nn.utils.clip_grad_norm_(base.parameters(), clip_norm)
+        previous_scale = float(scaler.get_scale())
+        scaler.step(optimizer)
+        scaler.update()
+        current_scale = float(scaler.get_scale())
+        if scaler.is_enabled() and current_scale < previous_scale:
             consecutive_amp_overflows += 1
             amp_skipped_steps += 1
             print(
                 "AMP overflow: skipped optimizer step "
                 f"({consecutive_amp_overflows}/{max_consecutive_amp_overflows}); "
-                f"scale {previous_scale:g} -> {current_scale:g}; "
-                f"first non-finite gradient: {nonfinite_gradients[0]}"
+                f"scale {previous_scale:g} -> {current_scale:g}"
             )
             if consecutive_amp_overflows >= max_consecutive_amp_overflows:
                 raise FloatingPointError(
@@ -101,33 +116,25 @@ def train(base, loaders, scaler, config, optimizer, current_epoch=None):
                 )
             continue
         consecutive_amp_overflows = 0
-        clip_norm = float(getattr(config, "gradient_clip_norm", 0.0))
-        if clip_norm > 0:
-            torch.nn.utils.clip_grad_norm_(base.parameters(), clip_norm)
-        scaler.step(optimizer)
-        scaler.update()
+        if ema is not None:
+            ema.update(base)
 
         # update meter
         acc_sign = False
         acc_value = 0
         for key, value in ret.items():
             if "loss" in key:
-                meter.update({key: value})
+                meter.update({key: value.detach()})
             if 'acc' in key:
                 acc_sign = True
                 acc_value = value
                 # meter.update({key: value})
-        meter.update({'total_loss': total_loss})
+        meter.update({'total_loss': total_loss.detach()})
         if acc_sign:
-            meter.update({'acc': acc_value})
+            meter.update({'acc': acc_value.detach()})
 
     meter.update({'amp_skipped_steps': float(amp_skipped_steps)})
 
     return meter.get_val(), meter.get_str()
-
-
-
-
-
 
 

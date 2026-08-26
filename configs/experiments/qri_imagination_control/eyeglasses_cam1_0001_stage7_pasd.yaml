@@ -1,0 +1,50 @@
+schema_version: 1
+experiment_id: qri-imagination-control-eyeglasses-stage7-pasd-20260822
+reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+roi_bbox_xyxy: [88, 2, 196, 44]
+seed: 20260821
+prompt:
+  positive: >-
+    same pedestrian, same face and identity, small thin black prescription eyeglasses,
+    two distinct transparent lenses, continuous uniform rims, narrow bridge,
+    symmetric temple arms, realistic indoor surveillance photograph
+  added: >-
+    preserve exact head shape, hair, eyes, skin, pose, clothing and lighting,
+    natural low-resolution texture, no high-definition patch
+  negative: >-
+    no glasses, bare eyes, white frame, bright rim, mismatched rims, broken frame,
+    disconnected frame, black knot, oversized glasses, sunglasses, goggles,
+    thick plastic frame, opaque lenses, duplicated eyes, changed face,
+    different person, distorted anatomy, mosaic, checkerboard, text, cartoon
+pasd:
+  process_size: 512
+  steps: 20
+  variants:
+    - name: layout_o035_c065
+      layout_opacity: 0.35
+      context_scale: 1.25
+      guidance_scale: 8.0
+      conditioning_scale: 0.65
+      region_feather_px: 3.0
+      region_max_alpha: 0.80
+      proposal_blur_px: 0.25
+      harmonize_strength: 0.75
+    - name: layout_o055_c065
+      layout_opacity: 0.55
+      context_scale: 1.25
+      guidance_scale: 8.0
+      conditioning_scale: 0.65
+      region_feather_px: 3.0
+      region_max_alpha: 0.80
+      proposal_blur_px: 0.25
+      harmonize_strength: 0.75
+    - name: layout_o035_c050
+      layout_opacity: 0.35
+      context_scale: 1.15
+      guidance_scale: 9.0
+      conditioning_scale: 0.50
+      region_feather_px: 3.0
+      region_max_alpha: 0.80
+      proposal_blur_px: 0.35
+      harmonize_strength: 0.80

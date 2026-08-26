@@ -1,0 +1,34 @@
+schema_version: 1
+experiment_id: qri-imagination-control-eyeglasses-stage9-sam-20260822
+reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+candidate: /home/lab929/ybj/experiments/qri_imagination_control/eyeglasses_cam1_0001/stage8_pasd_refine_20260822_v1/semantic_c085_g6/seed_20260821_pasd.png
+candidate_crop_box_xyxy: [74, 0, 209, 270]
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+sam:
+  source_root: /home/lab929/ybj/models/qri-v1/sources/segment-anything
+  weights: /home/lab929/ybj/models/qri-v1/checkpoints/sam_vit_b_01ec64.pth
+  model_type: vit_b
+sam_prompts:
+  box_xyxy: [88, 4, 196, 40]
+  positive_points:
+    - [101, 20]
+    - [121, 10]
+    - [121, 34]
+    - [144, 20]
+    - [166, 10]
+    - [166, 34]
+    - [188, 20]
+    - [194, 21]
+  negative_points:
+    - [119, 22]
+    - [163, 22]
+    - [144, 32]
+    - [144, 5]
+selection:
+  layout_dilation_px: 3
+  expected_box_area_ratio: 0.25
+writeback:
+  mask_dilation_px: 1
+  feather_px: 0.7
+  max_alpha: 1.0
+  harmonize_strength: 0.65

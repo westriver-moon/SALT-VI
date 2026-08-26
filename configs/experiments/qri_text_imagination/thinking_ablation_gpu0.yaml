@@ -1,0 +1,50 @@
+schema_version: 2
+experiment_id: qri-text-imagination-thinking-ablation-gpu0-20260822
+output_root: /home/lab929/ybj/experiments/qri_text_imagination/thinking_ablation_gpu0_20260822_v1
+endpoint: http://127.0.0.1:18080/v1/chat/completions
+model_id: third-party-qwen3.8-27b-ud-q4-k-xl
+timeout_seconds: 360
+board_size_px: 512
+temperature: 0.45
+max_tokens: 2048
+world_sample_count: 64
+seed: 20260822
+modes:
+  - name: no_thinking
+    enable_thinking: false
+    reasoning_effort: none
+  - name: thinking
+    enable_thinking: true
+    reasoning_effort: high
+samples:
+  - name: cartoon_drawstring_bag
+    lr: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam1/0319/0004/lr.png
+    swin: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam1/0319/0004/swin.png
+    region_id: back_carried_graphic
+    category: carried_object
+    bbox_xyxy: [42, 72, 218, 300]
+    focus_question: >-
+      Abstract the light-blue drawstring backpack and its central cartoon graphic.
+      Use visual and cultural world knowledge to identify a specific familiar
+      character or design family when justified, while retaining generic and
+      unresolved alternatives.
+  - name: ambiguous_eyewear
+    lr: /home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg
+    swin: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+    region_id: eyes
+    category: eyewear
+    bbox_xyxy: [88, 2, 196, 44]
+    focus_question: >-
+      Infer whether eyewear is present and describe only defensible coarse parts
+      such as paired lenses, bridge, front bar or temple hints. Keep a no-eyewear
+      and unresolved interpretation when the pixels do not decide.
+  - name: ambiguous_carried_object
+    lr: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam4/0351/0005/lr.png
+    swin: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam4/0351/0005/swin.png
+    region_id: left_carried
+    category: carried_object
+    bbox_xyxy: [0, 210, 118, 420]
+    focus_question: >-
+      Infer the dark object carried beside the left hand. Compare a folded
+      umbrella, soft bag, bundled garment and unresolved alternatives using
+      silhouette, attachment to the hand and gravity without forcing one answer.

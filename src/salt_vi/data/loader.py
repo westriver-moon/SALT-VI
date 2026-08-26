@@ -4,15 +4,26 @@ from torchvision.transforms import InterpolationMode
 import os
 from salt_vi.data.dataset import process_query_sysu, process_gallery_sysu, \
     process_test_regdb,process_gallery_llcm,process_query_llcm, SYSU_Tri_Data,RegDB_Tri_Data,LLCM_Tri_Data,Test_Tri_Data
-from salt_vi.data.processing import ChannelRandomErasing, ChannelAdapGray, ChannelExchange
+from salt_vi.data.processing import (
+    ChannelAdapGray,
+    ChannelExchange,
+    ChannelRandomErasing,
+    ChannelScale,
+    MSCMChannelAdapGray,
+    MSCMChannelExchange,
+    MSCMChannelT,
+)
 from salt_vi.data.sampler import (
     GenIdx,
     IdentitySampler,
     AutoReplaceIdentitySampler,
+    CameraDiverseIdentitySampler,
     validate_identity_batch_config,
 )
+from salt_vi.data.sysu_sources import load_train_source_records
 from salt_vi.retrieval import get_retrieval_protocol
 import torch.utils.data as data
+from torch.utils.data._utils.collate import default_collate
 
 
 SYSU_INTERPOLATION = InterpolationMode.BICUBIC
@@ -46,6 +57,13 @@ REQUIRED_RGB_IR_TEXT_BATCH_KEYS = (
     "target_rgb",
     "target_ir",
 )
+
+
+def collate_pmt_mscm_warmup(batch):
+    """Preserve transform RNG while dropping the unused RGB view before pinning."""
+    collated = default_collate(batch)
+    collated.pop("img_rgb_ori", None)
+    return collated
 
 
 def validate_rgb_ir_text_batch_dict(batch_dict, text_modalities=("rgb", "ir")):
@@ -84,6 +102,114 @@ def sysu_resolution_transforms(config, modality):
     steps.append(transforms.Resize(target_size, interpolation=SYSU_INTERPOLATION))
     return steps
 
+
+def build_mscmnet_exact_quadruple_transforms(
+    train_size, normalize, rgb_resolution, ir_resolution
+):
+    """Build the original MSCMNet four-view augmentations after SR loading.
+
+    Resolution transforms are prepended only to validate/select the already
+    loaded model input. For the PASD plugin recipe these are ExactSize checks,
+    so super-resolution is never treated as an augmentation operation.
+    """
+    color1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *rgb_resolution,
+        transforms.RandomGrayscale(p=0.5),
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+    ])
+    color2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *rgb_resolution,
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelExchange(gray=2),
+    ])
+    thermal1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *ir_resolution,
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelAdapGray(probability=0.5),
+    ])
+    thermal2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *ir_resolution,
+        transforms.ColorJitter(brightness=0.5),
+        transforms.Pad(10),
+        transforms.RandomCrop(train_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        ChannelRandomErasing(probability=0.5),
+        MSCMChannelT(probability=0.5),
+    ])
+    return color1, color2, thermal1, thermal2
+
+
+def build_pmt_recipe_transforms(
+    train_size, normalize, rgb_resolution, ir_resolution
+):
+    """Build the unchanged PMT Stage-A transforms used before the switch epoch."""
+    random_erasing = lambda: ChannelRandomErasing(
+        probability=0.5,
+        mean=[0.485, 0.456, 0.406],
+    )
+    thermal_mix_aug = [
+        transforms.ColorJitter(brightness=0.3, contrast=0.3),
+        transforms.GaussianBlur(21, sigma=(0.1, 3)),
+    ]
+    color1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(rgb_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    color2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(rgb_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.Grayscale(num_output_channels=3),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    thermal1 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(ir_resolution or [transforms.Resize(train_size)]),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomChoice(thermal_mix_aug),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+    ])
+    thermal2 = transforms.Compose([
+        transforms.ToPILImage(),
+        *(ir_resolution or [transforms.Resize(train_size)]),
+        transforms.ColorJitter(brightness=0.5),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        normalize,
+        random_erasing(),
+        ChannelScale(probability=0.5),
+    ])
+    return color1, color2, thermal1, thermal2
+
 class Loader:
 
     def __init__(self, config):
@@ -91,44 +217,50 @@ class Loader:
         train_size = (config.img_h, config.img_w)
         rgb_resolution = sysu_resolution_transforms(config, "rgb")
         ir_resolution = sysu_resolution_transforms(config, "ir")
+        self.quadruple_input = (
+            str(getattr(config, "visual_input_backend", "single")).lower()
+            == "quadruple_patch"
+        )
+        self.pmt_recipe_variant = str(
+            getattr(config, "pmt_recipe_variant", "original") or "original"
+        ).lower()
+        self.phased_mscm_recipe = self.pmt_recipe_variant == "mscm_phased"
+        self.pmt_progressive_epoch = int(
+            getattr(config, "pmt_progressive_epoch", 6)
+        )
+        self.phased_mscm_transforms = None
 
-        if getattr(config, "pmt_recipe_transforms", False):
-            pmt_random_erasing = lambda: ChannelRandomErasing(
-                probability=0.5,
-                mean=[0.485, 0.456, 0.406],
+        if self.phased_mscm_recipe:
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_pmt_recipe_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
             )
-            thermal_mix_aug = [
-                transforms.ColorJitter(brightness=0.3, contrast=0.3),
-                transforms.GaussianBlur(21, sigma=(0.1, 3)),
-            ]
-            self.transform_color1 = transforms.Compose([
-                transforms.ToPILImage(),
-                *(rgb_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
-
-            self.transform_color2 = transforms.Compose([
-                transforms.ToPILImage(),
-                *(rgb_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.Grayscale(num_output_channels=3),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
-
-            self.transform_thermal = transforms.Compose([
-                transforms.ToPILImage(),
-                *(ir_resolution or [transforms.Resize(train_size)]),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomChoice(thermal_mix_aug),
-                transforms.ToTensor(),
-                normalize,
-                pmt_random_erasing(),
-            ])
+            self.transform_thermal2 = None
+            self.phased_mscm_transforms = build_mscmnet_exact_quadruple_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
+        elif self.quadruple_input:
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_mscmnet_exact_quadruple_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
+        elif getattr(config, "pmt_recipe_transforms", False):
+            (
+                self.transform_color1,
+                self.transform_color2,
+                self.transform_thermal1,
+                self.transform_thermal2,
+            ) = build_pmt_recipe_transforms(
+                train_size, normalize, rgb_resolution, ir_resolution
+            )
         else:
             self.transform_color1 = transforms.Compose( [
                 transforms.ToPILImage(),
@@ -152,7 +284,7 @@ class Loader:
                 ChannelRandomErasing(probability = 0.6),
                 ChannelExchange(gray = 2)])
 
-            self.transform_thermal = transforms.Compose([
+            self.transform_thermal1 = transforms.Compose([
                 transforms.ToPILImage(),
                 *ir_resolution,
                 transforms.Pad(10),
@@ -162,6 +294,21 @@ class Loader:
                 normalize,
                 ChannelRandomErasing(probability=0.5),
                 ChannelAdapGray(probability=0.6)])
+            self.transform_thermal2 = transforms.Compose([
+                transforms.ToPILImage(),
+                *ir_resolution,
+                transforms.Pad(10),
+                transforms.RandomCrop(train_size),
+                transforms.ColorJitter(brightness=0.5),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+                ChannelRandomErasing(probability=0.5),
+                ChannelScale(probability=0.5),
+            ])
+
+        # Preserve every existing single-input dataset and recipe unchanged.
+        self.transform_thermal = self.transform_thermal1
 
 
         all_sysu_eval_modalities_are_exact_sr = (
@@ -227,11 +374,22 @@ class Loader:
         self.mode = config.mode
         self.test_mode = config.test_mode
         self.gall_mode = config.gall_mode
+        self.gallery_trials = int(getattr(config, "gallery_trials", 10))
+        if self.gallery_trials < 1:
+            raise ValueError(
+                f"gallery_trials must be positive, got {self.gallery_trials}"
+            )
         self.num_workers = config.num_workers
+        self.seed = int(getattr(config, "seed", 0))
+        self.eval_caption_seed = int(getattr(config, "eval_caption_seed", 0))
+        if not 0 <= self.eval_caption_seed <= 2**32 - 1:
+            raise ValueError(
+                f"eval_caption_seed must be in [0, 2**32 - 1], got {self.eval_caption_seed}"
+            )
         self.training_mode = config.training_mode
         self.test_modality = config.test_modality
         self.retrieval_protocol = get_retrieval_protocol(
-            getattr(config, "retrieval_backend", "legacy")
+            getattr(config, "retrieval_backend", "identity_text")
         )
         self.use_train_text = "Text" in self.training_mode
         self.train_text_modalities = self.retrieval_protocol.train_text_modalities(config)
@@ -269,7 +427,9 @@ class Loader:
             if self.mode == 'train':
                 # train sysu data simples
                 samples = SYSU_Tri_Data(self.sysu_data_path, transform1=self.transform_color1, transform2=self.transform_color2,
-                                transform3=self.transform_thermal,\
+                                transform3=self.transform_thermal1,
+                                transform4=self.transform_thermal2 if self.quadruple_input else None,\
+                                        phased_transforms=self.phased_mscm_transforms,\
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
                                                     joint_mode=self.joint_mode,\
@@ -283,16 +443,37 @@ class Loader:
                                                         sysu_sr_view_sampling=self.sysu_sr_view_sampling,
                                                         text_modalities=self.train_text_modalities)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
+                if self.sampler_type == "identity_camera_diverse":
+                    rgb_records = load_train_source_records(self.sysu_data_path, "rgb")
+                    ir_records = load_train_source_records(self.sysu_data_path, "ir")
+                    if [record.label for record in rgb_records] != samples.train_color_label.tolist():
+                        raise ValueError("SYSU RGB camera manifest does not match training labels")
+                    if [record.label for record in ir_records] != samples.train_thermal_label.tolist():
+                        raise ValueError("SYSU IR camera manifest does not match training labels")
+                    self.color_cameras = [record.camera for record in rgb_records]
+                    self.thermal_cameras = [record.camera for record in ir_records]
                 self.samples = samples
 
             # test sysu data simples
             query_samples, gallery_samples_list = self._get_test_samples(self.dataset)
-            query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                num_workers=self.num_workers)
+            query_loader = data.DataLoader(
+                query_samples,
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
             gallery_loaders = []
-            for i in range(10):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False,
-                                                 drop_last=False, num_workers=self.num_workers)
+            for i in range(self.gallery_trials):
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.query_loader = query_loader
             self.gallery_loaders = gallery_loaders
@@ -313,15 +494,27 @@ class Loader:
             query_samples_list, gallery_samples_list = self._get_test_samples(self.dataset)
             query_loaders = []
             for i in range(self.eval_num_regdb):
-                query_loader = data.DataLoader(query_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                    num_workers=self.num_workers)
+                query_loader = data.DataLoader(
+                    query_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 query_loaders.append(query_loader)
             self.query_loaders = query_loaders
 
             gallery_loaders = []
             for i in range(self.eval_num_regdb):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                             num_workers=self.num_workers)
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.gallery_loaders = gallery_loaders
 
@@ -338,12 +531,24 @@ class Loader:
                 self.samples = samples
 
             query_samples, gallery_samples_list = self._get_test_samples(self.dataset)
-            query_loader = data.DataLoader(query_samples, batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                                num_workers=self.num_workers)
+            query_loader = data.DataLoader(
+                query_samples,
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
             gallery_loaders = []
-            for i in range(10):
-                gallery_loader = data.DataLoader(gallery_samples_list[i], batch_size=self.test_batch_size, shuffle=False, drop_last=False,
-                                             num_workers=self.num_workers)
+            for i in range(self.gallery_trials):
+                gallery_loader = data.DataLoader(
+                    gallery_samples_list[i],
+                    batch_size=self.test_batch_size,
+                    shuffle=False,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
                 gallery_loaders.append(gallery_loader)
             self.query_loader = query_loader
             self.gallery_loaders = gallery_loaders
@@ -366,7 +571,7 @@ class Loader:
                                             sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                             sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                             sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
-                                            source_modality="ir")
+                                            source_modality="ir", caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -375,7 +580,7 @@ class Loader:
             gallery_samples_list = []
             self.gallery_labels = []
             self.gallery_cams = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gall_img, gall_label, gall_cam = process_gallery_sysu(self.sysu_data_path, mode=self.test_mode, trial=i,
                                                                       gall_mode=self.gall_mode)
                 self.gall_cam = gall_cam
@@ -400,7 +605,8 @@ class Loader:
                                         sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                         sysu_sr_eval_view_index=self.sysu_sr_eval_view_index,
-                                        source_modality="rgb")
+                                        source_modality="rgb",
+                                        caption_seed=self.eval_caption_seed)
                 gallery_samples_list.append(gallery_samples)
             return query_samples, gallery_samples_list
         elif self.dataset == 'regdb':
@@ -416,7 +622,7 @@ class Loader:
                                             captioner_name=self.captioner_name, \
                                                 joint_mode=self.joint_mode,gallorquery=f'query[{trial}]',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root)
+                                                text_data_root=self.text_data_root, caption_seed=self.eval_caption_seed)
                 query_samples_list.append(query_samples)
 
             gallery_samples_list = []
@@ -446,7 +652,7 @@ class Loader:
                                         captioner_name=self.captioner_name, \
                                             joint_mode=self.joint_mode,gallorquery='query',\
                                                 Feat_Filter=self.Feat_Filter, load_text=self.use_eval_text,
-                                                text_data_root=self.text_data_root)
+                                                text_data_root=self.text_data_root, caption_seed=self.eval_caption_seed)
             self.query_label = query_label
             self.query_cam = query_cam
 
@@ -455,7 +661,7 @@ class Loader:
             gallery_samples_list = []
             self.gallery_labels = []
             self.gallery_cams = []
-            for i in range(10):
+            for i in range(self.gallery_trials):
                 gall_img, gall_label, gall_cam = process_gallery_llcm(self.llcm_data_path, mode=1, trial=i) # vis
 
                 self.gall_cam = gall_cam
@@ -475,27 +681,52 @@ class Loader:
             raise ValueError(f"Dataset {self.dataset} not supported")
 
 
+    def set_training_epoch(self, current_epoch):
+        self.current_training_epoch = 0 if current_epoch is None else int(current_epoch)
+
     def get_train_loader(self):
+        if self.phased_mscm_recipe:
+            epoch = int(getattr(self, "current_training_epoch", 0))
+            phase = "pmt" if epoch < self.pmt_progressive_epoch else "mscm"
+            self.samples.set_training_phase(phase)
         if self.sampler_type == "identity_current_replace":
             sampler_cls = IdentitySampler
         elif self.sampler_type == "identity_auto_replace":
             sampler_cls = AutoReplaceIdentitySampler
+        elif self.sampler_type == "identity_camera_diverse":
+            if self.dataset != "sysu":
+                raise ValueError("camera-diverse sampling is currently defined only for SYSU")
+            sampler_cls = CameraDiverseIdentitySampler
         else:
             raise ValueError(f"Unsupported sampler_type: {self.sampler_type}")
 
         identities_per_batch = validate_identity_batch_config(
             self.batch_size, self.num_pos, len(self.color_pos)
         )
-        sampler = sampler_cls(
+        sampler_args = [
             self.samples.train_color_label,
             self.samples.train_thermal_label,
             self.color_pos,
             self.thermal_pos,
             self.num_pos,
             identities_per_batch,
-        )
+        ]
+        if sampler_cls is CameraDiverseIdentitySampler:
+            sampler_args.extend((self.color_cameras, self.thermal_cameras))
+        sampler = sampler_cls(*sampler_args)
         self.samples.cIndex = sampler.index1
         self.samples.tIndex = sampler.index2
-        train_loader = data.DataLoader(self.samples, batch_size=self.batch_size,
-                                       sampler=sampler, num_workers=self.num_workers, drop_last=True)
+        train_loader = data.DataLoader(
+            self.samples,
+            batch_size=self.batch_size,
+            sampler=sampler,
+            num_workers=self.num_workers,
+            drop_last=True,
+            pin_memory=True,
+            collate_fn=(
+                collate_pmt_mscm_warmup
+                if self.phased_mscm_recipe and phase == "pmt"
+                else None
+            ),
+        )
         return train_loader

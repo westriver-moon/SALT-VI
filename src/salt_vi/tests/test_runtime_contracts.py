@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
+import hashlib
 
 import numpy as np
 import pytest
 import torch
 
-from salt_vi.config.validation import validate_runtime_config
+from salt_vi.config.validation import (
+    validate_runtime_config,
+    validate_selected_config_schema,
+)
 from salt_vi.data.dataset import PIL_LANCZOS, _infer_dataset_name, _resolve_text_dir
 from salt_vi.data.sampler import GenIdx, IdentitySampler, validate_identity_batch_config
 from salt_vi.data.tokenizer import default_bpe
@@ -17,8 +22,31 @@ from salt_vi.engine.train import handle_nonfinite_gradients
 from salt_vi.entrypoints import train as train_entry
 from salt_vi.entrypoints.train import main
 from salt_vi.models.clip_model.clip_model import CLIP
-from salt_vi.models.model import Classifier as LegacyClassifier
 from salt_vi.utils.utils import _expand_environment_values
+
+
+def test_phased_training_skips_all_warmup_evaluations():
+    config = SimpleNamespace(
+        eval_start_epoch=2,
+        eval_epoch=2,
+        pmt_recipe_variant="mscm_phased",
+        pmt_progressive_epoch=6,
+    )
+    assert not train_entry.should_run_training_evaluation(config, 1)
+    assert not train_entry.should_run_training_evaluation(config, 3)
+    assert not train_entry.should_run_training_evaluation(config, 5)
+    assert not train_entry.should_run_training_evaluation(config, 6)
+    assert train_entry.should_run_training_evaluation(config, 7)
+
+
+def test_original_recipe_keeps_existing_evaluation_schedule():
+    config = SimpleNamespace(
+        eval_start_epoch=2,
+        eval_epoch=2,
+        pmt_recipe_variant="original",
+        pmt_progressive_epoch=6,
+    )
+    assert train_entry.should_run_training_evaluation(config, 1)
 
 
 def test_dataset_name_inference_accepts_trailing_separator():
@@ -71,13 +99,6 @@ def test_uni_bn_rejects_incomplete_five_group_batch():
         classifier(torch.randn(11, 2))
 
 
-def test_legacy_classifier_preserves_batch_dimension_for_singleton():
-    classifier = LegacyClassifier(pid_num=3, dim=2)
-    classifier.eval()
-    output = classifier(torch.randn(1, 2))
-    assert output.shape == (1, 2)
-
-
 def test_packaged_bpe_resource_exists_in_source_tree():
     assert Path(default_bpe()).is_file()
 
@@ -102,6 +123,62 @@ def test_runtime_validation_rejects_qbn_id_woir_combo():
                 "joint_mode": "uni",
                 "uni_BN": True,
                 "loss_names": "id_woir",
+            }
+        )
+
+
+def test_runtime_validation_rejects_removed_return_before_bn_flag():
+    with pytest.raises(ValueError, match="Return_B4_BN was a no-op"):
+        validate_runtime_config(
+            {"training_mode": "RGB_IR", "joint_mode": "image_only", "Return_B4_BN": True}
+        )
+
+
+def test_runtime_validation_rejects_non_positive_batch_size():
+    with pytest.raises(ValueError, match="batch_size must be >= 1"):
+        validate_runtime_config({"batch_size": 0})
+
+
+def test_runtime_validation_rejects_non_positive_temperature():
+    with pytest.raises(ValueError, match="temperature must be > 0"):
+        validate_runtime_config({"temperature": 0.0})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("temperature", float("nan")),
+        ("target_lr", float("inf")),
+        ("seed", 2**32),
+        ("llm_aug_prob", -0.01),
+        ("llm_aug_prob", 1.01),
+        ("target_lr_factor", -0.01),
+    ),
+)
+def test_runtime_validation_rejects_nonfinite_or_out_of_range_values(field, value):
+    with pytest.raises(ValueError, match=field):
+        validate_runtime_config({field: value})
+
+
+def test_runtime_validation_rejects_invalid_image_size_pair():
+    with pytest.raises(ValueError, match="img_size must be a pair"):
+        validate_runtime_config({"img_size": (288, 0)})
+
+
+def test_runtime_validation_rejects_model_only_resume():
+    with pytest.raises(ValueError, match="model-only resume"):
+        validate_runtime_config(
+            {"dataset": "sysu", "test_modality": "Fusion", "resume_train_epoch": 3}
+        )
+
+
+def test_runtime_validation_rejects_metric_boost_resume():
+    with pytest.raises(ValueError, match="metric_boost_resume_epoch is retired"):
+        validate_runtime_config(
+            {
+                "dataset": "sysu",
+                "test_modality": "Fusion",
+                "metric_boost_resume_epoch": 2,
             }
         )
 
@@ -145,15 +222,128 @@ def test_training_checkpoint_round_trip_restores_full_state(tmp_path):
     expected_weight = model.weight.detach().clone()
     checkpoint_path = tmp_path / "checkpoint_latest.pth"
     train_entry._save_training_checkpoint(
-        str(checkpoint_path), 4, model, optimizer, scheduler, scaler
+        str(checkpoint_path),
+        4,
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        run_uuid="run-1",
+        run_manifest_sha256="manifest-hash-1",
     )
     with torch.no_grad():
         model.weight.zero_()
     assert train_entry._load_training_checkpoint(
-        str(checkpoint_path), model, optimizer, scheduler, scaler, torch.device("cpu")
+        str(checkpoint_path),
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        torch.device("cpu"),
+        expected_run_uuid="run-1",
+        expected_run_manifest_sha256="manifest-hash-1",
     ) == 5
     assert torch.equal(model.weight, expected_weight)
     assert train_entry.best_rank1_fusion == 0.8
+
+
+def test_training_checkpoint_rejects_run_identity_mismatch_before_state_load(tmp_path):
+    model = torch.nn.Linear(2, 1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1)
+    scaler = _disabled_scaler()
+    checkpoint_path = tmp_path / "checkpoint_latest.pth"
+    train_entry._save_training_checkpoint(
+        str(checkpoint_path),
+        3,
+        model,
+        optimizer,
+        scheduler,
+        scaler,
+        run_uuid="expected-run",
+        run_manifest_sha256="expected-manifest",
+    )
+    with torch.no_grad():
+        model.weight.zero_()
+    with pytest.raises(ValueError, match="run UUID mismatch"):
+        train_entry._load_training_checkpoint(
+            str(checkpoint_path),
+            model,
+            optimizer,
+            scheduler,
+            scaler,
+            torch.device("cpu"),
+            expected_run_uuid="different-run",
+            expected_run_manifest_sha256="expected-manifest",
+        )
+    assert torch.equal(model.weight, torch.zeros_like(model.weight))
+
+
+class _ProtocolStub:
+    identifier = "stub-protocol"
+    eval_caption_seed = 0
+
+    def as_dict(self):
+        return {"identifier": self.identifier}
+
+
+def test_run_manifest_round_trip_hashes_config_data_and_protocol(tmp_path):
+    view_manifest = tmp_path / "manifest.jsonl"
+    view_manifest.write_text("source_1\nsource_2\n", encoding="utf-8")
+    config = SimpleNamespace(
+        output_path=str(tmp_path / "run"),
+        mode="test",
+        test_model_path=None,
+        training_weight_init=None,
+        sysu_sr_view_manifest=str(view_manifest),
+        sysu_sr_data_root=None,
+        dataset="sysu",
+        batch_size=32,
+        seed=1,
+    )
+    run_uuid = "fresh-run-uuid"
+    path, manifest_hash = train_entry._write_run_manifest(
+        config, run_uuid, _ProtocolStub()
+    )
+    assert Path(path).is_file()
+    manifest = train_entry._load_run_manifest(config)
+    assert manifest["run_uuid"] == run_uuid
+    assert manifest["resolved_config_sha256"] == train_entry._resolved_config_digest(config)
+    assert manifest["data_manifest"]["paths"] == [str(view_manifest)]
+    assert manifest["protocol_identifier"] == "stub-protocol"
+    assert manifest_hash == train_entry._sha256_file(path)
+    train_entry._validate_run_manifest(config, _ProtocolStub(), manifest)
+
+
+def test_golden_evaluation_writes_structured_metrics(tmp_path):
+    checkpoint = tmp_path / "model_Fusion_epoch_6.pth"
+    checkpoint.write_bytes(b"checkpoint-bytes")
+    output_root = tmp_path / "golden-run"
+    config = SimpleNamespace(
+        output_path=str(output_root),
+        mode="test",
+        test_model_path=str(checkpoint),
+        training_weight_init=None,
+        sysu_sr_view_manifest=None,
+        sysu_sr_data_root=None,
+        dataset="sysu",
+        batch_size=32,
+        seed=1,
+        golden_evaluation_path=str(tmp_path / "golden_evaluation.json"),
+        run_manifest_sha256="manifest-hash",
+        metric_experiment_id="GOLDEN-1",
+    )
+    path = train_entry._write_golden_evaluation(
+        config,
+        _ProtocolStub(),
+        {"Fusion": (0.6862, 0.7960, [0.8293])},
+    )
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert payload["schema_version"] == 1
+    assert payload["checkpoint_sha256"] == train_entry._sha256_file(str(checkpoint))
+    assert payload["metrics"]["Fusion"]["Rank-1"] == 0.8293
+    assert payload["metrics"]["Fusion"]["mAP"] == 0.7960
+    assert payload["metrics"]["Fusion"]["mINP"] == 0.6862
 
 
 def test_training_checkpoint_loader_requests_full_state_when_supported(monkeypatch):
@@ -220,10 +410,144 @@ def test_config_environment_placeholders_expand_recursively(monkeypatch):
     }
 
 
+def test_active_config_schema_rejects_unknown_keys(tmp_path):
+    project_root = tmp_path
+    config_path = project_root / "configs" / "stage_b" / "bad.yaml"
+    config_path.parent.mkdir(parents=True)
+    with pytest.raises(KeyError, match="typo_field"):
+        validate_selected_config_schema(
+            {"dataset": "sysu", "typo_field": True},
+            {"dataset": "sysu"},
+            config_path,
+            project_root,
+        )
+
+
+def test_active_config_schema_requires_checkpoint_hash(tmp_path):
+    project_root = tmp_path
+    config_path = project_root / "configs" / "stage_b" / "missing_hash.yaml"
+    config_path.parent.mkdir(parents=True)
+    with pytest.raises(ValueError, match="training_weight_init_sha256"):
+        validate_selected_config_schema(
+            {"training_weight_init": "warm-start.pth"},
+            {"training_weight_init": None, "training_weight_init_sha256": None},
+            config_path,
+            project_root,
+        )
+
+
+def test_training_weight_init_sha256_gate(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256="0" * 64,
+    )
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        train_entry._verify_training_weight_init(config)
+    expected = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    config.training_weight_init_sha256 = expected
+    assert train_entry._verify_training_weight_init(config) == expected
+
+
+def test_training_weight_init_requires_hash_after_runtime_overrides(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256=None,
+    )
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry._verify_training_weight_init(config)
+
+
+def test_missing_weight_hash_fails_before_loader_or_model(monkeypatch, tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    config = SimpleNamespace(
+        DataParallel=False,
+        retrieval_backend="identity_text",
+        CUDA_VISIBLE_DEVICES="0",
+        gpu_id="0",
+        mode="train",
+        auto_resume_training_from_lastest_step=False,
+        resume_train_epoch=-1,
+        training_weight_init=str(checkpoint),
+        training_weight_init_sha256=None,
+    )
+    protocol = SimpleNamespace(RESULT_KEY="Fusion")
+    monkeypatch.setattr(train_entry, "validate_runtime_config", lambda value: value)
+    monkeypatch.setattr(train_entry, "get_retrieval_protocol", lambda value: protocol)
+    monkeypatch.setattr(train_entry, "build_protocol_spec", lambda *args: None)
+    monkeypatch.setattr(train_entry, "resolve_run_directory", lambda value: str(tmp_path / "run"))
+    monkeypatch.setattr(train_entry, "ensure_fresh_run_directory", lambda value: None)
+    monkeypatch.setattr(
+        train_entry,
+        "Loader",
+        lambda value: pytest.fail("Loader must not be constructed before SHA validation"),
+    )
+    monkeypatch.setattr(
+        train_entry,
+        "build_model",
+        lambda value: pytest.fail("Model must not be constructed before SHA validation"),
+    )
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry.main(config)
+
+
+def test_set_override_cannot_remove_training_weight_init_hash(tmp_path):
+    checkpoint = tmp_path / "warm-start.pth"
+    checkpoint.write_bytes(b"checkpoint")
+    expected = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    selected = tmp_path / "selected.yaml"
+    selected.write_text(
+        f"training_weight_init: {checkpoint}\n"
+        f"training_weight_init_sha256: {expected}\n",
+        encoding="utf-8",
+    )
+    cli = train_entry.get_args(
+        [
+            "--config_select",
+            str(selected),
+            "--set",
+            "training_weight_init_sha256=null",
+        ]
+    )
+    config = train_entry._merge_runtime_config(cli)
+    with pytest.raises(ValueError, match="required whenever training_weight_init is set"):
+        train_entry._verify_training_weight_init(config)
+
+
+def test_cli_checkpoint_override_cannot_reuse_another_files_hash(tmp_path):
+    first = tmp_path / "first.pth"
+    second = tmp_path / "second.pth"
+    first.write_bytes(b"first checkpoint")
+    second.write_bytes(b"second checkpoint")
+    expected = hashlib.sha256(first.read_bytes()).hexdigest()
+    selected = tmp_path / "selected.yaml"
+    selected.write_text(
+        f"training_weight_init: {first}\n"
+        f"training_weight_init_sha256: {expected}\n",
+        encoding="utf-8",
+    )
+    cli = train_entry.get_args(
+        [
+            "--config_select",
+            str(selected),
+            "--training_weight_init",
+            str(second),
+        ]
+    )
+    config = train_entry._merge_runtime_config(cli)
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        train_entry._verify_training_weight_init(config)
+
+
 def test_metric_boost_uses_a_retained_canonical_baseline_config():
     repository_root = Path(__file__).resolve().parents[3]
     config = repository_root / "configs" / "stage_b" / "a3_e4_stageb.yaml"
     assert config.is_file()
     payload = config.read_text(encoding="utf-8")
-    assert "metric_boost_checkpoint:" in payload
+    assert "training_weight_init_sha256:" in payload
+    assert "metric_boost_" not in payload
     assert "vit_source_core_sysu_no_sff_parameter_add_pa05.yaml" not in payload

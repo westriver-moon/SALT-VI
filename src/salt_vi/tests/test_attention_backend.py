@@ -20,13 +20,13 @@ def _qkv(dtype=torch.float32):
 
 
 def test_attention_backend_names_are_strict():
-    assert normalize_attention_backend(None) == "legacy"
+    assert normalize_attention_backend(None) == "manual"
     assert normalize_attention_backend("SDPA") == "sdpa"
     with pytest.raises(ValueError, match="Unsupported attention backend"):
         normalize_attention_backend("automatic")
 
 
-def test_legacy_backend_matches_explicit_attention_and_backward():
+def test_manual_backend_matches_explicit_attention_and_backward():
     query, key, value = _qkv()
     expected_weights = (query @ key.transpose(-2, -1)) * (8**-0.5)
     expected = expected_weights.softmax(dim=-1) @ value
@@ -37,7 +37,7 @@ def test_legacy_backend_matches_explicit_attention_and_backward():
         scale=8**-0.5,
         dropout_p=0.0,
         training=True,
-        backend="legacy",
+        backend="manual",
     )
     assert torch.allclose(observed, expected, atol=1e-7, rtol=1e-6)
     observed.square().mean().backward()
@@ -49,16 +49,16 @@ def test_legacy_backend_matches_explicit_attention_and_backward():
     not hasattr(torch.nn.functional, "scaled_dot_product_attention"),
     reason="SDPA requires PyTorch 2.0 or newer",
 )
-def test_sdpa_backend_matches_legacy_on_cpu():
+def test_sdpa_backend_matches_manual_on_cpu():
     query, key, value = _qkv()
-    legacy = run_scaled_dot_product_attention(
+    manual = run_scaled_dot_product_attention(
         query,
         key,
         value,
         scale=8**-0.5,
         dropout_p=0.0,
         training=False,
-        backend="legacy",
+        backend="manual",
     )
     sdpa = run_scaled_dot_product_attention(
         query,
@@ -69,7 +69,7 @@ def test_sdpa_backend_matches_legacy_on_cpu():
         training=False,
         backend="sdpa",
     )
-    assert torch.allclose(sdpa, legacy, atol=1e-6, rtol=1e-5)
+    assert torch.allclose(sdpa, manual, atol=1e-6, rtol=1e-5)
 
 
 @pytest.mark.skipif(
@@ -91,10 +91,10 @@ def test_flash_backend_rejects_cpu_instead_of_falling_back():
 
 
 def test_backend_switch_preserves_checkpoint_parameter_contract():
-    legacy = Attention(dim=32, num_heads=4, attention_backend="legacy")
+    manual = Attention(dim=32, num_heads=4, attention_backend="manual")
     sdpa = Attention(dim=32, num_heads=4, attention_backend="sdpa")
-    assert legacy.state_dict().keys() == sdpa.state_dict().keys()
-    sdpa.load_state_dict(legacy.state_dict(), strict=True)
+    assert manual.state_dict().keys() == sdpa.state_dict().keys()
+    sdpa.load_state_dict(manual.state_dict(), strict=True)
 
 
 def test_pmt_visual_propagates_backend_to_every_block():
@@ -126,7 +126,7 @@ def test_pmt_visual_checkpoint_loads_strictly_across_backends():
         mlp_ratio=2.0,
         output_dim=32,
     )
-    legacy = PMTViTVisual(**model_kwargs, attention_backend="legacy")
+    manual = PMTViTVisual(**model_kwargs, attention_backend="manual")
     flash = PMTViTVisual(**model_kwargs, attention_backend="flash")
-    assert legacy.state_dict().keys() == flash.state_dict().keys()
-    flash.load_state_dict(legacy.state_dict(), strict=True)
+    assert manual.state_dict().keys() == flash.state_dict().keys()
+    flash.load_state_dict(manual.state_dict(), strict=True)

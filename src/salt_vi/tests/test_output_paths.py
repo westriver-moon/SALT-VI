@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
-from salt_vi.entrypoints.output_paths import build_experiment_name, resolve_run_directory
+import pytest
+
+from salt_vi.entrypoints.output_paths import build_experiment_name, ensure_fresh_run_directory, resolve_run_directory
 
 
 def config(**overrides):
@@ -21,7 +23,6 @@ def config(**overrides):
         llm_aug=False,
         llm_aug_prob=0.5,
         loss_names="id,cross_modal_hard",
-        Return_B4_BN=False,
         uni_BN=False,
         Fix_Visual=True,
         Feat_Filter=False,
@@ -40,9 +41,34 @@ def test_fresh_training_resolves_output_root_once():
     assert resolve_run_directory(value) == f"/runs/pasd/sysu/FV/{name}"
 
 
-def test_resume_and_test_use_final_output_path():
+def test_complete_resume_and_test_use_final_output_path():
     final = "/runs/pasd/sysu/FV/experiment"
     assert resolve_run_directory(
-        config(output_root=None, output_path=final, resume_train_epoch=3)
+        config(
+            output_root=None,
+            output_path=final,
+            auto_resume_training_from_lastest_step=True,
+        )
     ) == final
     assert resolve_run_directory(config(output_root=None, output_path=final, mode="test")) == final
+
+
+def test_fresh_training_rejects_nonempty_output_directory(tmp_path):
+    output = tmp_path / "run"
+    output.mkdir()
+    (output / "old.log").write_text("old", encoding="utf-8")
+    value = config(output_path=str(output))
+    with pytest.raises(FileExistsError, match="Fresh training refuses"):
+        ensure_fresh_run_directory(value)
+
+
+def test_resume_allows_nonempty_output_directory(tmp_path):
+    output = tmp_path / "run"
+    output.mkdir()
+    (output / "checkpoint.pth").write_bytes(b"state")
+    ensure_fresh_run_directory(
+        config(
+            output_path=str(output),
+            auto_resume_training_from_lastest_step=True,
+        )
+    )

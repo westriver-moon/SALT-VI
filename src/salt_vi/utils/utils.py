@@ -6,6 +6,7 @@ from pathlib import Path
 
 from easydict import EasyDict as edict
 import yaml
+from salt_vi.config.validation import validate_selected_config_schema
 
 
 AUTO_FIND_PMT_VIT_IMAGE_ONLY_BEST = "AUTO_FIND_PMT_VIT_IMAGE_ONLY_BEST"
@@ -48,6 +49,7 @@ def _load_yaml_with_extends(path, repo_root, seen=None):
     parent = payload.pop("extends", None)
     if not parent:
         return _expand_environment_values(payload)
+    parent = os.path.expandvars(str(parent))
     candidates = []
     if os.path.isabs(parent):
         candidates.append(parent)
@@ -367,6 +369,7 @@ def load_train_configs(path):
     default_path = os.path.join(package_root, 'config', 'default.yaml')
     args = _load_yaml(default_path)
     selected_args = _load_yaml_with_extends(path, project_root)
+    validate_selected_config_schema(selected_args, args, path, project_root)
     if selected_args:
         args.update(selected_args)
     pmt_pretrained = args.get('pmt_pretrained')
@@ -383,7 +386,6 @@ def load_train_configs(path):
     needs_training_weight_init = (
         args.get("mode", "train") == "train"
         and not bool(args.get("auto_resume_training_from_lastest_step", False))
-        and int(args.get("resume_train_epoch", -1)) < 0
     )
     should_auto_find_weight = (
         needs_training_weight_init

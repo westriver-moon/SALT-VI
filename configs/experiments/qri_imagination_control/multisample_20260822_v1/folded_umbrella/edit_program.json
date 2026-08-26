@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "target_semantics": "a closed black folding umbrella held in the left hand, with gathered canopy folds and one short handle",
+  "appearance": "same pedestrian, matte black fabric, soft outdoor surveillance texture, object hanging naturally with gravity",
+  "evaluation_roi_xyxy": [0, 210, 118, 420],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "umbrella_region", "type": "polygon", "points": [[0, 248], [71, 225], [107, 270], [92, 341], [45, 407], [0, 397]], "fill": true}
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "folded_canopy", "type": "polygon", "points": [[9, 272], [66, 247], [94, 282], [76, 347], [37, 389], [4, 376]], "stroke_width": 3.0},
+      {"id": "shaft", "type": "polyline", "points": [[81, 238], [70, 290], [55, 354], [42, 399]], "stroke_width": 3.0},
+      {"id": "handle", "type": "polyline", "points": [[79, 239], [91, 229], [101, 240]], "stroke_width": 3.0}
+    ]
+  }
+}

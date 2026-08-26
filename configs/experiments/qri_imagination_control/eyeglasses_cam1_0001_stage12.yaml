@@ -1,0 +1,48 @@
+schema_version: 1
+experiment_id: qri-imagination-control-eyeglasses-stage12-20260822
+inputs:
+  source: /home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg
+  reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+crop_box_xyxy: [0, 0, 256, 256]
+process_size: 512
+transition_dilation_px: 4
+transition_feather_px: 1.0
+seed: 20260821
+prompt:
+  added: >-
+    crisp, unambiguous, spatially aligned, realistic, no pasted-patch look
+  negative: >-
+    no glasses, bare eyes, sunglasses, goggles, visor, thick opaque lenses,
+    duplicated eyes, changed eyes, changed eyebrows, changed face, different person,
+    distorted anatomy, changed hair, changed skin, changes outside the requested layout,
+    mosaic, checkerboard, grid, text, cartoon, painting, oversharpened pasted patch
+variants:
+  - name: trimap_pixel_s085_t035
+    strength: 0.85
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: false
+  - name: trimap_lock_s085_t035
+    strength: 0.85
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: true
+  - name: trimap_lock_s095_t035
+    strength: 0.95
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.35
+    final_transition_alpha: 0.35
+    step_source_lock: true
+  - name: trimap_lock_s085_t055
+    strength: 0.85
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.55
+    final_transition_alpha: 0.45
+    step_source_lock: true

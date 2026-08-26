@@ -1,0 +1,8 @@
+extends: ../source_baseline_a3_512x256_mbpatch_bridge.yaml
+
+config_select: configs/stage_a/safe_tricks/a0_resolution_aligned_512.yaml
+metric_experiment_id: SAFE-A0-PMT-512
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/a0.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a0_resolution_aligned_512
+pmt_attention_backend: flash
+pmt_gradient_checkpointing: true

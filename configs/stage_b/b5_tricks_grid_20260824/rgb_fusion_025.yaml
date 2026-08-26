@@ -1,0 +1,14 @@
+extends: ../safe_tricks/b5_hard_loss_ramp.yaml
+
+config_select: configs/stage_b/b5_tricks_grid_20260824/rgb_fusion_025.yaml
+metric_experiment_id: C3-B5-RGB-FUSION-025
+metric_events_path: ${SALT_B5_TRICKS_OUTPUT_ROOT}/rgb_fusion_025/events.jsonl
+output_root: ${SALT_B5_TRICKS_OUTPUT_ROOT}/rgb_fusion_025/model_output
+
+cross_modal_pair_weights:
+  RGB-IR: 1.0
+  RGB-Text: 1.0
+  IR-Text: 1.0
+  RGB-Fusion: 0.25
+  IR-Fusion: 0.0
+  Fusion-Text: 0.0

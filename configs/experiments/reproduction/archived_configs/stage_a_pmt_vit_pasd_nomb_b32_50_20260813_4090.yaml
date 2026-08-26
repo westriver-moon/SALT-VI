@@ -1,0 +1,171 @@
+CAT_EVAL: false
+CUDA_VISIBLE_DEVICES: '1'
+DEBUG: false
+DEBUG_DIR: /debug_logs
+DataParallel: false
+Feat_Filter: false
+Fix_Visual: false
+LOG4TEST: false
+Return_B4_BN: false
+alpha: 0.9
+auto_resume_training_from_lastest_step: false
+batch_size: 32
+beta: 0.999
+captioner_name: Blip
+checkpoint_epoch: 10
+classifier_lr_factor: 1.0
+clip_download_root: ~/.cache/clip
+cmm_loss_weight: 1.0
+cmt_depth: 1
+config_select: /home/lab929/ybj/.codex-worktrees/salt-minimal-integration-20260810/configs/runtime/hosts/lab929_4090_stage_a_pasd_b32_50ep.yaml
+cross_modal_hard_weight: 1.0
+cross_modal_pair_weights: !!python/object/new:easydict.EasyDict
+  dictitems:
+    Fusion-Text: 1.0
+    IR-Fusion: 1.0
+    IR-Text: 1.0
+    RGB-Fusion: 1.0
+    RGB-IR: 1.0
+    RGB-Text: 1.0
+  state:
+    Fusion-Text: 1.0
+    IR-Fusion: 1.0
+    IR-Text: 1.0
+    RGB-Fusion: 1.0
+    RGB-IR: 1.0
+    RGB-Text: 1.0
+cuda: cuda
+dataset: sysu
+eval_epoch: 2
+eval_num_regdb: 1
+eval_start_epoch: 2
+experiment_name: stageA_current_best_NoMBPatch_PASD-RGB_IR-Geomatched_1view_b32_50ep_seed0
+freeze_text_in_image_only: true
+fusion_way: add
+gall_mode: single
+gallery_caption_manifest: null
+gallery_text_dropout: 0.0
+gamma: 0.1
+gpu_id: '0'
+gradient_clip_norm: 0.0
+id_loss_weight: 1.0
+img_h: 512
+img_size:
+- 512
+- 256
+img_w: 256
+ir_rgb_aux_weight: 0.5
+ir_rgb_text_pair_weight: 1.0
+joint_mode: image_only
+label_smoothing: 0.0
+learnable_pa: false
+llcm_data_path: datasets/llcm
+llm_aug: false
+llm_aug_prob: 0.5
+loss_names: pmt_recipe
+lr: null
+lr_factor: 5.0
+lr_txt: 1.0e-05
+lr_visual: 0.0003
+lrscheduler: cosine
+max_save_model_num: 1
+milestones: !!python/tuple
+- 40
+- 60
+- 100
+mode: train
+momentum: 0.9
+num_pos: 4
+num_workers: 8
+optimizer: AdamW
+output_path: /home/lab929/ybj/.codex-worktrees/salt-minimal-integration-20260810/train_outputs/stage_a_current_best_no_mbpatch/pasd_rgb_ir_geomatched_512x256_1view_b32_50ep_v1/sysu/Base/stageA_current_best_NoMBPatch_PASD-RGB_IR-Geomatched_1view_b32_50ep_seed0
+output_root: /home/lab929/ybj/.codex-worktrees/salt-minimal-integration-20260810/train_outputs/stage_a_current_best_no_mbpatch/pasd_rgb_ir_geomatched_512x256_1view_b32_50ep_v1
+pa: 0.1
+pa_init: 0.5
+patch_gem_learnable: true
+patch_gem_p: 3.0
+patch_gem_variant: signed_power_mean
+patch_pool_gamma_init: 0.0
+pid_num: 395
+pmt_assert_batch_layout: true
+pmt_attention_dropout: 0.0
+pmt_backbone_lr_factor: 0.5
+pmt_cross_modal_triplet_weight: 1.0
+pmt_dcl_weight: 0.5
+pmt_depth: 12
+pmt_drop_path_rate: 0.1
+pmt_dropout: 0.03
+pmt_embed_dim: 768
+pmt_gradient_checkpointing: true
+pmt_mlp_ratio: 4.0
+pmt_msel_weight: 0.5
+pmt_num_heads: 12
+pmt_patch_embed: null
+pmt_patch_size:
+- 16
+- 16
+pmt_pretrained: /home/lab929/ybj/.codex-worktrees/salt-minimal-integration-20260810/pretrained/pmt_sysu/jx_vit_base_p16_224-80ecf9dd.pth
+pmt_progressive_epoch: 6
+pmt_recipe: true
+pmt_recipe_transforms: true
+pmt_stride_size:
+- 12
+- 12
+pmt_triplet_margin: 0.1
+pooling: GEM
+power: 0.9
+pretrain_choice: PMT_VIT
+pretrain_path: default
+prj_output_dim: 768
+regdb_data_path: datasets/regdb
+regdb_test_mode: t-v
+resume_test_model: -1
+resume_train_epoch: -1
+retrieval_backend: legacy
+sampler_type: identity_auto_replace
+seed: 0
+stride_size: 16
+sysu_data_path: /home/lab929/datasets/SYSU-MM01
+sysu_source_size:
+- 256
+- 128
+sysu_sr_backend: pasd_multiview
+sysu_sr_data_root: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1
+sysu_sr_eval_view_index: 0
+sysu_sr_exact_size: true
+sysu_sr_modalities:
+- rgb
+- ir
+sysu_sr_view_manifest: /home/lab929/datasets/derived/SYSU-MM01-pasd-rgb-ir-geomatched-512x256-1view-v1/manifest.jsonl
+sysu_sr_view_sampling: paired
+sysu_sr_views_per_image: 1
+target_lr: 0.0
+target_lr_factor: 0.01
+temperature: 0.07
+test_modality: IR
+test_mode: all
+test_model_path: null
+test_model_type: IR
+text_bias_lr_factor: 2.0
+text_data_root: null
+text_length: 77
+text_weight_decay: 4.0e-05
+text_weight_decay_bias: 0.0
+total_train_epoch: 50
+training_mode: RGB_IR
+training_weight_init: null
+trial: 1
+triplet_mining: pmt_cross_modal_hard
+uni_BN: false
+visual_bias_lr_factor: 1.0
+visual_lr: 1.0e-06
+visual_pooling: cls
+visual_unfreeze_last_n_blocks: 0
+visual_unfreeze_start_epoch: 3
+visual_weight_decay: 0.0001
+visual_weight_decay_bias: 0.0001
+vocab_size: 49408
+warmup_epochs: 3
+warmup_factor: 0.01
+warmup_method: linear
+wrt_loss_weight: 1.0

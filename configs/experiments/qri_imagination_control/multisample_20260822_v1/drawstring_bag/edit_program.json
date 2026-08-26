@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "target_semantics": "a light blue drawstring backpack with two dark draw cords and one small centered cartoon cat patch",
+  "appearance": "same pedestrian, same pose, soft indoor surveillance texture, muted blue fabric, compact printed patch",
+  "evaluation_roi_xyxy": [42, 72, 218, 300],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "bag_body", "type": "polygon", "points": [[55, 98], [184, 92], [210, 267], [179, 292], [70, 283], [45, 240]], "fill": true}
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {"id": "bag_body", "type": "polygon", "points": [[70, 112], [177, 108], [193, 255], [171, 273], [82, 268], [62, 235]], "stroke_width": 3.0},
+      {"id": "left_cord", "type": "polyline", "points": [[71, 112], [50, 76], [46, 207], [65, 260]], "stroke_width": 2.0},
+      {"id": "right_cord", "type": "polyline", "points": [[176, 108], [196, 77], [211, 208], [190, 261]], "stroke_width": 2.0},
+      {"id": "cat_patch", "type": "ellipse", "bbox": [96, 157, 168, 220], "stroke_width": 2.0}
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/a6_p1_combined.yaml
+metric_experiment_id: SAFE-A6-PMT-P1-COMBINED
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/a6.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/a6_p1_combined
+ema_enabled: true
+ema_decay: 0.999
+sampler_type: identity_camera_diverse
+pmt_metric_loss: hetero_center
+hetero_center_margin: 0.3
+hetero_center_weight: 1.0
+rfa_probability: 0.5
+rfa_gaussian_sigma: 0.1
+normalized_classifier: true
+cosine_softmax_scale: 30.0

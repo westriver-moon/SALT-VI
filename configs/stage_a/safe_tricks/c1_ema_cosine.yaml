@@ -1,0 +1,10 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/c1_ema_cosine.yaml
+metric_experiment_id: SAFE-C1-PMT-EMA-COSINE
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/c1.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/c1_ema_cosine
+ema_enabled: true
+ema_decay: 0.999
+normalized_classifier: true
+cosine_softmax_scale: 30.0

@@ -1,7 +1,6 @@
 import json
 import os
 import random
-import regex as re
 import numpy as np
 import torch.utils.data as data
 from PIL import Image
@@ -260,6 +259,8 @@ class SYSU_Tri_Data(data.Dataset):
         transform1=None,
         transform2=None,
         transform3=None,
+        transform4=None,
+        phased_transforms=None,
         colorIndex=None,
         thermalIndex=None,
         text_length=77,
@@ -286,6 +287,11 @@ class SYSU_Tri_Data(data.Dataset):
         self.transform1 = transform1
         self.transform2 = transform2
         self.transform3 = transform3
+        self.transform4 = transform4
+        if phased_transforms is not None and len(phased_transforms) != 4:
+            raise ValueError("phased_transforms must contain exactly four transforms")
+        self.phased_transforms = phased_transforms
+        self.training_phase = "pmt" if phased_transforms is not None else "default"
 
         modalities = normalize_sysu_sr_modalities(sysu_sr_modalities)
         backend = normalize_backend(sysu_sr_backend)
@@ -355,18 +361,43 @@ class SYSU_Tri_Data(data.Dataset):
             sampling,
         )
 
+    def set_training_phase(self, phase):
+        if self.phased_transforms is None:
+            if phase != "default":
+                raise ValueError("training phase selection requires phased transforms")
+            return
+        if phase not in {"pmt", "mscm"}:
+            raise ValueError(f"Unsupported phased training phase {phase!r}")
+        self.training_phase = phase
+
     def __getitem__(self, index):
         color_index = int(self.cIndex[index])
         thermal_index = int(self.tIndex[index])
         rgb_image, rgb_view = self.rgb_visual_source.sample(color_index)
         ir_image, ir_view = self.ir_visual_source.sample(thermal_index)
-        batch = {
-            "img_rgb_ori": self.transform1(rgb_image),
-            "img_rgb_aug": self.transform2(rgb_image),
-            "img_ir": self.transform3(ir_image),
-            "target_rgb": self.train_color_label[color_index],
-            "target_ir": self.train_thermal_label[thermal_index],
-        }
+        phased_transforms = getattr(self, "phased_transforms", None)
+        training_phase = getattr(self, "training_phase", "default")
+        if phased_transforms is not None and training_phase == "mscm":
+            rgb1, rgb2, ir1, ir2 = phased_transforms
+            batch = {
+                "img_mscm_rgb1": rgb1(rgb_image),
+                "img_mscm_rgb2": rgb2(rgb_image),
+                "img_mscm_ir1": ir1(ir_image),
+                "img_mscm_ir2": ir2(ir_image),
+                "target_rgb": self.train_color_label[color_index],
+                "target_ir": self.train_thermal_label[thermal_index],
+            }
+        else:
+            batch = {
+                "img_rgb_ori": self.transform1(rgb_image),
+                "img_rgb_aug": self.transform2(rgb_image),
+                "img_ir": self.transform3(ir_image),
+                "target_rgb": self.train_color_label[color_index],
+                "target_ir": self.train_thermal_label[thermal_index],
+            }
+            if self.transform4 is not None:
+                # Both infrared augmentations are applied after sampling the SR asset.
+                batch["img_ir_aug"] = self.transform4(ir_image)
         if self.joint_mode in ("ir_crossfusion", "uni"):
             rgb_caption = self.rgb_caption_source.sample(color_index, rgb_view)
             ir_caption = self.ir_caption_source.sample(thermal_index, ir_view)
@@ -607,7 +638,8 @@ class Test_Tri_Data(data.Dataset):
                             sysu_sr_exact_size=False, sysu_sr_backend="array",
                             sysu_sr_view_manifest=None, sysu_sr_views_per_image=1,
                             sysu_sr_eval_view_index=0,
-                            caption_lookup="identity", caption_manifest=None): # include Feat_Filter=False
+                            caption_lookup="identity", caption_manifest=None,
+                            caption_seed=0): # include Feat_Filter=False
         self.tokenizer = SimpleTokenizer() if load_text else None
         self.Feat_Filter = Feat_Filter
         self.load_text = load_text
@@ -651,6 +683,7 @@ class Test_Tri_Data(data.Dataset):
         test_image = []
         test_text_ir = []
         test_text_rgb = []
+        caption_rng = np.random.RandomState(int(caption_seed))
         self.joint_mode = joint_mode
         print(f"Loading Test {self.type} Data...")
         for i in range(len(test_img_file)):
@@ -691,7 +724,7 @@ class Test_Tri_Data(data.Dataset):
                         text_dict_rgb, dataset_name, data_path, test_img_file[i]
                     )
                 else:
-                    caption = np.random.choice(text_dict_rgb[str(test_label[i])])
+                    caption = caption_rng.choice(text_dict_rgb[str(test_label[i])])
                 test_text_rgb.append(tokenize(caption, self.tokenizer))
                 if Feat_Filter:
                     test_text_ir.append(
@@ -743,7 +776,7 @@ class Test_Tri_Data(data.Dataset):
 
 def load_data(input_data_path):
     with open(input_data_path) as f:
-        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        data_file_list = f.read().splitlines()
         # Get full list of image and labels
         file_image = [s.split(' ')[0] for s in data_file_list]
         file_label = [int(s.split(' ')[1]) for s in data_file_list]
@@ -785,7 +818,8 @@ def process_query_sysu(data_path, mode='all', relabel=False):
 
 def process_gallery_sysu(data_path, mode='all', trial=0, relabel=False, gall_mode='single'):
 
-    random.seed(trial)
+    py_rng = random.Random(trial)
+    np_rng = np.random.default_rng(trial)
 
     if mode == 'all':
         rgb_cameras = ['cam1', 'cam2', 'cam4', 'cam5']
@@ -805,9 +839,10 @@ def process_gallery_sysu(data_path, mode='all', trial=0, relabel=False, gall_mod
             if os.path.isdir(img_dir):
                 new_files = sorted([img_dir + '/' + i for i in os.listdir(img_dir)])
                 if gall_mode == 'single':
-                    files_rgb.append(random.choice(new_files))
+                    files_rgb.append(py_rng.choice(new_files))
                 if gall_mode == 'multi':
-                    files_rgb.append(np.random.choice(new_files, 10, replace=False))
+                    replace = len(new_files) < 10
+                    files_rgb.append(np_rng.choice(new_files, 10, replace=replace))
     gall_img = []
     gall_id = []
     gall_cam = []
@@ -836,7 +871,7 @@ def process_test_regdb(img_dir, trial=1, modal='visible'):
         input_data_path = img_dir + 'idx/test_thermal_{}'.format(trial) + '.txt'
 
     with open(input_data_path) as f:
-        data_file_list = open(input_data_path, 'rt').read().splitlines()
+        data_file_list = f.read().splitlines()
         # Get full list of image and labels
         file_image = [img_dir + s.split(' ')[0] for s in data_file_list]
         file_label = [int(s.split('/')[1]) for s in data_file_list]
@@ -851,7 +886,6 @@ def process_query_llcm(data_path, mode = 1):
         cameras = ['test_nir/cam1','test_nir/cam2','test_nir/cam4','test_nir/cam5','test_nir/cam6','test_nir/cam7','test_nir/cam8','test_nir/cam9']
 
     file_path = os.path.join(data_path,'idx/test_id.txt')
-    files_rgb = []
     files_ir = []
 
     with open(file_path, 'r') as file:
@@ -878,7 +912,7 @@ def process_query_llcm(data_path, mode = 1):
 
 def process_gallery_llcm(data_path, mode = 1, trial = 0):
 
-    random.seed(trial)
+    py_rng = random.Random(trial)
 
     if mode== 1:
         cameras = ['test_vis/cam1','test_vis/cam2','test_vis/cam3','test_vis/cam4','test_vis/cam5','test_vis/cam6','test_vis/cam7','test_vis/cam8','test_vis/cam9']
@@ -897,7 +931,7 @@ def process_gallery_llcm(data_path, mode = 1, trial = 0):
             img_dir = os.path.join(data_path,cam,id)
             if os.path.isdir(img_dir):
                 new_files = sorted([img_dir+'/'+i for i in os.listdir(img_dir)])
-                files_rgb.append(random.choice(new_files))
+                files_rgb.append(py_rng.choice(new_files))
     gall_img = []
     gall_id = []
     gall_cam = []

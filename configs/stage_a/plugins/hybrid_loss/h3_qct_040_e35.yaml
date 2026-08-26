@@ -1,0 +1,11 @@
+extends: h3_qct_040.yaml
+
+config_select: configs/stage_a/plugins/hybrid_loss/h3_qct_040_e35.yaml
+experiment_name: stageA_mscm_hybrid_h3_qct_040_e35_seed0
+CUDA_VISIBLE_DEVICES: "1"
+output_root: /home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822/model_output
+metric_experiment_id: pmt-mscm-hybrid-h3-qct-040-e35-seed0
+metric_events_path: /home/lab929/ybj/experiments/stage_a/SALT-VI-pmt-mscm-hybrid-loss-h3-qct-040-e35-20260822/events.jsonl
+
+# Independent full rerun of H3 with the same loss and acceleration settings.
+total_train_epoch: 35

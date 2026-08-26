@@ -1,0 +1,9 @@
+extends: a0_resolution_aligned_512.yaml
+
+config_select: configs/stage_a/safe_tricks/c3_camera_diverse_cosine.yaml
+metric_experiment_id: SAFE-C3-PMT-CAMERA-DIVERSE-COSINE
+metric_events_path: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/events/c3.jsonl
+output_root: ${SALT_SAFE_TRICKS_OUTPUT_ROOT}/c3_camera_diverse_cosine
+sampler_type: identity_camera_diverse
+normalized_classifier: true
+cosine_softmax_scale: 30.0

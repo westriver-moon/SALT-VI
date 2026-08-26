@@ -1,0 +1,55 @@
+schema_version: 2
+experiment_id: stage-b-c3-b5-tricks-grid-20260824
+dataset: sysu
+protocol: all-search-single-shot-10-gallery-trials
+
+stage_a:
+  experiment_id: SAFE-C3-PMT-CAMERA-DIVERSE-COSINE
+  checkpoint: /home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth
+  checkpoint_sha256: 00c581ff6965a93088ac4c807c5937db270378336702d16f38720949693e8171
+  input_source: SYSU-MM01-swinir-x2-pmt256-v1
+
+stage_b:
+  total_train_epoch: 30
+  baseline:
+    experiment_id: SAFE-B5-HARD-LOSS-RAMP
+    events: /home/lab929/ybj/experiments/stage_b/SALT-VI-c3-stageb-safe-tricks-20260823/b5_hard_loss_ramp/events.jsonl
+    best_rank1: 0.8429660797119141
+    best_rank1_epoch: 6
+    map_at_best_rank1: 0.8169816128504147
+    minp_at_best_rank1: 0.7191188862048531
+  variants:
+    camera_only:
+      config: configs/stage_b/b5_tricks_grid_20260824/camera_only.yaml
+      purpose: isolate camera-diverse sampling while retaining the standard classifier
+    cosine_only:
+      config: configs/stage_b/b5_tricks_grid_20260824/cosine_only.yaml
+      purpose: isolate normalized cosine classification with the original sampler
+    label_smoothing_010:
+      config: configs/stage_b/b5_tricks_grid_20260824/label_smoothing_010.yaml
+      purpose: add label smoothing with epsilon 0.10
+    ema_0999:
+      config: configs/stage_b/b5_tricks_grid_20260824/ema_0999.yaml
+      purpose: maintain an exponential moving average with decay 0.999
+    rgb_fusion_025:
+      config: configs/stage_b/b5_tricks_grid_20260824/rgb_fusion_025.yaml
+      purpose: add direct RGB-Fusion hard alignment with weight 0.25
+    rgb_fusion_050:
+      config: configs/stage_b/b5_tricks_grid_20260824/rgb_fusion_050.yaml
+      purpose: add direct RGB-Fusion hard alignment with weight 0.50
+
+scheduling:
+  allowed_gpus: [1, 2]
+  selected_gpus: [1, 2]
+  poll_seconds: 30
+  max_idle_memory_mb: 128
+  continue_on_failure: true
+  queues:
+    "1": [camera_only, label_smoothing_010, rgb_fusion_025]
+    "2": [cosine_only, ema_0999, rgb_fusion_050]
+
+selection:
+  automatic_promotion: false
+  primary_metric: Rank-1
+  secondary_metrics: [mAP, mINP]
+  rule: compare raw aggregate metrics under the fixed 10-trial protocol

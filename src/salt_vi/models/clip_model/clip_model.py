@@ -10,7 +10,6 @@ import hashlib
 import urllib
 from tqdm import tqdm
 import warnings
-import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -423,7 +422,12 @@ class CLIP(nn.Module):
                  pmt_drop_path_rate: float = 0.1,
                  pmt_patch_embed_config=None,
                  pmt_gradient_checkpointing: bool = False,
-                 pmt_attention_backend: str = "legacy",
+                 pmt_gradient_checkpoint_blocks=None,
+                 pmt_gradient_checkpoint_segments=None,
+                 pmt_attention_backend: str = "manual",
+                 visual_input_backend: str = "single",
+                 quadruple_branch_order=None,
+                 quadruple_template_trainable: bool = False,
                  ):
         super().__init__()
 
@@ -446,7 +450,12 @@ class CLIP(nn.Module):
                 pretrained_path=pmt_pretrained,
                 patch_embed_config=pmt_patch_embed_config,
                 gradient_checkpointing=pmt_gradient_checkpointing,
+                gradient_checkpoint_blocks=pmt_gradient_checkpoint_blocks,
+                gradient_checkpoint_segments=pmt_gradient_checkpoint_segments,
                 attention_backend=pmt_attention_backend,
+                visual_input_backend=visual_input_backend,
+                quadruple_branch_order=quadruple_branch_order,
+                quadruple_template_trainable=quadruple_template_trainable,
             )
         elif visual_name == "RN50_ORI":
             vision_heads = vision_width * 32 // 64
@@ -845,7 +854,18 @@ def build_CLIP_from_openai_pretrained(name: str, image_size: Union[int, Tuple[in
         'pmt_drop_path_rate': config_dict.get("pmt_drop_path_rate", 0.1),
         'pmt_patch_embed_config': config_dict.get("pmt_patch_embed"),
         'pmt_gradient_checkpointing': config_dict.get("pmt_gradient_checkpointing", False),
-        'pmt_attention_backend': config_dict.get("pmt_attention_backend", "legacy"),
+        'pmt_gradient_checkpoint_blocks': config_dict.get(
+            "pmt_gradient_checkpoint_blocks"
+        ),
+        'pmt_gradient_checkpoint_segments': config_dict.get(
+            "pmt_gradient_checkpoint_segments"
+        ),
+        'pmt_attention_backend': config_dict.get("pmt_attention_backend", "manual"),
+        'visual_input_backend': config_dict.get("visual_input_backend", "single"),
+        'quadruple_branch_order': config_dict.get("quadruple_branch_order"),
+        'quadruple_template_trainable': config_dict.get(
+            "quadruple_template_trainable", False
+        ),
     }
 
 

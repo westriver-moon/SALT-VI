@@ -1,0 +1,37 @@
+schema_version: 1
+experiment_id: qri-multisample-white-sneakers-pasd-20260822
+reference: /home/lab929/ybj/experiments/qri_acceleration/qri-fast-search-gpu0-20260821/artifacts/pilot_base/cam2/0317/0003/swin.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/multisample_20260822_v1/white_sneakers/edit_program.json
+roi_bbox_xyxy: [54, 418, 202, 512]
+seed: 20260832
+semantic_proposal:
+  candidate: /home/lab929/ybj/experiments/qri_imagination_control/multisample_20260822_v1/white_sneakers/stage1_sd15/semantic_proposal/seed_20260832_raw_crop.png
+  crop_box_xyxy: [0, 256, 256, 512]
+  region_feather_px: 4.0
+  region_max_alpha: 1.0
+  proposal_blur_px: 0.0
+  harmonize_strength: 0.65
+prompt:
+  positive: >-
+    same pedestrian, pair of white low-top sneakers, two separate soles,
+    subtle lace structure, realistic indoor surveillance photograph
+  added: >-
+    refine the supplied shoes while preserving exact leg geometry, foot placement,
+    walking pose, floor and monitoring-camera texture
+  negative: >-
+    barefoot, sandals, high heels, boots, fused shoes, extra foot, extra shoe,
+    changed legs, changed skirt, different person, distorted anatomy, mosaic,
+    checkerboard, painting, glossy product photograph
+pasd:
+  process_size: 512
+  steps: 20
+  variants:
+    - name: semantic_c085_g6
+      control_source: semantic_proposal
+      context_scale: 1.30
+      guidance_scale: 6.0
+      conditioning_scale: 0.85
+      region_feather_px: 4.0
+      region_max_alpha: 0.78
+      proposal_blur_px: 0.2
+      harmonize_strength: 0.75

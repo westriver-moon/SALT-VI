@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 import torch
 
 from salt_vi.config.validation import validate_runtime_config
@@ -39,21 +40,63 @@ def test_backend_contract_and_runtime_config():
     assert validate_runtime_config(_config()).retrieval_backend == "ir_to_rgb_text"
 
 
-def test_legacy_is_an_explicit_protocol():
-    protocol = get_retrieval_protocol("legacy")
+def test_identity_text_is_an_explicit_protocol():
+    protocol = get_retrieval_protocol("identity_text")
     config = SimpleNamespace(test_modality="IR,Fusion,Text")
-    assert protocol.IS_LEGACY
+    assert protocol.NAME == "identity_text"
+    assert protocol.RESULT_KEYS == ("IR", "Fusion", "Text")
     assert protocol.RESULT_KEY == "Fusion"
     assert protocol.train_text_modalities(config) == ("rgb", "ir")
     assert protocol.query_caption_lookup(config) == "identity"
+
+
+def test_legacy_alias_resolves_to_identity_text_protocol():
+    protocol = get_retrieval_protocol("legacy")
+    assert protocol.NAME == "identity_text"
+    assert get_retrieval_protocol("identity_text") is protocol
+
+
+def test_identity_text_protocol_rejects_invalid_runtime_combinations():
+    protocol = get_retrieval_protocol("identity_text")
+    assert protocol.validate(
+        SimpleNamespace(dataset="sysu", test_modality="Fusion")
+    ).test_modality == "Fusion"
+    assert protocol.query_caption_lookup(
+        SimpleNamespace(test_modality="IR")
+    ) is None
+
+    with pytest.raises(ValueError, match="supports only"):
+        protocol.validate(SimpleNamespace(dataset="market1501", test_modality="IR"))
+    with pytest.raises(ValueError, match="non-empty subset"):
+        protocol.validate(SimpleNamespace(dataset="sysu", test_modality="IR-RGBText"))
+    with pytest.raises(ValueError, match="direction"):
+        protocol.validate(
+            SimpleNamespace(
+                dataset="regdb",
+                test_modality="IR",
+                regdb_test_mode="thermal-visible",
+                trial=1,
+                eval_num_regdb=1,
+            )
+        )
+    with pytest.raises(ValueError, match="within 1-10"):
+        protocol.validate(
+            SimpleNamespace(
+                dataset="regdb",
+                test_modality="Fusion",
+                regdb_test_mode="t-v",
+                trial=9,
+                eval_num_regdb=3,
+            )
+        )
 
 
 def test_training_recipe_dispatch_is_owned_by_protocol():
     config = SimpleNamespace(pmt_recipe=False, training_mode="RGB_IR_Text")
     protocol = get_retrieval_protocol("ir_to_rgb_text")
     assert build_training_recipe(config, protocol).name == "ir_to_rgb_text"
-    assert build_training_recipe(config, get_retrieval_protocol("legacy")).name == (
-        "legacy_rgb_ir_text"
+    assert build_training_recipe(config, get_retrieval_protocol("identity_text")).name == (
+        "identity_text_rgb_ir_text"
     )
 
 

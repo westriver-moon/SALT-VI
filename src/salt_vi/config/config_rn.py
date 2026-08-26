@@ -46,7 +46,6 @@ def build_parser():
     parser.add_argument('--test_mode', default='all', type=str, help='all or indoor')
     parser.add_argument('--gall_mode', default='single', type=str, help='single or multi')
     parser.add_argument('--regdb_test_mode', default='t-v', type=str, help='')
-    parser.add_argument('--resume_test_model', type=int, default=-1, help='-1 for no resuming')
     parser.add_argument('--test_model_type', default='Fusion', help='the type of mode for testing["IR","Fusion","Text"]',type=str)
     parser.add_argument('--test_modality', default='Fusion', help='testing retrieval mode ["IR","Fusion","Text"]',type=str)
     parser.add_argument('--training_mode', default='RGB_IR_Text', type=str, help='RGB_IR or RGB_IR_Text')
@@ -68,6 +67,7 @@ def build_parser():
     # dataset setting 
     parser.add_argument('--Feat_Filter', default=False, action='store_true')
     parser.add_argument('--training_weight_init', default=None, type=str, help='weight path initialization for training')
+    parser.add_argument('--training_weight_init_sha256', default=None, type=str)
     parser.add_argument('--dataset', default='sysu', help='dataset name: regdb or sysu or llcm]')
     parser.add_argument('--sysu_data_path', type=str, default='/data0/hzy_data/SYSU-MM01/')
     parser.add_argument('--regdb_data_path', type=str, default='/data0/hzy_data/RegDB/')
@@ -79,6 +79,7 @@ def build_parser():
     parser.add_argument('--img_w', default=144, type=int, metavar='imgw', help='img width')
     parser.add_argument('--img_h', default=288, type=int, metavar='imgh', help='img height')
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--eval_caption_seed', type=int, default=0)
     parser.add_argument('--pid_num', type=int, default=395)
     parser.add_argument('--num_pos', default=4, type=int,help='num of pos per identity in each modality')
     parser.add_argument('--num_workers', default=8, type=int,help='num of pos per identity in each modality')
@@ -86,12 +87,13 @@ def build_parser():
  
     ######################## eval and log config during training ########################
     parser.add_argument('--test_model_path', type=str, default=None)
+    parser.add_argument('--golden_evaluation_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default='/data0/hzy_log/WORK_2024_LOG/logs/',
                         help='path to save related informations')
     parser.add_argument('--clip_download_root', type=str, default='~/.cache/clip',
                         help='path to cache OpenAI CLIP model weights')
     parser.add_argument('--max_save_model_num', type=int, default=1, help='0 for max num is infinit')
-    parser.add_argument('--resume_train_epoch', type=int, default=-1, help='-1 for no resuming')
+    parser.add_argument('--resume_train_epoch', type=int, default=-1, help='-1 for no resuming; model-only resume is retired')
     parser.add_argument('--auto_resume_training_from_lastest_step', action="store_true", default=False)
     parser.add_argument('--eval_epoch', type=int, default=2)
     parser.add_argument('--eval_start_epoch', type=int, default=80)
@@ -102,7 +104,6 @@ def build_parser():
     ######################## model general settings ########################
     parser.add_argument('--uni_BN', default=False, action='store_true')
     parser.add_argument('--Fix_Visual', default=False, action='store_true')
-    parser.add_argument('--Return_B4_BN', default=False, action='store_true')
     parser.add_argument('--prj_output_dim', type=int, default=2048)
     parser.add_argument("--pooling", default='GEM', type=str, help='["attnpool","GEM"]')
     parser.add_argument("--pretrain_choice", default='RN50_ORI',help='ViT-B/16,RN50,RN50_ORI,PMT_VIT') # whether use pretrained model
@@ -134,8 +135,8 @@ def build_parser():
     parser.add_argument("--pmt_attention_dropout", type=float, default=0.0)
     parser.add_argument(
         "--pmt_attention_backend",
-        choices=("legacy", "sdpa", "flash"),
-        default="legacy",
+        choices=("manual", "sdpa", "flash"),
+        default="manual",
     )
     parser.add_argument("--pmt_drop_path_rate", type=float, default=0.1)
     parser.add_argument("--pmt_patch_embed", type=ast.literal_eval, default=None)

@@ -1,0 +1,12 @@
+extends: common.yaml
+
+config_select: configs/stage_a/plugins/hybrid_loss/h2_dcl_050.yaml
+experiment_name: stageA_mscm_hybrid_h2_dcl_050_seed0
+output_root: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/h2_dcl_050
+metric_experiment_id: pmt-mscm-hybrid-h2-dcl-050-seed0
+metric_events_path: ${SALT_MSCM_HYBRID_OUTPUT_ROOT}/events/h2_dcl_050.jsonl
+
+# Isolate the value of restoring the original DCL terminal strength.
+pmt_mscm_msel_weight: 0.25
+pmt_mscm_dcl_weight: 0.50
+pmt_mscm_qct_weight: 0.25

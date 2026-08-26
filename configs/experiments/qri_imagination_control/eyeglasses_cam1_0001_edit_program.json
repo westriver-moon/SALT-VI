@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "target_semantics": "small thin black prescription eyeglasses with two distinct transparent lenses, a continuous uniform frame, a narrow bridge and symmetric temple arms",
+  "appearance": "same face; unchanged eyes, eyebrows, hair, nose and skin; indoor surveillance super-resolution style",
+  "evaluation_roi_xyxy": [78, 0, 204, 78],
+  "edit_region": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {
+        "id": "semantic_eye_band",
+        "type": "rectangle",
+        "bbox": [88, 2, 196, 44],
+        "fill": true
+      }
+    ]
+  },
+  "preservation_layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {
+        "id": "left_eye_core",
+        "type": "ellipse",
+        "bbox": [105, 13, 133, 31],
+        "fill": true
+      },
+      {
+        "id": "right_eye_core",
+        "type": "ellipse",
+        "bbox": [149, 12, 176, 30],
+        "fill": true
+      }
+    ]
+  },
+  "layout": {
+    "coordinate_space": "pixel",
+    "canvas_size": [256, 512],
+    "primitives": [
+      {
+        "id": "left_lens_frame",
+        "type": "rectangle",
+        "bbox": [101, 9, 143, 35],
+        "stroke_width": 2.0
+      },
+      {
+        "id": "right_lens_frame",
+        "type": "rectangle",
+        "bbox": [146, 9, 188, 35],
+        "stroke_width": 2.0
+      },
+      {
+        "id": "nose_bridge",
+        "type": "polyline",
+        "points": [[143, 21], [145, 20], [147, 21]],
+        "stroke_width": 2.0
+      },
+      {
+        "id": "left_temple",
+        "type": "polyline",
+        "points": [[101, 20], [95, 18], [90, 17]],
+        "stroke_width": 2.0
+      },
+      {
+        "id": "right_temple",
+        "type": "polyline",
+        "points": [[188, 20], [192, 20], [195, 22]],
+        "stroke_width": 2.0
+      }
+    ]
+  }
+}

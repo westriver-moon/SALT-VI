@@ -1,3 +1,2 @@
-**/perturbations/
-**/source.jpg
-**/__pycache__/
+*
+!.gitignore

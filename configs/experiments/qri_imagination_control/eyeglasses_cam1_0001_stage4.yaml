@@ -1,0 +1,71 @@
+schema_version: 1
+experiment_id: qri-imagination-control-eyeglasses-stage4-20260822
+inputs:
+  source: /home/cgv841/datasets/SYSU-MM01/cam1/0001/0001.jpg
+  reference: /home/lab929/ybj/experiments/archive/qri_v2/qri-v2-visual-demo/sources/cam1/0001/0001/swin_reference.png
+edit_program: /home/lab929/ybj/SALT-VI/configs/experiments/qri_imagination_control/eyeglasses_cam1_0001_edit_program.json
+crop_box_xyxy: [64, 0, 216, 152]
+process_size: 512
+inpaint_source: trimap
+transition_dilation_px: 5
+transition_feather_px: 1.0
+seed: 20260821
+prompt:
+  added: >-
+    continuous exact layout, subtle low contrast, coherent object,
+    naturally blurred indoor surveillance photograph
+  negative: >-
+    no glasses, bare eyes, round glasses, oversized glasses, sunglasses, goggles,
+    thick plastic frame, thick bridge, broken frame, disconnected frame, lens glare,
+    opaque lenses, duplicated eyes, changed face, different person, distorted anatomy,
+    changed hair, mosaic, checkerboard, text, cartoon, painting, pasted patch
+variants:
+  - name: line_s082_trimap
+    strength: 0.82
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.45
+    final_transition_alpha: 0.55
+    step_source_lock: false
+    final_compositor: trimap
+  - name: line_s092_trimap
+    strength: 0.92
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.45
+    final_transition_alpha: 0.55
+    step_source_lock: false
+    final_compositor: trimap
+  - name: line_s082_region
+    strength: 0.82
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.45
+    final_transition_alpha: 0.55
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    proposal_blur_px: 0.6
+    harmonize_strength: 0.8
+  - name: line_s092_region
+    strength: 0.92
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.45
+    final_transition_alpha: 0.55
+    step_source_lock: false
+    final_compositor: region
+    region_feather_px: 3.0
+    proposal_blur_px: 0.8
+    harmonize_strength: 0.9
+  - name: line_s092_delayed_lock
+    strength: 0.92
+    guidance_scale: 7.5
+    steps: 30
+    transition_latent_weight: 0.55
+    final_transition_alpha: 0.65
+    step_source_lock: true
+    source_lock_map: trimap
+    lock_start_fraction: 0.45
+    lock_ramp_fraction: 0.30
+    final_compositor: trimap

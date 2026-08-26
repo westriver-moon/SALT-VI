@@ -6,7 +6,7 @@ from itertools import repeat
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
+from salt_vi.utils.checkpointing import checkpoint_forward
 
 from salt_vi.attention import normalize_attention_backend, run_scaled_dot_product_attention
 
@@ -101,7 +101,7 @@ class Attention(nn.Module):
         qk_scale=None,
         attn_drop=0.0,
         proj_drop=0.0,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -146,7 +146,7 @@ class Block(nn.Module):
         drop_path=0.0,
         act_layer=nn.GELU,
         norm_layer=nn.LayerNorm,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -287,7 +287,7 @@ class ViT(nn.Module):
         drop_path_rate=0.0,
         patch_embed_config=None,
         norm_layer=nn.LayerNorm,
-        attention_backend="legacy",
+        attention_backend="manual",
     ):
         super().__init__()
         if patch_embed_config:
@@ -340,7 +340,6 @@ class ViT(nn.Module):
         """Prepare pre-block tokens and return their actual rectangular grid."""
         if x.ndim != 4:
             raise ValueError(f"ViT expects BCHW input, got {tuple(x.shape)}")
-        batch = x.shape[0]
         height, width = x.shape[-2:]
         patch_height, patch_width = self.patch_embed.patch_size
         stride_height, stride_width = self.patch_embed.stride_size
@@ -352,8 +351,24 @@ class ViT(nn.Module):
                 f"{patch_height}x{patch_width}"
             )
         x = self.patch_embed(x)
+        return self.prepare_embedded_tokens(x, (grid_height, grid_width))
+
+    def prepare_embedded_tokens(self, patch_tokens, grid_size):
+        """Add the shared CLS and positional embeddings to externally embedded patches."""
+        if patch_tokens.ndim != 3:
+            raise ValueError(
+                f"Embedded PMT patches must have shape [B,N,D], got {tuple(patch_tokens.shape)}"
+            )
+        grid_height, grid_width = (int(value) for value in grid_size)
+        expected_tokens = grid_height * grid_width
+        if patch_tokens.shape[1] != expected_tokens:
+            raise ValueError(
+                f"Embedded PMT patches contain {patch_tokens.shape[1]} tokens, expected "
+                f"{expected_tokens} for grid {grid_height}x{grid_width}"
+            )
+        batch = patch_tokens.shape[0]
         cls_tokens = self.cls_token.expand(batch, -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
+        x = torch.cat((cls_tokens, patch_tokens), dim=1)
         pos_embed = resize_pos_embed_grid(
             self.pos_embed,
             self.base_grid_size[0],
@@ -370,7 +385,14 @@ class ViT(nn.Module):
         x = self.pos_drop(x)
         return x, (grid_height, grid_width)
 
-    def run_blocks(self, tokens, start_index, end_index, checkpoint_blocks=False):
+    def run_blocks(
+        self,
+        tokens,
+        start_index,
+        end_index,
+        checkpoint_blocks=False,
+        checkpoint_segments=None,
+    ):
         """Run blocks[start_index:end_index] with an exclusive end index."""
         start_index = int(start_index)
         end_index = int(end_index)
@@ -386,14 +408,52 @@ class ViT(nn.Module):
                 f"PMT token dim {tokens.shape[-1]} does not match "
                 f"backbone dim {self.pos_embed.shape[-1]}"
             )
-        for block_index in range(start_index, end_index):
-            block = self.blocks[block_index]
-            if checkpoint_blocks and torch.is_grad_enabled() and tokens.requires_grad:
-                # The production environment is pinned to PyTorch 1.8.1, whose
-                # checkpoint API predates the ``use_reentrant`` keyword.
-                tokens = checkpoint(block, tokens)
+        if isinstance(checkpoint_blocks, bool):
+            checkpoint_count = depth if checkpoint_blocks else 0
+        else:
+            checkpoint_count = int(checkpoint_blocks)
+            if not 0 <= checkpoint_count <= depth:
+                raise ValueError(
+                    f"checkpoint_blocks must be within [0, {depth}], "
+                    f"got {checkpoint_count}"
+                )
+        checkpoint_end = min(end_index, checkpoint_count)
+        checkpoint_start = min(max(start_index, 0), checkpoint_end)
+        active_checkpoint_count = checkpoint_end - checkpoint_start
+        if (
+            active_checkpoint_count > 0
+            and torch.is_grad_enabled()
+            and tokens.requires_grad
+        ):
+            if checkpoint_segments is None:
+                segment_count = active_checkpoint_count
             else:
-                tokens = block(tokens)
+                segment_count = int(checkpoint_segments)
+                if segment_count < 1:
+                    raise ValueError(
+                        "checkpoint_segments must be positive when checkpointing "
+                        f"is active, got {segment_count}"
+                    )
+                segment_count = min(segment_count, active_checkpoint_count)
+            segment_size, remainder = divmod(
+                active_checkpoint_count, segment_count
+            )
+            cursor = checkpoint_start
+            for segment_index in range(segment_count):
+                width = segment_size + int(segment_index < remainder)
+                segment_blocks = tuple(self.blocks[cursor : cursor + width])
+
+                def run_segment(value, blocks=segment_blocks):
+                    for block in blocks:
+                        value = block(value)
+                    return value
+
+                tokens = checkpoint_forward(run_segment, tokens)
+                cursor += width
+        else:
+            checkpoint_end = start_index
+        for block_index in range(checkpoint_end, end_index):
+            tokens = self.blocks[block_index](tokens)
         return tokens
 
     def finalize_tokens(self, tokens):
