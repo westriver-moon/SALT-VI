@@ -16,7 +16,8 @@ class PersonAssetStore:
         self.size_hw = tuple(self.contract["size_hw"])
         self.refinements = []
         self._image_paths = {}
-        if self.contract.get("overlay_type") == "fallback_refinement_v1":
+        overlay_type = self.contract.get("overlay_type", "")
+        if overlay_type.startswith("fallback_refinement_v"):
             base = PersonAssetStore(self.contract["base_asset_root"], dataset)
             refinement_manifest = self.root / "refinements.jsonl"
             self.refinements = [
@@ -26,7 +27,10 @@ class PersonAssetStore:
             ]
             accepted = {}
             for row in self.refinements:
-                if row["status"] == "secondary_accepted":
+                accepted_record = row.get(
+                    "accepted", str(row.get("status", "")).endswith("_accepted")
+                )
+                if accepted_record:
                     merged = dict(row)
                     merged["overlay_status"] = merged["status"]
                     merged["status"] = "complete"

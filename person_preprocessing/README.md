@@ -42,3 +42,26 @@ python -m person_preprocessing.refine \
   --config person_preprocessing/configs/person_assets_512x256_v2.yaml \
   --datasets sysu regdb llcm --device 0
 ```
+
+`person_assets_512x256_v3.yaml` continues only from the fallbacks retained by
+v2. It uses a three-stage YOLO11x-pose cascade: low-confidence 960 inference,
+high-resolution 1280 inference, and a final autocontrast 1280 pass. Every weak
+box is expanded toward a stage-specific central safety envelope before the
+aspect-preserving render, so lower confidence increases context instead of
+causing a tighter and riskier crop. Raw and rendered boxes, stage provenance,
+keypoint quality, and every failed earlier attempt remain in the manifest. A
+detected candidate may drive the crop only after it passes the trusted-person
+gate. Low-confidence, landscape-source, off-center, badly shaped, or weak-pose
+candidates retain a full-frame aspect-preserving render while keeping the raw
+detection for audit; detector coverage never overrides image quality.
+Trusted cropping additionally requires agreement with an independent
+YOLO11x detection head: detector confidence must be at least 0.10 and its
+person box must overlap the pose box at IoU 0.50 or higher. Candidates without
+dual-model agreement remain full-frame guarded even when the pose head alone
+is confident.
+
+```bash
+python -m person_preprocessing.refine_v3 \
+  --config person_preprocessing/configs/person_assets_512x256_v3.yaml \
+  --datasets sysu regdb llcm --device 0
+```
