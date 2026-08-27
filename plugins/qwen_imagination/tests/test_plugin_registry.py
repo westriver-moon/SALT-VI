@@ -31,5 +31,5 @@ def test_qri_v6_registry_preflight_uses_injected_backend_contract(
     )
     assert result.ok
     assert result.plugin_id == "qri-v6"
-    assert result.payload["algorithm"]["world_sampling"] == "direct_joint_vlm_draws"
+    assert result.payload["algorithm"]["world_generation"] == "single_vlm_candidate_batch"
     assert result.payload["runtime_backends"] == "injected"

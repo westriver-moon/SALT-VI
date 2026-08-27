@@ -1,8 +1,7 @@
 schema_version: 6
 plugin_version: qri-v6
 output_root: ${QRI_V6_OUTPUT_ROOT}
-joint_sample_count: 32
-max_worlds: 8
+candidate_world_count: 8
 similarity_threshold: 0.85
 request_max_attempts: 3
 seed: 20260824

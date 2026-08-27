@@ -1,15 +1,14 @@
 # SALT-VI 当前状态
 
-最后核验：2026-08-24（Asia/Shanghai），主机 `cgv841-SYS-7049GP-TRT`。
+QRI-v6 机制更新：2026-08-26（Asia/Shanghai），主机 `cgv841-SYS-7049GP-TRT`。
+下述运行状态保留 2026-08-24 快照，不代表实时进程状态。
 
 ## 代码与工作树
 
-- 清理分支 `codex/pmt-mscm-phased-pasd-20260821-v2` 已固定在 `392c8e11`；
-- 当前 QRI 开发分支为 `codex/qri-v6-semantic-imagination-20260824`，统一版本名为
-  `qri-v6`。清理提交中的 text-annotation 代码实际是 V5 过渡实现，内部残留的
-  V4 标签已纠正；V4 只指 2026-08-22 的历史 smoke 产物；
-- 活动工作树 `.codex-worktrees/stageb-b5-tricks-grid-20260824` 明确排除于本次改动范围；
-- 独立 V6 工作树 `.codex-worktrees/qri-v6-semantic-imagination-20260824` 承载本分支改动。
+- 当前仓库为 `/home/lab929/ybj/SALT-VI`，所在分支为
+  `codex/pmt-mscm-phased-pasd-20260821-v2`；
+- 2026-08-26 的均匀候选机制直接修改现有 v6，未创建或切换分支、worktree；
+- 版本名和 schema 保持 `qri-v6` / 6；历史 V4/V5 产物不重标为 v6。
 
 ## 运行状态
 
@@ -21,8 +20,9 @@
 ## QRI-v6 状态
 
 - 当前入口：`plugins/qwen_imagination/versions/qri-v6/plugin.yaml`；
-- 当前机制：VLM 联合世界抽样、complete-link 语义聚类、簇频率权重和逐代表世界
-  LLM 改写；VLM、编码器和 LLM 仅通过接口注入；
+- 当前机制：VLM 一次生成联合候选、结构检查、complete-link 语义去重、
+  全部代表世界以 `1/K` 等权输出并逐个 LLM 改写；VLM、编码器和 LLM 仅通过接口注入；
+- 默认一次请求 8 个候选；移除重复抽样、簇频率、频率 Top-K 与 Wilson 区间；
 - V2/V5 text-annotation 配置已移入 `plugins/qwen_imagination/configs/legacy/`；
 - V6 尚未绑定真实模型或运行 SYSU 生产数据，不存在模型效果或 ReID 收益结论。
 

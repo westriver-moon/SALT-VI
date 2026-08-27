@@ -1,24 +1,28 @@
 # SALT Semantic Imagination
 
-`semantic_imagination.v6` 是当前 QRI-v6 的唯一语义采样核心。它把一个低质量
-观测转换为带经验质量的联合语义世界，并通过注入的文本改写接口生成每个代表
-世界的完整 caption。该包不导入具体 VLM、LLM、PASD 或 SALT 训练代码。
+`semantic_imagination.v6` 是当前 QRI-v6 的唯一联合语义候选核心。它把一个
+低质量观测转换为有限个等权的联合世界，并通过注入的文本改写接口生成每个
+代表世界的完整 caption。该包不导入具体 VLM、LLM、PASD 或 SALT 训练代码。
 
 ## V6 数据流
 
 1. `VLMBackend.observe` 返回全局 caption 与逐 ROI 稳定事实；
-2. `VLMBackend.sample_joint_world` 在一次请求中返回所有目标 ROI 的联合赋值；
-3. `SemanticEncoder` 编码完整联合世界；
-4. 框架在相同 state signature 内执行 complete-link 聚类，value/location
-   的语义距离真实参与分簇；
-5. 簇频率直接形成经验质量，不再进行第二次随机世界组合；
-6. `RewriteBackend` 将共同观测和代表世界改写成完整 caption；
-7. manifest 原样记录失败质量、保留质量、全部调用遥测和可哈希 contract。
+2. `VLMBackend.generate_joint_worlds` 一次返回最多 `candidate_world_count`
+   个完整联合候选，默认请求 8 个；不循环调用单世界抽样接口；
+3. 检查候选的 ROI 覆盖、类别与非空字段，记录无效候选，不补抽；
+4. `SemanticEncoder` 编码完整世界，在相同 state signature 内以
+   complete-link 和 value/location 语义距离去重；
+5. 保留全部 K 个代表世界，各赋权 `selected_weight=1/K`；
+6. `RewriteBackend` 将共同观测和每个代表世界改写成完整 caption；
+7. manifest 记录候选来源、诊断计数、调用遥测和 generation contract。
+
+不再进行重复联合抽样、簇频率估计、频率 Top-K 或二次世界采样。
+均匀权重是候选使用策略，不是现实真值概率。
 
 VLM、语义编码器和 LLM 改写器都必须提供 `BackendDescriptor`。descriptor 包含
 后端 ID、模型 ID、权重或代码 revision，以及 prompt、temperature、top-p、
 token 限制等影响结果的参数。descriptor 与算法配置共同进入 run signature；
-修改任一采样参数都会使缓存失效。
+修改任一生成参数都会使缓存失效；旧频率型 v6 缓存不再复用。
 
 ```python
 from semantic_imagination.v6 import V6Pipeline, load_v6_config

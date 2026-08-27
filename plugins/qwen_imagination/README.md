@@ -16,18 +16,24 @@
 
 V6 只要求运行方注入三个带完整 descriptor 的后端接口：
 
-1. `VLMBackend`：一次稳定观测和多次完整联合语义世界采样；
-2. `SemanticEncoder`：编码完整联合世界，用于完全链接聚类；
+1. `VLMBackend`：一次稳定观测和一次批量联合语义候选生成；
+2. `SemanticEncoder`：编码完整联合世界，用于完全链接语义去重；
 3. `RewriteBackend`：把共同观测与一个代表世界改写为完整 caption。
 
 插件不内置或猜测具体 VLM/LLM。模型 ID、权重/代码 revision、prompt
 版本、temperature、top-p、token 限制等影响分布的参数由 descriptor 进入
-run signature 和 sampling contract。`load_plugin("qri-v6")` 返回未绑定插件；
+run signature 和 generation contract。`load_plugin("qri-v6")` 返回未绑定插件；
 调用 `bind(vlm=..., encoder=..., rewriter=...)` 后得到可运行的 `V6Pipeline`。
 
-V6 每次 VLM 抽样直接返回所有目标 ROI 的联合赋值，不再从区域边缘分布做
-独立笛卡尔采样。联合样本经过真正生效的 complete-link 聚类，簇频率直接形成
-经验质量；没有第二次 Monte Carlo 世界采样。每个保留簇只调用一次改写接口。
+V6 调用 `generate_joint_worlds(source, observation, count, seed)`，
+一次返回最多 `candidate_world_count` 个完整联合候选，默认请求 8 个。
+不从区域边缘分布独立组合，也不循环执行单世界抽样。
+候选通过结构检查与 complete-link 语义去重后，全部 K 个代表世界等权输出，
+`selected_weight=1/K`。每个代表只调用一次改写接口。
+
+重复联合抽样、簇频率权重、频率 Top-K 和 Wilson 区间已移除；
+旧 `joint_sample_count`、`max_worlds` 配置及频率型 v6 缓存不再使用。
+具体后端若需要关闭 token 采样，应使用确定性解码并在 descriptor 中记录。
 
 默认输出根由 `QRI_V6_OUTPUT_ROOT` 显式提供，记录固定写入：
 

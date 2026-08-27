@@ -1,161 +1,103 @@
 # QRI-v6 联合语义想象数学规范
 
-本文档是 QRI-v6 的权威概率语义。实现可以替换 VLM、语义编码器和文本改写器，
-但不得改变联合随机变量、经验质量与可复现边界。
+QRI-v6 将共同可见观测扩展为有限个联合语义候选，去重后等权输出。
+版本名仍为 `qri-v6`；不再进行重复联合抽样、簇频率估计或频率 Top-K。
 
 ## 1. 共同观测
 
-给定低质量行人图像 $x$ 和目标区域集合
+给定低质量行人图像 \(x\) 和目标区域集合
+\(\mathcal R=\{r_1,\ldots,r_L\}\)，VLM 首先产生全局 caption
+\(c^{\mathrm{obs}}\) 和逐区域稳定事实 \(o_{1:L}\)。
+不能稳定确认的内容不进入共同观测。
+
+## 2. 一次生成联合候选
+
+令 \(B\) 为请求的候选数量，默认 \(B=8\)。一次 VLM 生成请求返回：
 
 \[
-\mathcal R=\{r_1,\ldots,r_L\},
+\mathcal H=\mathcal G_\phi(x,c^{\mathrm{obs}},o_{1:L},q;B)
+          =(H_1,\ldots,H_J),\qquad 1\le J\le B.
 \]
 
-VLM 首先产生所有后续世界共享的可见观测
+每个 \(H_j=(h_{j1},\ldots,h_{jL})\) 是完整联合世界，每个区域恰好包含一个
+`region/category/state/value/location` 赋值。后端应在同一响应中提出不同、
+与共同可见事实一致的方案，不逐候选重复请求，也不把逐区域候选做独立笛卡尔组合。
+
+这些候选不是用于估计 \(p_\phi(H\mid x)\) 的 Monte Carlo 样本。
+不要求后端自报概率。为避免解码抽样，具体后端应使用确定性生成配置
+（例如支持时设置 `do_sample=false`），并将实际配置写入 descriptor；
+框架本身不实现 token 解码。
+
+结构检查剔除区域缺失、重复、类别不符或字段为空的候选，保留 \(V\le J\) 个
+有效候选并记录拒绝原因。框架检查结构；语义上保留可见事实的约束由生成后端
+和改写后端执行，结构检查不等于视觉真实性验证。
+
+请求失败仅重试同一批次，耗尽后整次生成失败。少于 \(B\) 个候选时不补抽；
+空批次、超出 \(B\) 的响应或零有效候选不能形成完整输出。
+
+## 3. 语义去重
+
+不同硬 state signature
 
 \[
-c^{\mathrm{obs}},\quad
-o_1,\ldots,o_L=\mathcal V^{\mathrm{obs}}_\phi(x,\mathcal R).
+\sigma(H)=((r_l,g_l,s_l))_{l=1}^L
 \]
 
-$c^{\mathrm{obs}}$ 是全局 caption，$o_l$ 是区域稳定事实。不能稳定确认的内容
-不得进入共同观测。
-
-## 2. 联合世界抽样
-
-一个语义世界不是若干区域边缘分布的事后笛卡尔组合，而是一次 VLM 请求产生的
-联合随机变量：
+的世界不合并。同一 signature 内用完整 value/location 文本向量执行
+complete-link，每个等价组 \(C_k\) 满足：
 
 \[
-H=(h_1,\ldots,h_L)
-\sim p_\phi(H\mid x,c^{\mathrm{obs}},o_{1:L},q).
+\min_{H_i,H_j\in C_k}\cos(e(H_i),e(H_j))\ge\tau.
 \]
 
-每个 $h_l$ 必须包含 `region/category/state/value/location`，且一次有效抽样
-恰好为每个目标区域返回一个原子赋值。框架用互相独立、按命名空间派生的 seed
-执行 $M$ 次直接联合抽样：
+每组取实际成员 medoid 作为代表 \(\bar H_k\)。保留全部 \(K\) 个代表，
+不按组大小排序、不截断 Top-K、不再次随机选择世界。
+分组仅用于去重，重复数量不参与权重估计。
+
+## 4. 均匀权重
+
+对实际保留的 \(K\ge1\) 个不同世界，直接规定：
 
 \[
-H_m\sim p_\phi(H\mid x,c^{\mathrm{obs}},o_{1:L},q),
-\qquad m=1,\ldots,M.
+w_k=\frac1K,\qquad \sum_{k=1}^{K}w_k=1.
 \]
 
-不得先估计每个 $h_l$ 的边缘概率，再假设
+这是候选集合上的人为等权策略，不是模型频率、置信度或现实真值概率。
+不再输出 empirical mass、valid weight、频率置信区间或保留概率质量。
+下游字段 `selected_weight` 保留，但统一表示 \(1/K\)；
+`world_weighting=uniform_over_unique_worlds` 明确该语义。
+重复或无效候选减少 \(K\) 后，按实际数量重新均分。
+
+## 5. 语义改写与输出
+
+每个代表世界调用一次改写接口：
 
 \[
-p(H)=\prod_l p(h_l).
+\bar c_k=\mathcal L_\psi(c^{\mathrm{obs}},o_{1:L},\bar H_k).
 \]
 
-该乘积会制造模型从未联合提出的跨区域组合，QRI-v6 明确禁止这种实现。
-
-请求重试耗尽的任务记为 `request_failed`，不进入聚类。令有效联合样本数为
+改写器只组合共同观测和当前代表世界，不增加新事实、不混入其他世界，
+不删除共同可见身份信息。最终结果为：
 
 \[
-V\le M.
+\mathcal C_{v6}(x)=\{(\bar c_k,1/K)\}_{k=1}^{K}.
 \]
 
-失败质量 $1-V/M$ 必须保留，不能伪装为主动 abstention，也不能静默分配给
-有效世界。
+框架输出所有候选 caption，不在输出前采样。下游可以直接等权使用全部候选。
 
-## 3. 联合语义等价簇
+## 6. 可复现与实现不变量
 
-每个世界具有硬 state signature
+run signature 覆盖候选数量、去重阈值、complete-link、等权策略、
+重试次数、基础 seed，以及三个后端的模型、revision、prompt 和解码参数。
+generation contract 另含源图身份、source key、模态与 ROI 几何。
+批次生成与每个 caption 改写使用独立命名空间的 seed；重试复用原请求 seed。
 
-\[
-\sigma(H)=((r_l,g_l,s_l))_{l=1}^L.
-\]
+1. 正常路径只有一次联合候选生成操作；重试单独计入遥测。
+2. 每个有效候选只归属一个语义去重组，代表必须来自该组实际成员。
+3. 全部去重组都输出，权重恒为 \(1/K\)，不受重复次数影响。
+4. 请求数、返回数、无效数、重复数和最终世界数仅是诊断计数，不解释成概率。
+5. 算法或后端参数改变会使缓存失效；旧频率型 v6 记录不能复用。
+6. 输出、测试和缓存只写显式仓库外目录或测试临时目录。
 
-不同 signature 的世界不能合并。同一 signature 内，语义编码器对完整
-value/location canonical text 产生向量 $e(H)$。完全链接阈值为 $\tau$，
-每个输出簇 $C_k$ 必须满足
-
-\[
-\min_{H_i,H_j\in C_k}
-\cos(e(H_i),e(H_j))\ge\tau.
-\]
-
-因此 canonical state 是硬边界，但不是最终等价类；同一 state 下语义不同的
-颜色、对象或位置仍能被阈值拆开。single-link 和“只按 state 合并”仅属于旧
-结果复现，不得标记为 QRI-v6。
-
-簇代表必须是实际抽样成员的 medoid：
-
-\[
-\bar H_k=\arg\min_{H\in C_k}
-\sum_{H'\in C_k}(1-\cos(e(H),e(H'))).
-\]
-
-## 4. 经验质量
-
-每个簇保留两种不混淆的质量：
-
-\[
-\widehat\mu_k=\frac{|C_k|}{M},
-\qquad
-\widehat w_k=\frac{|C_k|}{V}.
-\]
-
-$\widehat\mu_k$ 是相对于全部计划任务的未归一化经验质量；
-$\widehat w_k$ 是在有效联合抽样条件下的权重。若只保留 Top-K 簇，供下游
-选择的权重为
-
-\[
-\widetilde w_k=\frac{|C_k|}
-{\sum_{a\in\mathrm{retained}}|C_a|}.
-\]
-
-manifest 必须同时记录 retained empirical mass，不能把
-$\widetilde w_k$ 误称为全部计划采样的概率。Wilson 区间只描述固定簇划分下
-有限 $V$ 的频率误差，不包含模型、聚类或现实真实性误差。
-
-QRI-v6 不从上述权重再次随机抽取“世界”。第二次 Monte Carlo 只会在已有经验
-估计上增加噪声，并可能掩盖被截断质量。
-
-## 5. 语义改写
-
-每个保留簇调用一次改写接口：
-
-\[
-\bar c_k=\mathcal L_\psi
-(c^{\mathrm{obs}},o_{1:L},\bar H_k).
-\]
-
-改写器只能组合共同观测与该代表世界，不得增加新事实、混入其他簇或删除共同
-身份语义。最终输出为
-
-\[
-\mathcal C_{v6}(x)=
-\{(\bar c_k,\widehat\mu_k,\widehat w_k,\widetilde w_k)\}.
-\]
-
-VLM 与 LLM 的具体实现不属于核心包；它们通过带 descriptor 的接口注入。
-
-## 6. 可复现 contract
-
-run signature 必须覆盖：
-
-1. `qri-v6` schema、$M$、Top-K、$\tau$、complete-link、重试次数和基础 seed；
-2. VLM、语义编码器、改写器的 backend/model ID 与 revision；
-3. 三个后端的 prompt 版本、temperature、top-p、token 限制和其他采样参数。
-
-source contract 另行记录图像 SHA-256、source key、模态、ROI 类别与坐标。所有
-派生 seed 必须按 phase 与 sample index 分离，不能让联合抽样和文本改写共用同一
-随机序列。
-
-## 7. 实现不变量
-
-1. 一个有效 sample 是一个完整联合世界，而不是独立区域抽样的乘积。
-2. 每个有效 sample 恰好属于一个非空簇；失败 sample 不得获得 cluster ID。
-3. \(\sum_k|C_k|=V\le M\)，失败质量和截断质量分别记录。
-4. 不同 state signature 不合并；同一 signature 内阈值必须真实参与 complete-link。
-5. 每个代表都是簇内真实成员；每个 caption 只对应一个代表世界。
-6. 三类权重 `empirical_mass`、`valid_weight`、`selected_weight` 不得互相覆盖。
-7. 实际后端调用次数、额外重试、耗时和 usage 必须按 phase 汇总。
-8. 任何影响结果的算法、后端或 source contract 变化都必须改变对应哈希并使缓存失效。
-9. 测试和 smoke 输出只能写入显式外部输出根或临时目录。
-
-## 8. 解释边界
-
-经验质量是当前模型、prompt、解码参数、输入和聚类规则共同诱导的分布；它不是
-现实真值概率，也不是校准后验。QRI-v6 不声称 PASD 输出保持身份或恢复不可见
-真值。真实 VLM/LLM 后端、概率校准、身份保持和 ReID 收益必须通过独立实验验证。
+V6 仍通过接口注入 VLM、语义编码器和改写器。真实模型、PASD 与 ReID 效果
+未因本次机制修改而得到验证。

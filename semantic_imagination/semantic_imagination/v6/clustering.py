@@ -23,25 +23,6 @@ def cosine(left: Sequence[float], right: Sequence[float]) -> float:
     return dot / (left_norm * right_norm)
 
 
-def wilson_interval(count: int, total: int) -> dict[str, float | str]:
-    if total < 1:
-        raise ValueError("Wilson interval requires a positive total")
-    z = 1.959963984540054
-    estimate = count / total
-    denominator = 1.0 + z * z / total
-    center = (estimate + z * z / (2.0 * total)) / denominator
-    margin = (
-        z
-        / denominator
-        * math.sqrt(estimate * (1.0 - estimate) / total + z * z / (4.0 * total * total))
-    )
-    return {
-        "method": "wilson-95-conditional-on-fixed-v6-clusters",
-        "lower": max(0.0, center - margin),
-        "upper": min(1.0, center + margin),
-    }
-
-
 def _validated_vectors(
     vectors: Sequence[Sequence[float]], expected: int
 ) -> list[list[float]]:
@@ -108,7 +89,7 @@ def cluster_joint_worlds(
     similarity_threshold: float,
 ) -> list[WorldCluster]:
     if not worlds:
-        raise ValueError("joint-world clustering requires at least one sample")
+        raise ValueError("joint-world clustering requires at least one candidate")
     if not -1.0 <= similarity_threshold <= 1.0:
         raise ValueError("similarity_threshold must be within [-1, 1]")
     embedded = _validated_vectors(vectors, len(worlds))

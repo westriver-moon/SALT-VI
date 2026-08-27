@@ -19,8 +19,7 @@ class V6Config:
     schema_version: int
     plugin_version: str
     output_root: Path
-    joint_sample_count: int = 32
-    max_worlds: int = 8
+    candidate_world_count: int = 8
     similarity_threshold: float = 0.85
     request_max_attempts: int = 3
     seed: int = 20260824
@@ -30,10 +29,8 @@ class V6Config:
             raise ValueError(
                 "qri-v6 requires schema_version=6 and plugin_version=qri-v6"
             )
-        if self.joint_sample_count < 2:
-            raise ValueError("joint_sample_count must be at least 2")
-        if not 1 <= self.max_worlds <= self.joint_sample_count:
-            raise ValueError("max_worlds must be within [1, joint_sample_count]")
+        if self.candidate_world_count < 1:
+            raise ValueError("candidate_world_count must be positive")
         if not -1.0 <= self.similarity_threshold <= 1.0:
             raise ValueError("similarity_threshold must be within [-1, 1]")
         if self.request_max_attempts < 1:
@@ -44,12 +41,11 @@ class V6Config:
         return {
             "schema_version": self.schema_version,
             "plugin_version": self.plugin_version,
-            "joint_sample_count": self.joint_sample_count,
-            "max_worlds": self.max_worlds,
+            "candidate_world_count": self.candidate_world_count,
             "similarity_threshold": self.similarity_threshold,
-            "cluster_linkage": "complete",
-            "world_sampling": "direct_joint_vlm_draws",
-            "weight_estimator": "joint_cluster_frequency",
+            "deduplication_linkage": "complete",
+            "world_generation": "single_vlm_candidate_batch",
+            "world_weighting": "uniform_over_unique_worlds",
             "request_max_attempts": self.request_max_attempts,
             "seed": self.seed,
         }

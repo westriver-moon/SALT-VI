@@ -142,16 +142,16 @@ def ordered_world(world: JointWorld, regions: Sequence[RegionSpec]) -> JointWorl
     by_region = {item.region_id: item for item in world.assignments}
     expected = {region.region_id: region for region in regions}
     if len(by_region) != len(world.assignments):
-        raise ValueError("joint draw must not repeat a region assignment")
+        raise ValueError("joint candidate must not repeat a region assignment")
     if set(by_region) != set(expected):
-        raise ValueError("joint draw must contain exactly one assignment per region")
+        raise ValueError("joint candidate must contain exactly one assignment per region")
     ordered = tuple(by_region[region.region_id] for region in regions)
     for item in ordered:
         if item.category != expected[item.region_id].category:
             raise ValueError(
-                f"joint draw category mismatch for region {item.region_id}: "
+                f"joint candidate category mismatch for region {item.region_id}: "
                 f"{item.category} != {expected[item.region_id].category}"
             )
         if not all((item.state.strip(), item.value.strip(), item.location.strip())):
-            raise ValueError("joint draw fields must be non-empty")
+            raise ValueError("joint candidate fields must be non-empty")
     return JointWorld(ordered)

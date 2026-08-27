@@ -18,12 +18,20 @@ class VLMBackend(Protocol):
 
     def observe(self, source: SourceSpec) -> BackendResult[Observation]: ...
 
-    def sample_joint_world(
+    def generate_joint_worlds(
         self,
         source: SourceSpec,
         observation: Observation,
+        count: int,
         seed: int,
-    ) -> BackendResult[JointWorld]: ...
+    ) -> BackendResult[Sequence[JointWorld]]:
+        """Generate up to count complete worlds in one request, without repeated draws.
+
+        Each candidate must preserve the observation's visible facts and contain
+        one coherent assignment per ROI. Do not independently combine ROI
+        alternatives or supply model-estimated probabilities.
+        """
+        ...
 
 
 class SemanticEncoder(Protocol):

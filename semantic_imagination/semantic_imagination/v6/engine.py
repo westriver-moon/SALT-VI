@@ -7,11 +7,12 @@ import os
 import tempfile
 import time
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from .clustering import cluster_joint_worlds, wilson_interval
+from .clustering import cluster_joint_worlds
 from .config import V6Config
 from .contracts import (
     BackendResult,
@@ -147,7 +148,7 @@ class V6Engine:
         )
         return {"payload": payload, "sha256": _json_hash(payload)}
 
-    def sampling_contract(
+    def generation_contract(
         self,
         source: SourceSpec,
         *,
@@ -202,14 +203,15 @@ class V6Engine:
             raise ValueError("VLM observation regions must match source region order")
         return result
 
-    @staticmethod
-    def _joint_draw(
-        result: BackendResult[JointWorld], source: SourceSpec
-    ) -> BackendResult[JointWorld]:
-        return BackendResult(
-            ordered_world(result.value, source.regions),
-            usage=result.usage,
-        )
+    def _joint_candidates(
+        self, result: BackendResult[Sequence[JointWorld]]
+    ) -> BackendResult[Sequence[JointWorld]]:
+        candidates = list(result.value)
+        if not 1 <= len(candidates) <= self.config.candidate_world_count:
+            raise ValueError(
+                "VLM must return between 1 and candidate_world_count candidates"
+            )
+        return BackendResult(candidates, usage=result.usage)
 
     def build_manifest(
         self,
@@ -219,7 +221,7 @@ class V6Engine:
     ) -> dict[str, Any]:
         source_image_sha256 = source_image_sha256 or _file_sha256(source.image)
         signature = self.run_signature()
-        sampling_contract = self.sampling_contract(
+        generation_contract = self.generation_contract(
             source, source_image_sha256=source_image_sha256
         )
         telemetry = _Telemetry()
@@ -229,44 +231,48 @@ class V6Engine:
             telemetry,
         )
         observation = observation_result.value
-
-        samples: list[dict[str, Any]] = []
-        valid_worlds: list[JointWorld] = []
-        valid_sample_indices: list[int] = []
-        for sample_index in range(self.config.joint_sample_count):
-            seed = _derived_seed(
-                self.config.seed, source.source_key, "joint-vlm-draw", sample_index
-            )
-            try:
-                result = self._invoke(
-                    "vlm_joint_sample",
-                    lambda seed=seed: self._joint_draw(
-                        self.vlm.sample_joint_world(source, observation, seed), source
-                    ),
-                    telemetry,
+        generation_seed = _derived_seed(
+            self.config.seed, source.source_key, "joint-vlm-candidates", 0
+        )
+        generated = self._invoke(
+            "vlm_joint_generation",
+            lambda: self._joint_candidates(
+                self.vlm.generate_joint_worlds(
+                    source,
+                    observation,
+                    self.config.candidate_world_count,
+                    generation_seed,
                 )
-            except BackendRequestError as error:
-                samples.append(
+            ),
+            telemetry,
+        )
+
+        candidates: list[dict[str, Any]] = []
+        valid_worlds: list[JointWorld] = []
+        valid_candidate_indices: list[int] = []
+        for candidate_index, candidate in enumerate(generated.value):
+            try:
+                world = ordered_world(candidate, source.regions)
+            except ValueError as error:
+                candidates.append(
                     {
-                        "sample_index": sample_index,
-                        "seed": seed,
-                        "status": "request_failed",
+                        "candidate_index": candidate_index,
+                        "status": "invalid",
                         "error": str(error),
                     }
                 )
                 continue
-            valid_sample_indices.append(sample_index)
-            valid_worlds.append(result.value)
-            samples.append(
+            valid_candidate_indices.append(candidate_index)
+            valid_worlds.append(world)
+            candidates.append(
                 {
-                    "sample_index": sample_index,
-                    "seed": seed,
+                    "candidate_index": candidate_index,
                     "status": "valid",
-                    "assignments": result.value.manifest(),
+                    "assignments": world.manifest(),
                 }
             )
         if not valid_worlds:
-            raise BackendRequestError("all qri-v6 joint VLM draws failed")
+            raise BackendRequestError("qri-v6 generation returned no valid candidates")
 
         encoded = self._invoke(
             "semantic_encoding",
@@ -275,24 +281,20 @@ class V6Engine:
             ),
             telemetry,
         )
+        # Complete-link is used only for semantic deduplication. Keep every
+        # representative, without frequency ranking, truncation, or resampling.
         clusters = cluster_joint_worlds(
             valid_worlds,
             encoded.value,
             self.config.similarity_threshold,
         )
-        ranked = sorted(
-            clusters,
-            key=lambda cluster: (
-                -len(cluster.member_indices),
-                valid_worlds[cluster.representative_index].canonical_text(),
-            ),
-        )[: self.config.max_worlds]
-        retained_count = sum(len(cluster.member_indices) for cluster in ranked)
+        uniform_weight = 1.0 / len(clusters)
         worlds = []
-        for cluster_id, cluster in enumerate(ranked):
+        for world_index, cluster in enumerate(clusters):
+            world_id = f"w{world_index:02d}"
             representative = valid_worlds[cluster.representative_index]
             rewrite_seed = _derived_seed(
-                self.config.seed, source.source_key, "llm-rewrite", cluster_id
+                self.config.seed, source.source_key, "llm-rewrite", world_index
             )
             rewritten = self._invoke(
                 "llm_rewrite",
@@ -305,41 +307,23 @@ class V6Engine:
             caption = str(rewritten.value).strip()
             if not caption:
                 raise ValueError("LLM rewrite caption must be non-empty")
-            member_sample_indices = [
-                valid_sample_indices[index] for index in cluster.member_indices
+            member_candidate_indices = [
+                valid_candidate_indices[index] for index in cluster.member_indices
             ]
-            count = len(cluster.member_indices)
             worlds.append(
                 {
-                    "world_id": f"w{cluster_id:02d}",
-                    "representative_sample_index": valid_sample_indices[
+                    "world_id": world_id,
+                    "representative_candidate_index": valid_candidate_indices[
                         cluster.representative_index
                     ],
-                    "member_sample_indices": member_sample_indices,
+                    "member_candidate_indices": member_candidate_indices,
                     "assignments": representative.manifest(),
                     "caption": caption,
-                    "sample_count": count,
-                    "empirical_mass": count / self.config.joint_sample_count,
-                    "valid_weight": count / len(valid_worlds),
-                    "selected_weight": count / retained_count,
-                    "valid_weight_interval_95": wilson_interval(
-                        count, len(valid_worlds)
-                    ),
+                    "selected_weight": uniform_weight,
                 }
             )
-
-        cluster_membership = {
-            sample_index: cluster_id
-            for cluster_id, cluster in enumerate(ranked)
-            for sample_index in (
-                valid_sample_indices[index] for index in cluster.member_indices
-            )
-        }
-        for sample in samples:
-            if sample["sample_index"] in cluster_membership:
-                sample["retained_cluster_id"] = cluster_membership[
-                    sample["sample_index"]
-                ]
+            for candidate_index in member_candidate_indices:
+                candidates[candidate_index]["world_id"] = world_id
 
         valid_count = len(valid_worlds)
         return {
@@ -350,21 +334,20 @@ class V6Engine:
             "image": str(source.image),
             "source_image_sha256": source_image_sha256,
             "run_signature": signature,
-            "sampling_contract": sampling_contract,
-            "sampling_contract_sha256": _json_hash(sampling_contract),
+            "generation_contract": generation_contract,
+            "generation_contract_sha256": _json_hash(generation_contract),
             "observation": observation.manifest(),
-            "samples": samples,
+            "generation_seed": generation_seed,
+            "candidates": candidates,
+            "world_weighting": "uniform_over_unique_worlds",
             "worlds": worlds,
-            "sampling_diagnostics": {
-                "scheduled": self.config.joint_sample_count,
-                "valid": valid_count,
-                "request_failed": self.config.joint_sample_count - valid_count,
-                "valid_mass": valid_count / self.config.joint_sample_count,
-                "cluster_count": len(clusters),
-                "retained_world_count": len(worlds),
-                "retained_valid_mass": retained_count / valid_count,
-                "retained_empirical_mass": retained_count
-                / self.config.joint_sample_count,
+            "generation_diagnostics": {
+                "requested_candidate_count": self.config.candidate_world_count,
+                "returned_candidate_count": len(candidates),
+                "valid_candidate_count": valid_count,
+                "invalid_candidate_count": len(candidates) - valid_count,
+                "duplicate_candidate_count": valid_count - len(worlds),
+                "world_count": len(worlds),
             },
             "telemetry": telemetry.manifest(),
         }
@@ -411,8 +394,8 @@ class V6Pipeline:
         path = self.record_path(source)
         source_hash = _file_sha256(source.image)
         signature = self.engine.run_signature()
-        sampling_contract_sha256 = _json_hash(
-            self.engine.sampling_contract(source, source_image_sha256=source_hash)
+        generation_contract_sha256 = _json_hash(
+            self.engine.generation_contract(source, source_image_sha256=source_hash)
         )
         if path.is_file() and not overwrite:
             cached = json.loads(path.read_text(encoding="utf-8"))
@@ -421,7 +404,7 @@ class V6Pipeline:
                 and cached.get("plugin_version") == QRI_V6
                 and cached.get("source_image_sha256") == source_hash
                 and cached.get("run_signature") == signature
-                and cached.get("sampling_contract_sha256") == sampling_contract_sha256
+                and cached.get("generation_contract_sha256") == generation_contract_sha256
             ):
                 return PipelineResult(copy.deepcopy(cached), path, True)
         record = self.engine.build_manifest(source, source_image_sha256=source_hash)

@@ -68,7 +68,7 @@ python scripts/train.py --config_select configs/stage_b/r_text_visual_20260729.y
         │
         ├─ pasd_plugin/ ──> SYSU/RegDB/LLCM 的 PASD RGB+IR/NIR manifests
         │
-        ├─ semantic_imagination.v6 ──> 联合语义世界、频率权重与改写 caption
+        ├─ semantic_imagination.v6 ──> 联合语义候选、均匀权重与改写 caption
         │
         ▼
 Stage A：RGB/IR image-only 视觉表征
@@ -92,10 +92,10 @@ SYSU/RegDB/LLCM 评估、checkpoint、日志与实验总表
 
 ## 4. QRI-v6 Semantic Imagination 的当前边界
 
-当前接口版本统一为 `qri-v6`。VLM 每次直接抽取包含全部目标 ROI 的联合语义
-世界，避免从区域边缘分布独立组合出未被模型联合提出的世界。相同 state
-signature 内使用完整 value/location 表示执行 complete-link；簇频率直接成为
-经验质量。每个代表世界再通过注入的 LLM 接口与共同观测改写成完整 caption。
+当前接口版本仍为 `qri-v6`。VLM 一次生成最多 8 个包含全部目标 ROI 的
+联合语义候选，避免从区域边缘分布独立组合。候选经过结构检查和相同 state
+signature 内的 complete-link 语义去重后，全部 K 个代表以 `1/K` 等权输出，
+再分别与共同观测改写成完整 caption。不重复抽样，不估计簇频率，不做频率 Top-K。
 
 VLM、语义编码器与 LLM 改写器当前只定义接口，尚未绑定真实模型。所有活跃训练
 YAML 仍使用单视图数据，因此 QRI-v6 是已实现并经过契约测试的下一阶段接口，
