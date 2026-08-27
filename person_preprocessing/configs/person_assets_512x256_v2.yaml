@@ -1,0 +1,16 @@
+source_asset_root: /home/lab929/ybj/datasets/person-assets-512x256-v1/person_fit
+output_root: /home/lab929/ybj/datasets/person-assets-512x256-v2-overlay
+size_hw: [512, 256]
+person_margin: 0.05
+blur_radius: 24.0
+pose_weight: /home/lab929/ybj/models/qri-v1/checkpoints/yolo11x-pose.pt
+secondary_detection_confidence: 0.10
+secondary_pose_imgsz: 640
+secondary_min_box_area_fraction: 0.08
+secondary_max_box_area_fraction: 0.95
+secondary_min_box_height_fraction: 0.35
+secondary_min_box_aspect_ratio_hw: 0.75
+secondary_max_box_center_distance: 0.50
+secondary_keypoint_confidence: 0.15
+secondary_min_keypoints: 5
+secondary_min_torso_keypoints: 1

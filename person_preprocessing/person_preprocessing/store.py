@@ -14,10 +14,40 @@ class PersonAssetStore:
         self.root = Path(root) / dataset
         self.contract = json.loads((self.root / "contract.json").read_text())
         self.size_hw = tuple(self.contract["size_hw"])
-        manifest = self.root / "images.jsonl"
-        self.records = [
-            json.loads(line) for line in manifest.read_text().splitlines() if line
-        ]
+        self.refinements = []
+        self._image_paths = {}
+        if self.contract.get("overlay_type") == "fallback_refinement_v1":
+            base = PersonAssetStore(self.contract["base_asset_root"], dataset)
+            refinement_manifest = self.root / "refinements.jsonl"
+            self.refinements = [
+                json.loads(line)
+                for line in refinement_manifest.read_text().splitlines()
+                if line
+            ]
+            accepted = {}
+            for row in self.refinements:
+                if row["status"] == "secondary_accepted":
+                    merged = dict(row)
+                    merged["overlay_status"] = merged["status"]
+                    merged["status"] = "complete"
+                    accepted[row["source_key"]] = merged
+            self.records = [accepted.get(row["source_key"], row) for row in base.records]
+            for row in self.records:
+                if row["source_key"] in accepted:
+                    path = self.root / row["image"]
+                else:
+                    path = base.path(row["source_key"])
+                for key in [row["source_key"]] + row.get("aliases", []):
+                    self._image_paths[key] = path
+        else:
+            manifest = self.root / "images.jsonl"
+            self.records = [
+                json.loads(line) for line in manifest.read_text().splitlines() if line
+            ]
+            for row in self.records:
+                path = self.root / row["image"]
+                for key in [row["source_key"]] + row.get("aliases", []):
+                    self._image_paths[key] = path
         self.by_key = {}
         for row in self.records:
             for key in [row["source_key"]] + row.get("aliases", []):
@@ -38,7 +68,8 @@ class PersonAssetStore:
         return row
 
     def path(self, source_key):
-        return self.root / self.record(source_key)["image"]
+        self.record(source_key)
+        return self._image_paths[str(source_key)]
 
     def image(self, source_key):
         with Image.open(self.path(source_key)) as image:

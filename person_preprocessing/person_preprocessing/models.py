@@ -8,13 +8,14 @@ import numpy as np
 class PoseEstimator:
     """Load one COCO-17 pose checkpoint and select the central person."""
 
-    def __init__(self, weight, device="0", confidence=0.25, imgsz=640):
+    def __init__(self, weight, device="0", confidence=0.25, imgsz=640, rect=None):
         self.weight = Path(weight).expanduser().resolve()
         if not self.weight.is_file():
             raise FileNotFoundError(self.weight)
         self.device = device
         self.confidence = float(confidence)
         self.imgsz = int(imgsz)
+        self.rect = rect
         self.model = None
 
     def predict(self, image):
@@ -24,6 +25,9 @@ class PoseEstimator:
             self.model = YOLO(str(self.weight))
             if self.model.task != "pose":
                 raise ValueError("checkpoint is not a pose model")
+        options = {}
+        if self.rect is not None:
+            options["rect"] = bool(self.rect)
         result = self.model.predict(
             image,
             device=self.device,
@@ -33,6 +37,7 @@ class PoseEstimator:
             verbose=False,
             save=False,
             half=False,
+            **options,
         )[0]
         if not len(result.boxes):
             return None

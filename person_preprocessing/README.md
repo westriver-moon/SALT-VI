@@ -28,3 +28,17 @@ while exposing every fallback for later quality analysis.
 Geometry preparation is intentionally offline. Training reads the immutable
 prepared images through `prepared_data_root` and applies only stochastic data
 augmentation online; it never reruns YOLO or changes the crop between epochs.
+
+`person_assets_512x256_v2.yaml` creates a sparse overlay containing only v1
+`fallback_full_frame` records. It runs a square-padded (`rect=False`)
+YOLO11x-pose second pass at confidence 0.10, then accepts a crop only when box
+area, height, aspect, center distance, and keypoint/torso evidence all pass
+explicit gates. No non-fallback image is copied or processed. `PersonAssetStore`
+combines accepted overlay images with the immutable v1 base at read time. Run
+the refinement with:
+
+```bash
+python -m person_preprocessing.refine \
+  --config person_preprocessing/configs/person_assets_512x256_v2.yaml \
+  --datasets sysu regdb llcm --device 0
+```

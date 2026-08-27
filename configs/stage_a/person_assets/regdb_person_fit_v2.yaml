@@ -1,0 +1,8 @@
+extends: regdb_person_fit.yaml
+
+config_select: configs/stage_a/person_assets/regdb_person_fit_v2.yaml
+prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256-v2-overlay
+experiment_name: person_assets_regdb_person_fit_v2
+metric_experiment_id: PERSON-ASSETS-REGDB-PERSON-FIT-V2
+output_root: train_outputs/person_assets_regdb/person_fit_v2
+metric_events_path: train_outputs/person_assets_regdb/person_fit_v2/events.jsonl
