@@ -40,14 +40,20 @@ def build_rounded_rect_keep_indices(
     if target_remove <= 0:
         return torch.arange(token_count, dtype=torch.long, device=device)
 
-    # Integer-centered coordinates make reflected positions exactly equal
-    # before normalization, avoiding asymmetric corner removal at a tie.
-    y = torch.arange(grid_height, dtype=torch.float64, device=device)
-    x = torch.arange(grid_width, dtype=torch.float64, device=device)
+    # Canonical integer orbit coordinates make every horizontal/vertical
+    # reflection read the exact same floating-point score.  Constructing
+    # signed floating coordinates first can differ by one ULP at a threshold.
+    y_orbit = torch.arange(grid_height, dtype=torch.long, device=device)
+    x_orbit = torch.arange(grid_width, dtype=torch.long, device=device)
+    y_orbit = torch.minimum(y_orbit, grid_height - 1 - y_orbit)
+    x_orbit = torch.minimum(x_orbit, grid_width - 1 - x_orbit)
+    y = torch.arange((grid_height + 1) // 2, dtype=torch.float64, device=device)
+    x = torch.arange((grid_width + 1) // 2, dtype=torch.float64, device=device)
     y = (2.0 * y + 1.0 - grid_height).abs() / grid_height
     x = (2.0 * x + 1.0 - grid_width).abs() / grid_width
     yy, xx = torch.meshgrid(y, x, indexing="ij")
-    scores = xx.pow(roundness).add(yy.pow(roundness)).flatten()
+    orbit_scores = xx.pow(roundness).add(yy.pow(roundness))
+    scores = orbit_scores[y_orbit[:, None], x_orbit[None, :]].flatten()
 
     unique_scores, counts = torch.unique(scores, sorted=True, return_counts=True)
     unique_scores = unique_scores.flip(0)

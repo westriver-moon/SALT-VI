@@ -30,11 +30,15 @@ def _small_visual(**overrides):
     return PMTViTVisual(**kwargs)
 
 
-def test_c3_grid_roundrect_keeps_exactly_794_tokens_and_is_symmetric():
+@pytest.mark.parametrize(
+    ("fraction", "expected_keep"),
+    ((0.10, 794), (0.15, 752), (0.20, 708)),
+)
+def test_c3_grid_roundrect_sweep_counts_and_symmetry(fraction, expected_keep):
     indices = build_rounded_rect_keep_indices(
-        (42, 21), prune_fraction=0.10, roundness=4.0
+        (42, 21), prune_fraction=fraction, roundness=4.0
     )
-    assert indices.shape == (794,)
+    assert indices.shape == (expected_keep,)
     mask = torch.zeros(42 * 21, dtype=torch.bool)
     mask[indices] = True
     mask = mask.reshape(42, 21)
@@ -150,16 +154,22 @@ def test_token_pruning_rejects_soft_ellipse_attention():
         model.configure_ellipse_attention(layer=1)
 
 
-def test_c3_swin_person_fit_roundrect_config_changes_only_token_pruning():
+@pytest.mark.parametrize(
+    ("suffix", "fraction"),
+    (("10", 0.10), ("15", 0.15), ("20", 0.20)),
+)
+def test_c3_swin_person_fit_roundrect_configs_change_only_token_pruning(
+    suffix, fraction
+):
     baseline = load_train_configs(
         "configs/stage_a/person_assets/sysu_person_fit.yaml"
     )
     rounded = load_train_configs(
-        "configs/stage_a/person_assets/sysu_person_fit_rounded_rect_10.yaml"
+        f"configs/stage_a/person_assets/sysu_person_fit_rounded_rect_{suffix}.yaml"
     )
     validate_runtime_config(rounded)
     assert rounded.pmt_token_pruning_mode == "rounded_rect"
-    assert rounded.pmt_token_prune_fraction == 0.10
+    assert rounded.pmt_token_prune_fraction == fraction
     assert rounded.pmt_token_roundness == 4.0
     for key in (
         "prepared_data_root",
