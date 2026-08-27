@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -51,6 +52,9 @@ class TextAnnotationConfig:
     strategy: str = "track_anchor"
     exact_selection_mode: str = "full_tta"
     precomputed_swinir_root: Path | None = None
+    prepared_data_root: Path | None = None
+    dataset: str = "sysu"
+    trial: int = 1
     assets: dict[str, Path] = field(default_factory=dict)
     roi: dict[str, Any] = field(default_factory=dict)
     swinir: dict[str, Any] = field(default_factory=dict)
@@ -110,13 +114,29 @@ class TextAnnotationConfig:
             "schp_lip",
             "sam_vit_b",
         }
+        if self.dataset not in {"sysu", "regdb", "llcm"} or not 1 <= self.trial <= 10:
+            raise ValueError("invalid dataset or RegDB trial")
+        if self.prepared_data_root is not None:
+            if self.precomputed_swinir_root is not None:
+                raise ValueError("choose prepared images or legacy SwinIR arrays, not both")
+            if self.strategy != "exact" or self.exact_selection_mode != "fast_blur_eye_guard":
+                raise ValueError("prepared images require exact + fast_blur_eye_guard (no extra SR)")
+            if self.qwen.get("response_profile") != "swin_separated_v1":
+                raise ValueError("prepared images require the single-full-image Qwen profile")
+            required_assets.remove("swinir_model")
+            required_assets.remove("yolo_pose")
+            pose_contract = self.prepared_data_root / self.dataset / "pose.contract.json"
+            if not pose_contract.is_file():
+                raise ValueError("prepared Qwen annotation requires a shared pose cache")
+        elif self.dataset != "sysu":
+            raise ValueError("RegDB/LLCM annotation requires prepared_data_root")
         missing = sorted(required_assets.difference(self.assets))
         if missing:
             raise ValueError(f"text annotation config omits assets: {missing}")
         for name in ("schp_root", "sam_root", "device"):
             if name not in self.roi:
                 raise ValueError(f"text annotation roi config omits {name}")
-        if "root" not in self.swinir:
+        if self.prepared_data_root is None and "root" not in self.swinir:
             raise ValueError("text annotation swinir config omits root")
         for name in ("endpoint", "model_id"):
             if name not in self.qwen:
@@ -124,7 +144,7 @@ class TextAnnotationConfig:
         return self
 
     def run_signature(self) -> dict[str, Any]:
-        return {
+        signature = {
             "schema_version": int(self.schema_version),
             "annotation_version": self.annotation_version,
             "modalities": list(self.modalities),
@@ -166,11 +186,23 @@ class TextAnnotationConfig:
             ),
             "qwen_prompt_version": str(self.qwen.get("prompt_version", "v1")),
         }
+        if self.prepared_data_root is not None:
+            pose_contract = self.prepared_data_root / self.dataset / "pose.contract.json"
+            signature.update(
+                dataset=self.dataset,
+                trial=self.trial,
+                prepared_data_root=str(self.prepared_data_root),
+                person_pose_contract=json.loads(
+                    pose_contract.read_text(encoding="utf-8")
+                ),
+            )
+        return signature
 
     def provenance(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["dataset_root"] = str(self.dataset_root)
         payload["output_root"] = str(self.output_root)
+        payload["prepared_data_root"] = str(self.prepared_data_root) if self.prepared_data_root else None
         payload["precomputed_swinir_root"] = (
             str(self.precomputed_swinir_root)
             if self.precomputed_swinir_root is not None
@@ -203,6 +235,8 @@ def load_text_annotation_config(
 
     expanded["dataset_root"] = resolve_path(expanded["dataset_root"])
     expanded["output_root"] = resolve_path(expanded["output_root"])
+    if expanded.get("prepared_data_root") is not None:
+        expanded["prepared_data_root"] = resolve_path(expanded["prepared_data_root"])
     if expanded.get("precomputed_swinir_root") is not None:
         expanded["precomputed_swinir_root"] = resolve_path(
             expanded["precomputed_swinir_root"]

@@ -165,9 +165,9 @@ class HumanROIGenerator:
                 refined = base
         return Region(region_id, category, bbox, refined, side=side)
 
-    def regions(self, image: Image.Image, modality: str) -> list[Region]:
+    def regions(self, image: Image.Image, modality: str, *, pose_result: dict | None = None) -> list[Region]:
         image = image.convert("RGB")
-        pose = self.pose.infer(image)
+        pose = self.pose.infer(image) if pose_result is None else pose_result
         parsing = np.asarray(self.parsing.infer(image))
         if parsing.shape != (image.height, image.width):
             parsing = np.asarray(

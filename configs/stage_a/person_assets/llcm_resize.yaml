@@ -1,0 +1,11 @@
+extends: sysu_resize.yaml
+
+config_select: configs/stage_a/person_assets/llcm_resize.yaml
+experiment_name: person_assets_llcm_resize
+metric_experiment_id: PERSON-ASSETS-LLCM-RESIZE
+output_root: train_outputs/person_assets_llcm/resize
+metric_events_path: train_outputs/person_assets_llcm/resize/events.jsonl
+dataset: llcm
+llcm_data_path: /home/cgv841/datasets/LLCM/
+sampler_type: identity_auto_replace
+pid_num: 713

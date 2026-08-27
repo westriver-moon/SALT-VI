@@ -57,7 +57,7 @@ class TextAnnotationPipeline:
         self,
         config: TextAnnotationConfig,
         *,
-        swin: SwinBackend,
+        swin: SwinBackend | None,
         roi: HumanROIGenerator,
         reasoner: AnnotationReasoner,
         category_stats: dict[str, dict[str, float]] | None = None,
@@ -71,6 +71,8 @@ class TextAnnotationPipeline:
         self.reference_store = reference_store
 
     def _load_lr(self, source: SourceItem) -> Image.Image:
+        if self.config.prepared_data_root is not None:
+            return self.reference_store.image(source)
         with Image.open(source.image) as image:
             image = image.convert("RGB")
         target_h, target_w = self.config.source_size_hw
@@ -180,7 +182,12 @@ class TextAnnotationPipeline:
         else:
             variants = []
         tta_ready = time.perf_counter()
-        regions = self.roi.regions(reference, source.modality)
+        source_aware_regions = getattr(self.roi, "regions_for_source", None)
+        regions = (
+            source_aware_regions(reference, source.modality, source.source_key)
+            if source_aware_regions is not None
+            else self.roi.regions(reference, source.modality)
+        )
         if self.config.exact_selection_mode == "full_tta":
             self._score_regions(reference, variants, regions)
         else:
@@ -231,7 +238,8 @@ class TextAnnotationPipeline:
             "qwen_seconds": qwen_ready - roi_ready,
             "postprocess_seconds": finished - qwen_ready,
             "total_seconds": finished - process_started,
-            "reference_source": "precomputed" if self.reference_store else "live_swinir",
+            "reference_source": ("prepared_final_image" if self.config.prepared_data_root
+                                 else "precomputed" if self.reference_store else "live_swinir"),
         }
         selected_ids = {region.region_id for region in selected}
         record = {
@@ -253,7 +261,8 @@ class TextAnnotationPipeline:
                 "sampling_scope": "source_image",
                 "semantic_scope": "source_image",
                 "roi_geometry_scope": "source_image",
-                "vlm_visual_input": "swinir_only",
+                "vlm_visual_input": ("prepared_final_image" if self.config.prepared_data_root
+                                     else "swinir_only"),
             },
             "roi_candidates": [
                 {

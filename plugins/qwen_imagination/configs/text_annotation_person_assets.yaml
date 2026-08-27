@@ -1,0 +1,41 @@
+schema_version: 1
+annotation_version: person-assets-qwen-v1
+dataset: ${PACT_DATASET}
+dataset_root: ${PACT_ORIGINAL_ROOT}
+prepared_data_root: ${SALT_PERSON_ASSET_MODE_ROOT}
+output_root: ${PACT_ANNOTATION_ROOT}
+trial: 1
+modalities: [rgb, ir]
+source_size_hw: [256, 128]
+output_size_hw: [512, 256]
+strategy: exact
+exact_selection_mode: fast_blur_eye_guard
+selected_region_count: 3
+max_selected_region_count: 8
+roi_category_priority_boosts: {carried_object: 0.25, wrist_accessory: 0.10, headwear: 0.05}
+assets:
+  qwen_model: /home/lab929/ybj/models/qwen3.8-27b-gguf/Qwen3.8-27B-UD-Q4_K_XL.gguf
+  qwen_mmproj: /home/lab929/ybj/models/qwen3.8-27b-gguf/mmproj-F16.gguf
+  schp_lip: /home/lab929/ybj/models/qri-v1/checkpoints/schp_lip.pth
+  sam_vit_b: /home/lab929/ybj/models/qri-v1/checkpoints/sam_vit_b_01ec64.pth
+roi:
+  device: cuda:3
+  schp_root: /home/lab929/ybj/models/qri-v1/sources/Self-Correction-Human-Parsing
+  sam_root: /home/lab929/ybj/models/qri-v1/sources/segment-anything
+qwen:
+  model_id: third-party-qwen3.8-27b-ud-q4-k-xl
+  server_binary: /home/lab929/ybj/models/qri-v1/sources/llama.cpp/build/bin/llama-server
+  gpu: 3
+  host: 127.0.0.1
+  port: 18080
+  context_size: 8192
+  endpoint: http://127.0.0.1:18080/v1/chat/completions
+  health_endpoint: http://127.0.0.1:18080/health
+  reasoning_effort: none
+  reasoning_budget: 0
+  thinking_mode: false
+  temperature: 0.25
+  atomic_temperature: 0.75
+  max_tokens: 1100
+  response_profile: swin_separated_v1
+  prompt_version: person-assets-v1

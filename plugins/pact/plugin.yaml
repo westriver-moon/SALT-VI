@@ -1,0 +1,4 @@
+schema_version: 1
+plugin_id: pact-v1
+implementation: pact.plugin:PACTPlugin
+shared_asset_dependency: salt-person-preprocessing>=0.1,<0.2

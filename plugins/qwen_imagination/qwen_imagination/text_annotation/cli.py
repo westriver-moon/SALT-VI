@@ -10,10 +10,17 @@ from pathlib import Path
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
-SALT_ROOT = PLUGIN_ROOT.parents[2]
+SALT_ROOT = PLUGIN_ROOT.parents[1]
 SRC_ROOT = SALT_ROOT / "src"
 SEMANTIC_ROOT = SALT_ROOT / "semantic_imagination"
-for candidate in (SALT_ROOT, SRC_ROOT, PLUGIN_ROOT, SEMANTIC_ROOT):
+PERSON_PREPROCESSING_ROOT = SALT_ROOT / "person_preprocessing"
+for candidate in (
+    SALT_ROOT,
+    SRC_ROOT,
+    PLUGIN_ROOT,
+    SEMANTIC_ROOT,
+    PERSON_PREPROCESSING_ROOT,
+):
     if str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
@@ -38,6 +45,11 @@ from .manifest import (  # noqa: E402
     valid_cached_record,
 )
 from .pipeline import TextAnnotationPipeline  # noqa: E402
+from .prepared import (  # noqa: E402
+    CachedPoseROIGenerator,
+    PreparedReferenceStore,
+    collect_prepared_sources,
+)
 from .reasoner import TextAnnotationReasoner  # noqa: E402
 from .track_anchor import (  # noqa: E402
     PrecomputedSwinIRStore,
@@ -55,10 +67,13 @@ def _load_category_stats(config: TextAnnotationConfig) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _build_roi(config: TextAnnotationConfig) -> HumanROIGenerator:
+def _build_roi(
+    config: TextAnnotationConfig, prepared_store=None
+) -> HumanROIGenerator | CachedPoseROIGenerator:
     device = str(config.roi.get("device", "cuda:0"))
-    return HumanROIGenerator(
-        pose=UltralyticsPoseBackend(config.assets["yolo_pose"], device=device),
+    regions = HumanROIGenerator(
+        pose=(None if config.prepared_data_root else
+              UltralyticsPoseBackend(config.assets["yolo_pose"], device=device)),
         parsing=SCHPLIPBackend(
             config.roi["schp_root"], config.assets["schp_lip"], device=device
         ),
@@ -69,6 +84,11 @@ def _build_roi(config: TextAnnotationConfig) -> HumanROIGenerator:
         ),
         strict=True,
     )
+    if config.prepared_data_root:
+        if prepared_store is None:
+            raise ValueError("prepared Qwen ROI requires a shared person asset store")
+        return CachedPoseROIGenerator(regions, prepared_store)
+    return regions
 
 
 def _build_reasoner(config: TextAnnotationConfig) -> TextAnnotationReasoner:
@@ -90,8 +110,16 @@ def _build_reasoner(config: TextAnnotationConfig) -> TextAnnotationReasoner:
 def build_pipeline(
     config: TextAnnotationConfig,
 ) -> TextAnnotationPipeline | TrackAnchorTextAnnotationPipeline:
-    roi = _build_roi(config)
     reasoner = _build_reasoner(config)
+    if config.prepared_data_root is not None:
+        reference_store = PreparedReferenceStore(config)
+        roi = _build_roi(config, reference_store.store)
+        return TextAnnotationPipeline(
+            config, swin=None, roi=roi, reasoner=reasoner,
+            reference_store=reference_store,
+            category_stats=_load_category_stats(config),
+        )
+    roi = _build_roi(config)
     if config.strategy == "track_anchor":
         return TrackAnchorTextAnnotationPipeline(
             config,
@@ -121,6 +149,8 @@ def build_pipeline(
 
 
 def collect_sources(config: TextAnnotationConfig, split: str) -> list[SourceItem]:
+    if config.prepared_data_root is not None:
+        return collect_prepared_sources(config, split)
     by_modality = {}
     for modality in config.modalities:
         rows = []
@@ -339,9 +369,12 @@ def preflight(config: TextAnnotationConfig, *, check_server: bool = True) -> dic
         path = Path(config.roi[name]).expanduser().resolve()
         if not path.is_dir():
             raise FileNotFoundError(path)
-    swin_root = Path(config.swinir["root"]).expanduser().resolve()
-    if not swin_root.is_dir():
-        raise FileNotFoundError(swin_root)
+    if config.prepared_data_root is not None:
+        PreparedReferenceStore(config)
+    else:
+        swin_root = Path(config.swinir["root"]).expanduser().resolve()
+        if not swin_root.is_dir():
+            raise FileNotFoundError(swin_root)
     if config.precomputed_swinir_root is not None:
         derived = Path(config.precomputed_swinir_root).expanduser().resolve()
         required = [
@@ -359,6 +392,8 @@ def preflight(config: TextAnnotationConfig, *, check_server: bool = True) -> dic
         "dataset_root": str(config.dataset_root),
         "output_root": str(config.output_root),
         "strategy": config.strategy,
+        "prepared_data_root": str(config.prepared_data_root) if config.prepared_data_root else None,
+        "dataset": config.dataset,
         "precomputed_swinir_root": (
             str(config.precomputed_swinir_root)
             if config.precomputed_swinir_root is not None

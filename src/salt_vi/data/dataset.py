@@ -194,7 +194,16 @@ def _build_sysu_visual_source(
     views,
     modality,
     labels,
+    prepared_data_root=None,
 ):
+    if prepared_data_root:
+        from salt_vi.person_assets import PersonAssetStore, PersonVisualSource
+        from salt_vi.data.sysu_sources import load_train_source_records
+        records = load_train_source_records(data_dir, modality)
+        if [record.label for record in records] != list(labels):
+            raise ValueError("prepared SYSU source order does not match labels")
+        return PersonVisualSource(PersonAssetStore(prepared_data_root, "sysu"),
+                                    [record.source_key for record in records])
     if sr_backend == "pasd_multiview" and modality in sr_modalities:
         store = PASDTrainViewStore(
             data_dir,
@@ -252,6 +261,17 @@ def _build_sysu_caption_source(
     return ArrayCaptionSource(captions, augmented, llm_aug_prob)
 
 
+def _indexed_images(data_dir, paths, dataset, prepared_data_root):
+    if prepared_data_root:
+        from salt_vi.person_assets import PersonAssetStore, PersonVisualSource
+        return PersonVisualSource(PersonAssetStore(prepared_data_root, dataset), paths)
+    images = []
+    for path in paths:
+        with Image.open(os.path.join(data_dir, path)) as image:
+            images.append(np.array(image.resize((144, 288), PIL_LANCZOS)))
+    return np.array(images)
+
+
 class SYSU_Tri_Data(data.Dataset):
     def __init__(
         self,
@@ -277,6 +297,7 @@ class SYSU_Tri_Data(data.Dataset):
         sysu_sr_views_per_image=1,
         sysu_sr_view_sampling="independent",
         text_modalities=("rgb", "ir"),
+        prepared_data_root=None,
     ):
         self.tokenizer = SimpleTokenizer()
         self.joint_mode = joint_mode
@@ -313,6 +334,7 @@ class SYSU_Tri_Data(data.Dataset):
             views,
             "rgb",
             self.train_color_label,
+            prepared_data_root,
         )
         self.ir_visual_source = _build_sysu_visual_source(
             data_dir,
@@ -323,6 +345,7 @@ class SYSU_Tri_Data(data.Dataset):
             views,
             "ir",
             self.train_thermal_label,
+            prepared_data_root,
         )
         if len(self.rgb_visual_source) != len(self.train_color_label):
             raise ValueError("SYSU RGB image count does not match train labels")
@@ -416,7 +439,8 @@ class RegDB_Tri_Data(data.Dataset):
                     colorIndex=None, thermalIndex=None, \
                             text_length=77, llm_aug_prob=0.5,\
                                     llm_aug=False, captioner_name='Blip', joint_mode="ir_crossfusion", \
-                                        Feat_Filter=False, text_data_root=None):
+                                        Feat_Filter=False, text_data_root=None,
+                                        prepared_data_root=None):
         # initialize text tokenizer
         self.tokenizer = SimpleTokenizer()
 
@@ -434,21 +458,8 @@ class RegDB_Tri_Data(data.Dataset):
         color_img_file, train_color_label = load_data(train_color_list)
         thermal_img_file, train_thermal_label = load_data(train_thermal_list)
 
-        train_color_image = []
-        for i in range(len(color_img_file)):
-            img = Image.open(data_dir + color_img_file[i])
-            img = img.resize((144, 288), PIL_LANCZOS)
-            pix_array = np.array(img)
-            train_color_image.append(pix_array)
-        train_color_image = np.array(train_color_image)
-
-        train_thermal_image = []
-        for i in range(len(thermal_img_file)):
-            img = Image.open(data_dir + thermal_img_file[i])
-            img = img.resize((144, 288), PIL_LANCZOS)
-            pix_array = np.array(img)
-            train_thermal_image.append(pix_array)
-        train_thermal_image = np.array(train_thermal_image)
+        train_color_image = _indexed_images(data_dir, color_img_file, "regdb", prepared_data_root)
+        train_thermal_image = _indexed_images(data_dir, thermal_img_file, "regdb", prepared_data_root)
 
         # RGB format
         self.train_color_image = train_color_image
@@ -525,7 +536,8 @@ class LLCM_Tri_Data(data.Dataset):
                     colorIndex=None, thermalIndex=None, \
                             text_length=77, llm_aug_prob=0.5,\
                                     llm_aug=False, captioner_name='Blip', joint_mode="ir_crossfusion", \
-                                        Feat_Filter=False, text_data_root=None):
+                                        Feat_Filter=False, text_data_root=None,
+                                        prepared_data_root=None):
         # initialize text tokenizer
         self.tokenizer = SimpleTokenizer()
 
@@ -543,22 +555,8 @@ class LLCM_Tri_Data(data.Dataset):
         color_img_file, train_color_label = load_data(train_color_list)
         thermal_img_file, train_thermal_label = load_data(train_thermal_list)
 
-        train_color_image = []
-        for i in range(len(color_img_file)):
-            img = Image.open(data_dir+ color_img_file[i])
-            img = img.resize((144, 288), PIL_LANCZOS)
-            pix_array = np.array(img)
-            train_color_image.append(pix_array)
-        train_color_image = np.array(train_color_image)
-
-        train_thermal_image = []
-        for i in range(len(thermal_img_file)):
-            img = Image.open(data_dir+ thermal_img_file[i])
-            img = img.resize((144, 288), PIL_LANCZOS)
-            pix_array = np.array(img)
-            train_thermal_image.append(pix_array)
-            #print(pix_array.shape)
-        train_thermal_image = np.array(train_thermal_image)
+        train_color_image = _indexed_images(data_dir, color_img_file, "llcm", prepared_data_root)
+        train_thermal_image = _indexed_images(data_dir, thermal_img_file, "llcm", prepared_data_root)
 
         # RGB format
         self.train_color_image = train_color_image
@@ -639,7 +637,7 @@ class Test_Tri_Data(data.Dataset):
                             sysu_sr_view_manifest=None, sysu_sr_views_per_image=1,
                             sysu_sr_eval_view_index=0,
                             caption_lookup="identity", caption_manifest=None,
-                            caption_seed=0): # include Feat_Filter=False
+                            caption_seed=0, prepared_data_root=None):
         self.tokenizer = SimpleTokenizer() if load_text else None
         self.Feat_Filter = Feat_Filter
         self.load_text = load_text
@@ -650,6 +648,7 @@ class Test_Tri_Data(data.Dataset):
             or sysu_sr_data_root
             or sysu_sr_modalities
             or source_modality is not None
+            or prepared_data_root is not None
         )
         dataset_name = _infer_dataset_name(data_path) if needs_dataset_name else None
         assert 'query' in gallorquery or 'gall' in gallorquery, "gallorquery must be 'query[i]' or 'gall[i]'"
@@ -686,10 +685,16 @@ class Test_Tri_Data(data.Dataset):
         caption_rng = np.random.RandomState(int(caption_seed))
         self.joint_mode = joint_mode
         print(f"Loading Test {self.type} Data...")
+        prepared_store = None
+        if prepared_data_root:
+            from salt_vi.person_assets import PersonAssetStore
+            prepared_store = PersonAssetStore(prepared_data_root, dataset_name)
         for i in range(len(test_img_file)):
             # load img from the test_img_file
             image_path = test_img_file[i]
-            if dataset_name == "sysu" and source_modality is not None:
+            if prepared_store is not None:
+                image_path = prepared_store.path(os.path.relpath(image_path, data_path))
+            elif dataset_name == "sysu" and source_modality is not None:
                 image_path = _sysu_eval_image_path(
                     image_path,
                     data_path,
@@ -703,11 +708,11 @@ class Test_Tri_Data(data.Dataset):
                 )
             img = Image.open(image_path).convert("RGB")
             using_sr = source_modality in sr_modalities
-            if using_sr and sysu_sr_exact_size:
+            if prepared_store is not None or (using_sr and sysu_sr_exact_size):
                 expected_size = (int(img_size[0]), int(img_size[1]))
                 if img.size != expected_size:
                     raise ValueError(
-                        f"SYSU {source_modality} SR evaluation image has size {img.size}, "
+                        f"prepared/SR evaluation image has size {img.size}, "
                         f"expected {expected_size}"
                     )
             elif not using_sr and sysu_source_size is not None and dataset_name == "sysu":

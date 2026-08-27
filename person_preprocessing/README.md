@@ -1,0 +1,20 @@
+# SALT person preprocessing
+
+This repository-owned package creates the immutable visual assets shared by
+SALT-VI, Qwen annotation, and PACT. It has no dependency on any of those
+consumers.
+
+The ordering is deliberate:
+
+1. consume the inventoried super-resolved source image;
+2. deterministically resize or person-fit it to the exact ViT input geometry;
+3. run one canonical pose annotation on that final image;
+4. bind image and pose products with immutable contracts.
+
+The cache contains only generic artifacts: the final RGB image, geometry,
+person bbox, COCO-17 keypoints, detection confidence, and provenance. PACT
+anatomical masks and Qwen semantic ROIs belong to their own plugins.
+
+For `person_fit`, an earlier localization pass is needed to define the crop.
+That localization is recorded as geometry provenance; the reusable pose is
+still generated once on the final ViT-sized image.

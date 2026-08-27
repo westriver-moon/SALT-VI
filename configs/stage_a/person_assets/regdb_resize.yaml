@@ -1,0 +1,13 @@
+extends: sysu_resize.yaml
+
+config_select: configs/stage_a/person_assets/regdb_resize.yaml
+experiment_name: person_assets_regdb_resize
+metric_experiment_id: PERSON-ASSETS-REGDB-RESIZE
+output_root: train_outputs/person_assets_regdb/resize
+metric_events_path: train_outputs/person_assets_regdb/resize/events.jsonl
+dataset: regdb
+regdb_data_path: /home/cgv841/datasets/RegDB/
+sampler_type: identity_auto_replace
+pid_num: 206
+trial: 1
+eval_num_regdb: 1

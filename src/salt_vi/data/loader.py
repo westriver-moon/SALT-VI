@@ -85,6 +85,8 @@ def sysu_resolution_transforms(config, modality):
     Every non-derived SYSU modality first passes through the configured shared
     source size before reaching the model input size.
     """
+    if getattr(config, "prepared_data_root", None):
+        return [ExactSize((config.img_h, config.img_w), field_name=f"prepared {modality} input")]
     if getattr(config, "dataset", None) != "sysu":
         return []
     source_size = getattr(config, "sysu_source_size", None)
@@ -213,6 +215,9 @@ def build_pmt_recipe_transforms(
 class Loader:
 
     def __init__(self, config):
+        self.prepared_data_root = getattr(config, "prepared_data_root", None)
+        if self.prepared_data_root and getattr(config, "sysu_sr_modalities", []):
+            raise ValueError("prepared_data_root and legacy SYSU SR inputs are mutually exclusive")
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         train_size = (config.img_h, config.img_w)
         rgb_resolution = sysu_resolution_transforms(config, "rgb")
@@ -318,7 +323,7 @@ class Loader:
                 {str(item).lower() for item in getattr(config, "sysu_sr_modalities", [])}
             )
         )
-        if all_sysu_eval_modalities_are_exact_sr:
+        if self.prepared_data_root or all_sysu_eval_modalities_are_exact_sr:
             test_resize = ExactSize((config.img_h, config.img_w), field_name="SYSU evaluation SR input")
         else:
             test_resize = transforms.Resize(
@@ -441,7 +446,8 @@ class Loader:
                                                         sysu_sr_view_manifest=self.sysu_sr_view_manifest,
                                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                                         sysu_sr_view_sampling=self.sysu_sr_view_sampling,
-                                                        text_modalities=self.train_text_modalities)
+                                                        text_modalities=self.train_text_modalities,
+                                                        prepared_data_root=self.prepared_data_root)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 if self.sampler_type == "identity_camera_diverse":
                     rgb_records = load_train_source_records(self.sysu_data_path, "rgb")
@@ -481,6 +487,7 @@ class Loader:
         elif self.dataset == 'regdb':
             if self.mode == 'train':
                 samples = RegDB_Tri_Data(self.regdb_data_path, trial=self.trial, transform1=self.transform_color1, transform2=self.transform_color2,
+                                prepared_data_root=self.prepared_data_root,
                                 transform3=self.transform_thermal,\
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
@@ -521,6 +528,7 @@ class Loader:
         elif self.dataset == 'llcm':
             if self.mode == 'train':
                 samples = LLCM_Tri_Data(self.llcm_data_path, transform1=self.transform_color1, transform2=self.transform_color2,
+                                prepared_data_root=self.prepared_data_root,
                                 transform3=self.transform_thermal,\
                                         llm_aug_prob=self.llm_aug_prob,\
                                                 llm_aug=self.llm_aug,captioner_name=self.captioner_name,\
@@ -557,6 +565,7 @@ class Loader:
         if dataset == 'sysu':
             query_img, query_label, query_cam = process_query_sysu(self.sysu_data_path, mode=self.test_mode)
             query_samples = Test_Tri_Data(query_img, query_label, transform=self.transform_test,
+                                     prepared_data_root=self.prepared_data_root,
                                      img_size=(self.img_w, self.img_h), data_path=self.sysu_data_path,\
                                             captioner_name=self.captioner_name, joint_mode=self.joint_mode,gallorquery='query',\
                                             Feat_Filter=self.Feat_Filter,
@@ -590,6 +599,7 @@ class Loader:
                 self.gallery_cams.append(gall_cam)
 
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.sysu_data_path,transform=self.transform_test,
+                                        prepared_data_root=self.prepared_data_root,
                                         img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,
                                         joint_mode=self.joint_mode,gallorquery=f'gall[{i+1}]',
                                         Feat_Filter=self.Feat_Filter,
@@ -618,6 +628,7 @@ class Loader:
                 self.query_labels.append(query_label)
                 self.query_sizes.append(len(query_label))
                 query_samples = Test_Tri_Data(query_img, query_label, transform=self.transform_test,
+                                        prepared_data_root=self.prepared_data_root,
                                         img_size=(self.img_w, self.img_h), data_path=self.regdb_data_path,\
                                             captioner_name=self.captioner_name, \
                                                 joint_mode=self.joint_mode,gallorquery=f'query[{trial}]',\
@@ -634,6 +645,7 @@ class Loader:
                 self.gallery_sizes.append(len(gall_label))
 
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.regdb_data_path,transform=self.transform_test,
+                                            prepared_data_root=self.prepared_data_root,
                                             img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,\
                                                 joint_mode=self.joint_mode,gallorquery=f'gall[{trial}]',
                                                 Feat_Filter=self.Feat_Filter, load_text=False,
@@ -648,6 +660,7 @@ class Loader:
         elif self.dataset == 'llcm':
             query_img, query_label, query_cam = process_query_llcm(self.llcm_data_path, mode=2) # nir
             query_samples = Test_Tri_Data(query_img, query_label, transform=self.transform_test,
+                                     prepared_data_root=self.prepared_data_root,
                                      img_size=(self.img_w, self.img_h), data_path=self.llcm_data_path,\
                                         captioner_name=self.captioner_name, \
                                             joint_mode=self.joint_mode,gallorquery='query',\
@@ -671,6 +684,7 @@ class Loader:
                 self.gallery_cams.append(gall_cam)
 
                 gallery_samples = Test_Tri_Data(gall_img, gall_label,data_path=self.llcm_data_path,transform=self.transform_test,
+                                            prepared_data_root=self.prepared_data_root,
                                             img_size=(self.img_w, self.img_h), captioner_name=self.captioner_name,\
                                                 joint_mode=self.joint_mode,gallorquery=f'gall[{i+1}]',
                                                 Feat_Filter=self.Feat_Filter, load_text=False,

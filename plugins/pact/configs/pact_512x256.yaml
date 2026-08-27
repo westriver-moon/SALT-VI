@@ -1,0 +1,5 @@
+person_assets_root: /home/lab929/ybj/datasets/person-assets-512x256-v1
+output_root: /home/lab929/ybj/datasets/pact-assets-512x256-v1
+keypoint_confidence: 0.3
+patch_hw: [16, 16]
+stride_hw: [12, 12]

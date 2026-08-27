@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "salt-person-preprocessing"
+version = "0.1.0"
+description = "Deterministic ViT-sized person images and reusable perception caches"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy>=1.24",
+  "Pillow>=9.1",
+  "PyYAML>=6",
+]
+
+[project.optional-dependencies]
+pose = ["ultralytics==8.3.179"]
+test = ["pytest>=7"]
+
+[project.scripts]
+salt-person-preprocess = "person_preprocessing.pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["person_preprocessing*"]

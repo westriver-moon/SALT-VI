@@ -267,6 +267,11 @@ def validate_runtime_config(config):
         )
     if visual_input_backend not in {"single", "quadruple_patch"}:
         raise ValueError(f"Unsupported visual_input_backend {visual_input_backend!r}")
+    prepared_data_root = _value(config, "prepared_data_root", None)
+    if prepared_data_root and (_value(config, "sysu_sr_modalities", []) or []):
+        raise ValueError(
+            "prepared_data_root and legacy SYSU super-resolution inputs are mutually exclusive"
+        )
     if visual_input_backend == "quadruple_patch":
         expected_order = [
             "visible_global",
