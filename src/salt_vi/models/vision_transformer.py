@@ -113,6 +113,20 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
+    def cls_patch_attention(self, x):
+        """Return head-averaged CLS-to-patch attention without an NxN map."""
+        batch, tokens, channels = x.shape
+        if tokens < 2:
+            raise ValueError("CLS-to-patch attention requires at least one patch token")
+        qkv = self.qkv(x).reshape(
+            batch, tokens, 3, self.num_heads, channels // self.num_heads
+        )
+        qkv = qkv.permute(2, 0, 3, 1, 4)
+        query = qkv[0][:, :, :1]
+        keys = qkv[1][:, :, 1:]
+        logits = (query @ keys.transpose(-2, -1)) * float(self.scale)
+        return logits.float().softmax(dim=-1).mean(dim=1).squeeze(1)
+
     def forward(self, x):
         batch, tokens, channels = x.shape
         qkv = self.qkv(x).reshape(batch, tokens, 3, self.num_heads, channels // self.num_heads)
@@ -455,6 +469,16 @@ class ViT(nn.Module):
         for block_index in range(checkpoint_end, end_index):
             tokens = self.blocks[block_index](tokens)
         return tokens
+
+    def cls_patch_attention(self, tokens, block_index):
+        block_index = int(block_index)
+        if not 0 <= block_index < len(self.blocks):
+            raise ValueError(
+                f"PMT attention block index {block_index} is outside "
+                f"[0, {len(self.blocks) - 1}]"
+            )
+        block = self.blocks[block_index]
+        return block.attn.cls_patch_attention(block.norm1(tokens))
 
     def finalize_tokens(self, tokens):
         if tokens.ndim != 3:

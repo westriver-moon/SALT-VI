@@ -116,6 +116,13 @@ pmt_dropout: 0.03
 pmt_attention_dropout: 0.0
 pmt_attention_backend: manual
 pmt_drop_path_rate: 0.1
+ellipse_attention_weight: 0.0
+ellipse_attention_layer: 0
+ellipse_attention_radius_x: 0.58
+ellipse_attention_radius_y: 0.55
+ellipse_attention_temperature: 0.12
+ellipse_attention_tolerance: 0.08
+ellipse_attention_warmup_epochs: 3
 pmt_patch_embed: null
 visual_input_backend: single
 quadruple_template_trainable: false

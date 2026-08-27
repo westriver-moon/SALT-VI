@@ -100,6 +100,8 @@ def _validate_numeric_ranges(config):
         "pmt_gradient_checkpoint_blocks_warmup": (0, None),
         "pmt_gradient_checkpoint_segments": (1, None),
         "pmt_progressive_epoch": (1, None),
+        "ellipse_attention_layer": (0, None),
+        "ellipse_attention_warmup_epochs": (0, None),
         "pmt_mscm_transition_epochs": (0, None),
         "prj_output_dim": (1, None),
         "pid_num": (1, None),
@@ -157,6 +159,11 @@ def _validate_numeric_ranges(config):
         ("rfa_gaussian_sigma", 0.0, None, True, False),
         ("ema_decay", 0.0, 1.0, True, True),
         ("cosine_softmax_scale", 0.0, None, True, False),
+        ("ellipse_attention_weight", 0.0, None, False, False),
+        ("ellipse_attention_radius_x", 0.0, 1.0, True, False),
+        ("ellipse_attention_radius_y", 0.0, 1.0, True, False),
+        ("ellipse_attention_temperature", 0.0, None, True, False),
+        ("ellipse_attention_tolerance", 0.0, 1.0, False, False),
     )
     for name, minimum, maximum, exclusive_min, exclusive_max in real_fields:
         _require_real(
@@ -350,11 +357,28 @@ def validate_runtime_config(config):
         raise ValueError(
             "pmt_attention_backend is only implemented for pretrain_choice='PMT_VIT'"
         )
+    ellipse_weight = float(_value(config, "ellipse_attention_weight", 0.0))
+    ellipse_layer = int(_value(config, "ellipse_attention_layer", 0))
+    depth = int(_value(config, "pmt_depth", 12))
+    if ellipse_layer > depth:
+        raise ValueError(
+            f"ellipse_attention_layer cannot exceed pmt_depth; "
+            f"got {ellipse_layer} > {depth}"
+        )
+    if ellipse_weight > 0.0:
+        if str(_value(config, "pretrain_choice", "")) != "PMT_VIT":
+            raise ValueError("ellipse attention loss requires pretrain_choice='PMT_VIT'")
+        if not bool(_value(config, "pmt_recipe", False)):
+            raise ValueError("ellipse attention loss requires pmt_recipe=true")
+        if ellipse_layer < 1:
+            raise ValueError(
+                "positive ellipse_attention_weight requires "
+                "ellipse_attention_layer >= 1"
+            )
     checkpoint_blocks = _value(config, "pmt_gradient_checkpoint_blocks", None)
     warmup_checkpoint_blocks = _value(
         config, "pmt_gradient_checkpoint_blocks_warmup", None
     )
-    depth = int(_value(config, "pmt_depth", 12))
     for field_name, field_value in (
         ("pmt_gradient_checkpoint_blocks", checkpoint_blocks),
         ("pmt_gradient_checkpoint_blocks_warmup", warmup_checkpoint_blocks),

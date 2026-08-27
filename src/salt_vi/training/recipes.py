@@ -30,6 +30,17 @@ def _loss_names(model):
     return [name.strip() for name in model.args.loss_names.split(",") if name.strip()]
 
 
+def ellipse_attention_weight(args, current_epoch):
+    target = float(getattr(args, "ellipse_attention_weight", 0.0))
+    if target <= 0.0:
+        return 0.0
+    warmup_epochs = int(getattr(args, "ellipse_attention_warmup_epochs", 0))
+    if current_epoch is None or warmup_epochs <= 1:
+        return target
+    progress = min(1.0, max(0.0, (int(current_epoch) + 1) / warmup_epochs))
+    return target * progress
+
+
 def cross_modal_hard_weight(args, current_epoch):
     target = float(getattr(args, "cross_modal_hard_weight", 1.0))
     start = int(getattr(args, "cross_modal_hard_start_epoch", 0))
@@ -183,6 +194,26 @@ class PMTRecipe:
             )
             * model.args.id_loss_weight,
         }
+        ellipse_weight = ellipse_attention_weight(model.args, current_epoch)
+        if ellipse_weight > 0.0:
+            if not isinstance(visual, dict):
+                raise TypeError("Ellipse attention loss requires a PMT visual dictionary")
+            if "ellipse_attention" not in visual or "ellipse_mask" not in visual:
+                raise RuntimeError(
+                    "Ellipse attention loss is enabled but the visual encoder "
+                    "did not return its shallow-layer attention"
+                )
+            attention = visual["ellipse_attention"]
+            mask = visual["ellipse_mask"].to(
+                device=attention.device, dtype=attention.dtype
+            )
+            outside_mass = (attention * (1.0 - mask)).sum(dim=-1)
+            tolerance = float(getattr(model.args, "ellipse_attention_tolerance", 0.08))
+            result["ellipse_loss"] = torch.relu(
+                outside_mass - tolerance
+            ).mean() * ellipse_weight
+            result["ellipse_outside_mass"] = outside_mass.mean().detach()
+            result["ellipse_weight"] = ellipse_weight
         metric_loss = str(getattr(model.args, "pmt_metric_loss", "legacy"))
         mining = getattr(model.args, "triplet_mining", "pmt_hard")
         if mining not in {"pmt_hard", "wrt", "pmt_cross_modal_hard"}:

@@ -119,6 +119,11 @@ class PMTViTVisual(nn.Module):
                 + ("trainable warmup template" if self.quadruple_template_trainable else "frozen template")
             )
 
+        self.ellipse_attention_layer = 0
+        self.ellipse_attention_radius_x = 0.58
+        self.ellipse_attention_radius_y = 0.55
+        self.ellipse_attention_temperature = 0.12
+
     @property
     def input_dtype(self):
         if self.input_plugin is not None:
@@ -127,6 +132,97 @@ class PMTViTVisual(nn.Module):
         if isinstance(proj, nn.ModuleList):
             return proj[0].weight.dtype
         return proj.weight.dtype
+
+    def configure_ellipse_attention(
+        self,
+        *,
+        layer=0,
+        radius_x=0.58,
+        radius_y=0.55,
+        temperature=0.12,
+    ):
+        """Configure a 1-based shallow block for a broad soft ellipse prior."""
+        layer = int(layer)
+        radius_x = float(radius_x)
+        radius_y = float(radius_y)
+        temperature = float(temperature)
+        if not 0 <= layer <= len(self.vit.blocks):
+            raise ValueError(
+                f"ellipse_attention_layer must be within [0, {len(self.vit.blocks)}]"
+            )
+        if radius_x <= 0 or radius_y <= 0:
+            raise ValueError("ellipse attention radii must be positive")
+        if temperature <= 0:
+            raise ValueError("ellipse_attention_temperature must be positive")
+        self.ellipse_attention_layer = layer
+        self.ellipse_attention_radius_x = radius_x
+        self.ellipse_attention_radius_y = radius_y
+        self.ellipse_attention_temperature = temperature
+
+    def _ellipse_mask(self, grid_size, *, device):
+        grid_height, grid_width = (int(value) for value in grid_size)
+        y = (torch.arange(grid_height, device=device, dtype=torch.float32) + 0.5)
+        x = (torch.arange(grid_width, device=device, dtype=torch.float32) + 0.5)
+        y = y / grid_height
+        x = x / grid_width
+        yy, xx = torch.meshgrid(y, x, indexing="ij")
+        distance = (
+            ((xx - 0.5) / self.ellipse_attention_radius_x).square()
+            + ((yy - 0.5) / self.ellipse_attention_radius_y).square()
+        )
+        return torch.sigmoid(
+            (1.0 - distance) / self.ellipse_attention_temperature
+        ).flatten()
+
+    def _run_tokens(self, tokens, grid_size):
+        checkpoint_blocks = (
+            self.gradient_checkpoint_blocks if self.training else 0
+        )
+        layer = self.ellipse_attention_layer if self.training else 0
+        if layer <= 0:
+            return (
+                self.run_blocks(
+                    tokens,
+                    0,
+                    len(self.vit.blocks),
+                    checkpoint_blocks=checkpoint_blocks,
+                    checkpoint_segments=self.gradient_checkpoint_segments,
+                ),
+                None,
+            )
+
+        block_index = layer - 1
+        tokens = self.run_blocks(
+            tokens,
+            0,
+            block_index,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        attention = self.vit.cls_patch_attention(tokens, block_index)
+        if attention.shape[-1] != int(grid_size[0]) * int(grid_size[1]):
+            raise RuntimeError(
+                "Ellipse attention token count does not match the PMT patch grid"
+            )
+        tokens = self.run_blocks(
+            tokens,
+            block_index,
+            len(self.vit.blocks),
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        auxiliary = {
+            "ellipse_attention": attention,
+            "ellipse_mask": self._ellipse_mask(grid_size, device=attention.device),
+            "ellipse_layer": layer,
+        }
+        return tokens, auxiliary
+
+    @staticmethod
+    def _attach_auxiliary(packaged, auxiliary):
+        if auxiliary is not None:
+            packaged.update(auxiliary)
+        return packaged
 
     def forward(self, x, mode=None):
         if self.input_plugin is not None:
@@ -139,17 +235,11 @@ class PMTViTVisual(nn.Module):
             if mode is not None:
                 return self.forward_modality(x, mode)
         del mode
-        tokens, _grid_size = self.prepare_tokens(x)
-        tokens = self.run_blocks(
-            tokens,
-            0,
-            len(self.vit.blocks),
-            checkpoint_blocks=(
-                self.gradient_checkpoint_blocks if self.training else 0
-            ),
-            checkpoint_segments=self.gradient_checkpoint_segments,
+        tokens, grid_size = self.prepare_tokens(x)
+        tokens, auxiliary = self._run_tokens(tokens, grid_size)
+        return self._attach_auxiliary(
+            self.finalize_and_package(tokens), auxiliary
         )
-        return self.finalize_and_package(tokens)
 
     def forward_template(self, images):
         """Use the original shared patch embedding during phased PMT warmup."""
@@ -157,17 +247,11 @@ class PMTViTVisual(nn.Module):
             raise ValueError(
                 f"shared template input expects [B,3,H,W], got {tuple(images.shape)}"
             )
-        tokens, _grid_size = self.prepare_tokens(images)
-        tokens = self.run_blocks(
-            tokens,
-            0,
-            len(self.vit.blocks),
-            checkpoint_blocks=(
-                self.gradient_checkpoint_blocks if self.training else 0
-            ),
-            checkpoint_segments=self.gradient_checkpoint_segments,
+        tokens, grid_size = self.prepare_tokens(images)
+        tokens, auxiliary = self._run_tokens(tokens, grid_size)
+        return self._attach_auxiliary(
+            self.finalize_and_package(tokens), auxiliary
         )
-        return self.finalize_and_package(tokens)
 
     @torch.no_grad()
     def sync_input_plugin_from_template(self):
@@ -180,15 +264,7 @@ class PMTViTVisual(nn.Module):
 
     def _run_embedded_patches(self, patch_tokens, grid_size):
         tokens, _grid_size = self.vit.prepare_embedded_tokens(patch_tokens, grid_size)
-        return self.run_blocks(
-            tokens,
-            0,
-            len(self.vit.blocks),
-            checkpoint_blocks=(
-                self.gradient_checkpoint_blocks if self.training else 0
-            ),
-            checkpoint_segments=self.gradient_checkpoint_segments,
-        )
+        return self._run_tokens(tokens, grid_size)
 
     @staticmethod
     def _reshape_branch_major(tensor, branch_count, batch_size):
@@ -201,8 +277,9 @@ class PMTViTVisual(nn.Module):
             raise RuntimeError("forward_quadruple requires visual_input_backend='quadruple_patch'")
         batch_size = views.shape[0]
         patch_tokens, grid_size = self.input_plugin(views)
-        tokens = self._run_embedded_patches(patch_tokens, grid_size)
-        packaged = self.finalize_and_package(tokens)
+        tokens, auxiliary = self._run_embedded_patches(patch_tokens, grid_size)
+        packaged = self._attach_auxiliary(
+            self.finalize_and_package(tokens), auxiliary)
         packaged.update(
             branch_tokens=self._reshape_branch_major(packaged["tokens"], 4, batch_size),
             branch_features=self._reshape_branch_major(packaged["features"], 4, batch_size),
@@ -217,8 +294,9 @@ class PMTViTVisual(nn.Module):
             raise RuntimeError("forward_modality requires visual_input_backend='quadruple_patch'")
         batch_size = images.shape[0]
         patch_tokens, grid_size, branch_ids = self.input_plugin.forward_modality(images, modality)
-        tokens = self._run_embedded_patches(patch_tokens, grid_size)
-        packaged = self.finalize_and_package(tokens)
+        tokens, auxiliary = self._run_embedded_patches(patch_tokens, grid_size)
+        packaged = self._attach_auxiliary(
+            self.finalize_and_package(tokens), auxiliary)
         branch_tokens = self._reshape_branch_major(packaged["tokens"], 2, batch_size)
         branch_raw_tokens = self._reshape_branch_major(packaged["raw_tokens"], 2, batch_size)
         averaged_tokens = branch_tokens.mean(dim=1)

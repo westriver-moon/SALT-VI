@@ -334,6 +334,14 @@ class CLIP2ReID(nn.Module):
                 self.args, "quadruple_template_trainable", False
             ),
         )
+        ellipse_weight = float(getattr(args, "ellipse_attention_weight", 0.0))
+        if ellipse_weight > 0.0:
+            self.base_model.visual.configure_ellipse_attention(
+                layer=getattr(args, "ellipse_attention_layer", 0),
+                radius_x=getattr(args, "ellipse_attention_radius_x", 0.58),
+                radius_y=getattr(args, "ellipse_attention_radius_y", 0.55),
+                temperature=getattr(args, "ellipse_attention_temperature", 0.12),
+            )
         self.embed_dim = base_cfg['embed_dim']
         if args.pretrain_choice == 'RN50':
             # 复制conv1...的权重到conv1_...

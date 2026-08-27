@@ -1,0 +1,15 @@
+extends: c3_camera_diverse_cosine.yaml
+
+config_select: configs/stage_a/safe_tricks/e1_c3_ellipse_layer2.yaml
+metric_experiment_id: ELLIPSE-C3-LAYER2
+metric_events_path: ${SALT_ELLIPSE_OUTPUT_ROOT}/events/layer2.jsonl
+output_root: ${SALT_ELLIPSE_OUTPUT_ROOT}/layer2
+
+# Broad, soft body prior: it retains the full center width and mainly suppresses corners.
+ellipse_attention_weight: 0.10
+ellipse_attention_layer: 2
+ellipse_attention_radius_x: 0.58
+ellipse_attention_radius_y: 0.55
+ellipse_attention_temperature: 0.12
+ellipse_attention_tolerance: 0.08
+ellipse_attention_warmup_epochs: 3

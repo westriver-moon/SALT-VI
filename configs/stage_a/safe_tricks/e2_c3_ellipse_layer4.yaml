@@ -1,0 +1,15 @@
+extends: c3_camera_diverse_cosine.yaml
+
+config_select: configs/stage_a/safe_tricks/e2_c3_ellipse_layer4.yaml
+metric_experiment_id: ELLIPSE-C3-LAYER4
+metric_events_path: ${SALT_ELLIPSE_OUTPUT_ROOT}/events/layer4.jsonl
+output_root: ${SALT_ELLIPSE_OUTPUT_ROOT}/layer4
+
+# Same C3 recipe and ellipse; only the constrained shallow block changes.
+ellipse_attention_weight: 0.10
+ellipse_attention_layer: 4
+ellipse_attention_radius_x: 0.58
+ellipse_attention_radius_y: 0.55
+ellipse_attention_temperature: 0.12
+ellipse_attention_tolerance: 0.08
+ellipse_attention_warmup_epochs: 3
