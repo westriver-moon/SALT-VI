@@ -37,6 +37,12 @@ class StubEstimator:
         }
 
 
+class MissingEstimator(StubEstimator):
+    def predict(self, image):
+        self.calls.append(image.size)
+        return None
+
+
 def test_pose_is_cached_on_final_vit_image(tmp_path, monkeypatch):
     native = tmp_path / "native"
     source = native / "sysu/cam1/0001/0001.png"
@@ -81,3 +87,49 @@ def test_pose_is_cached_on_final_vit_image(tmp_path, monkeypatch):
     assert tuple(pose["size_hw"]) == (64, 32)
     assert pose["keypoints"].shape == (17, 3)
     assert store.pose_contract()["coordinate_space"] == "final_vit_input_pixels_xy"
+
+
+def test_person_fit_preserves_inventory_when_localization_fails(tmp_path, monkeypatch):
+    native = tmp_path / "native"
+    source = native / "llcm/nir/0000/frame.png"
+    source.parent.mkdir(parents=True)
+    Image.new("RGB", (20, 50), "gray").save(source)
+    (native / "contract.json").write_text(json.dumps({"scale": 1}))
+    manifest = tmp_path / "images.jsonl"
+    row = {
+        "dataset": "llcm",
+        "source": "nir/0000/frame.png",
+        "output": "nir/0000/frame.png",
+        "modality": "ir",
+        "width": 20,
+        "height": 50,
+        "references": [],
+        "aliases": [],
+    }
+    manifest.write_text(json.dumps(row) + "\n")
+    weight = tmp_path / "yolo11x-pose.pt"
+    weight.write_bytes(b"fixture")
+    config = {
+        "input_root": str(native),
+        "input_manifest": str(manifest),
+        "input_scale": 1,
+        "output_root": str(tmp_path / "assets"),
+        "size_hw": [64, 32],
+        "person_margin": 0.05,
+        "blur_radius": 2,
+        "detection_confidence": 0.25,
+        "no_person_fallback": "full_frame_fit",
+        "pose_imgsz": 640,
+        "pose_weight": str(weight),
+    }
+    MissingEstimator.calls = []
+    monkeypatch.setattr(pipeline, "PoseEstimator", MissingEstimator)
+
+    summary = pipeline.prepare(config, ["llcm"], ["person_fit"], "cpu")[0]
+
+    store = PersonAssetStore(tmp_path / "assets/person_fit", "llcm")
+    assert store.image(row["source"]).size == (32, 64)
+    assert store.record(row["source"])["localization"]["status"] == "fallback_full_frame"
+    assert summary["counts"] == {"complete": 1}
+    assert summary["localization_counts"] == {"fallback_full_frame": 1}
+    assert summary["complete_inventory"] is True

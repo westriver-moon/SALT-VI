@@ -18,3 +18,13 @@ anatomical masks and Qwen semantic ROIs belong to their own plugins.
 For `person_fit`, an earlier localization pass is needed to define the crop.
 That localization is recorded as geometry provenance; the reusable pose is
 still generated once on the final ViT-sized image.
+
+The canonical configuration uses `no_person_fallback: full_frame_fit`. If the
+localizer misses a person, the sample is not discarded: the complete source
+frame is fitted with the same aspect-preserving geometry and the record is
+marked `fallback_full_frame`. This keeps the prepared dataset inventory exact
+while exposing every fallback for later quality analysis.
+
+Geometry preparation is intentionally offline. Training reads the immutable
+prepared images through `prepared_data_root` and applies only stochastic data
+augmentation online; it never reruns YOLO or changes the crop between epochs.

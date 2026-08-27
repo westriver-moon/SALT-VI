@@ -6,5 +6,6 @@ size_hw: [512, 256]
 person_margin: 0.05
 blur_radius: 24.0
 detection_confidence: 0.25
+no_person_fallback: full_frame_fit
 pose_imgsz: 640
 pose_weight: /home/lab929/ybj/models/qri-v1/checkpoints/yolo11x-pose.pt

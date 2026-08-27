@@ -138,6 +138,11 @@ def prepare(config, datasets, modes, device, limit=0, source_keys=None):
         (Path(config["input_root"]) / "contract.json").read_text(encoding="utf-8")
     )
     scale = int(native_contract.get("scale", config.get("input_scale", 1)))
+    no_person_fallback = config.get("no_person_fallback", "reject")
+    if no_person_fallback not in {"reject", "full_frame_fit"}:
+        raise ValueError(
+            "no_person_fallback must be 'reject' or 'full_frame_fit'"
+        )
     locator = (
         PoseEstimator(
             pose_weight(config),
@@ -174,6 +179,7 @@ def prepare(config, datasets, modes, device, limit=0, source_keys=None):
                     pose_imgsz=int(config["pose_imgsz"]),
                     person_margin=float(config["person_margin"]),
                     blur_radius=float(config["blur_radius"]),
+                    no_person_fallback=no_person_fallback,
                 )
             bind_contract(root / "contract.json", contract)
             for row in selected:
@@ -200,27 +206,44 @@ def prepare(config, datasets, modes, device, limit=0, source_keys=None):
                     image="images/" + row["output"],
                 )
                 if mode == "person_fit" and person is None:
-                    record["status"] = "no_person_detected"
+                    if no_person_fallback == "reject":
+                        record["status"] = "no_person_detected"
+                        write_json(metadata, record)
+                        continue
+                    person_bbox = [0.0, 0.0, float(image.width), float(image.height)]
                 else:
-                    output, geometry = render(
-                        image,
-                        mode,
-                        config["size_hw"],
-                        person["bbox"] if person else None,
-                        config["person_margin"],
-                        config["blur_radius"],
-                    )
-                    image_path.parent.mkdir(parents=True, exist_ok=True)
-                    temporary = image_path.with_suffix(".png.tmp")
-                    output.save(temporary, format="PNG", compress_level=3)
-                    os.replace(temporary, image_path)
-                    record.update(status="complete", geometry=geometry)
-                    if person:
-                        record["localization"] = {
+                    person_bbox = person["bbox"] if person else None
+                output, geometry = render(
+                    image,
+                    mode,
+                    config["size_hw"],
+                    person_bbox,
+                    config["person_margin"],
+                    config["blur_radius"],
+                )
+                image_path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = image_path.with_suffix(".png.tmp")
+                output.save(temporary, format="PNG", compress_level=3)
+                os.replace(temporary, image_path)
+                record.update(status="complete", geometry=geometry)
+                if person:
+                    record["localization"] = {
+                        "status": "detected_person",
+                        **{
                             key: value.tolist() if isinstance(value, np.ndarray) else value
                             for key, value in person.items()
                             if key != "keypoints"
-                        }
+                        },
+                    }
+                elif mode == "person_fit":
+                    record["localization"] = {
+                        "status": "fallback_full_frame",
+                        "reason": "no_person_detected",
+                        "bbox": person_bbox,
+                        "confidence": 0.0,
+                        "person_count": 0,
+                        "model_path": str(pose_weight(config)),
+                    }
                 write_json(metadata, record)
             records = [
                 json.loads(path.read_text(encoding="utf-8"))
@@ -238,6 +261,13 @@ def prepare(config, datasets, modes, device, limit=0, source_keys=None):
                 "counts": dict(collections.Counter(row["status"] for row in records)),
                 "manifest_records": len(records),
             }
+            if mode == "person_fit":
+                summary["localization_counts"] = dict(
+                    collections.Counter(
+                        row.get("localization", {}).get("status", "unavailable")
+                        for row in records
+                    )
+                )
             summary["complete_inventory"] = (
                 summary["counts"].get("complete", 0) == summary["inventory_total"]
             )
