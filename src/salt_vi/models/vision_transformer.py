@@ -350,7 +350,7 @@ class ViT(nn.Module):
             nn.init.zeros_(module.bias)
             nn.init.ones_(module.weight)
 
-    def prepare_tokens(self, x):
+    def prepare_tokens(self, x, patch_indices=None):
         """Prepare pre-block tokens and return their actual rectangular grid."""
         if x.ndim != 4:
             raise ValueError(f"ViT expects BCHW input, got {tuple(x.shape)}")
@@ -365,10 +365,19 @@ class ViT(nn.Module):
                 f"{patch_height}x{patch_width}"
             )
         x = self.patch_embed(x)
-        return self.prepare_embedded_tokens(x, (grid_height, grid_width))
+        return self.prepare_embedded_tokens(
+            x,
+            (grid_height, grid_width),
+            patch_indices=patch_indices,
+        )
 
-    def prepare_embedded_tokens(self, patch_tokens, grid_size):
-        """Add the shared CLS and positional embeddings to externally embedded patches."""
+    def prepare_embedded_tokens(self, patch_tokens, grid_size, patch_indices=None):
+        """Add CLS and the original-grid positional embeddings to patch tokens.
+
+        ``patch_indices`` selects both patch embeddings and their matching
+        positions.  The full rectangular positional parameter is deliberately
+        retained so existing PMT and Stage-A checkpoints keep the same shape.
+        """
         if patch_tokens.ndim != 3:
             raise ValueError(
                 f"Embedded PMT patches must have shape [B,N,D], got {tuple(patch_tokens.shape)}"
@@ -380,9 +389,6 @@ class ViT(nn.Module):
                 f"Embedded PMT patches contain {patch_tokens.shape[1]} tokens, expected "
                 f"{expected_tokens} for grid {grid_height}x{grid_width}"
             )
-        batch = patch_tokens.shape[0]
-        cls_tokens = self.cls_token.expand(batch, -1, -1)
-        x = torch.cat((cls_tokens, patch_tokens), dim=1)
         pos_embed = resize_pos_embed_grid(
             self.pos_embed,
             self.base_grid_size[0],
@@ -390,10 +396,35 @@ class ViT(nn.Module):
             grid_height,
             grid_width,
         )
+        if patch_indices is not None:
+            if patch_indices.ndim != 1 or patch_indices.dtype != torch.long:
+                raise ValueError("patch_indices must be a one-dimensional torch.long tensor")
+            if patch_indices.numel() < 1:
+                raise ValueError("patch_indices must retain at least one patch token")
+            if patch_indices.device != patch_tokens.device:
+                patch_indices = patch_indices.to(device=patch_tokens.device)
+            # Avoid device synchronization in the hot CUDA path. index_select
+            # still reports an out-of-range device index; detailed structural
+            # validation is retained for CPU callers and unit tests.
+            if patch_indices.device.type == "cpu":
+                if int(patch_indices.min()) < 0 or int(patch_indices.max()) >= expected_tokens:
+                    raise ValueError(
+                        f"patch_indices must be within [0, {expected_tokens - 1}]"
+                    )
+                if torch.unique(patch_indices).numel() != patch_indices.numel():
+                    raise ValueError("patch_indices must not contain duplicates")
+            patch_tokens = patch_tokens.index_select(1, patch_indices)
+            patch_pos_embed = pos_embed[:, 1:].index_select(1, patch_indices)
+            pos_embed = torch.cat((pos_embed[:, :1], patch_pos_embed), dim=1)
+
+        batch = patch_tokens.shape[0]
+        cls_tokens = self.cls_token.expand(batch, -1, -1)
+        x = torch.cat((cls_tokens, patch_tokens), dim=1)
         if x.shape[1] != pos_embed.shape[1]:
             raise RuntimeError(
                 f"Patch tokens ({x.shape[1]}) and positional tokens "
-                f"({pos_embed.shape[1]}) disagree for {height}x{width}"
+                f"({pos_embed.shape[1]}) disagree for grid "
+                f"{grid_height}x{grid_width}"
             )
         x = x + pos_embed
         x = self.pos_drop(x)

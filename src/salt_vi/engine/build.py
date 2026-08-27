@@ -333,6 +333,15 @@ class CLIP2ReID(nn.Module):
             quadruple_template_trainable=getattr(
                 self.args, "quadruple_template_trainable", False
             ),
+            pmt_token_pruning_mode=getattr(
+                self.args, "pmt_token_pruning_mode", "none"
+            ),
+            pmt_token_prune_fraction=getattr(
+                self.args, "pmt_token_prune_fraction", 0.10
+            ),
+            pmt_token_roundness=getattr(
+                self.args, "pmt_token_roundness", 4.0
+            ),
         )
         ellipse_weight = float(getattr(args, "ellipse_attention_weight", 0.0))
         if ellipse_weight > 0.0:

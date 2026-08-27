@@ -164,6 +164,8 @@ def _validate_numeric_ranges(config):
         ("ellipse_attention_radius_y", 0.0, 1.0, True, False),
         ("ellipse_attention_temperature", 0.0, None, True, False),
         ("ellipse_attention_tolerance", 0.0, 1.0, False, False),
+        ("pmt_token_prune_fraction", 0.0, 1.0, False, True),
+        ("pmt_token_roundness", 2.0, None, True, False),
     )
     for name, minimum, maximum, exclusive_min, exclusive_max in real_fields:
         _require_real(
@@ -357,6 +359,20 @@ def validate_runtime_config(config):
         raise ValueError(
             "pmt_attention_backend is only implemented for pretrain_choice='PMT_VIT'"
         )
+    token_pruning_mode = str(
+        _value(config, "pmt_token_pruning_mode", "none") or "none"
+    ).lower()
+    if token_pruning_mode not in {"none", "rounded_rect"}:
+        raise ValueError(
+            f"Unsupported pmt_token_pruning_mode {token_pruning_mode!r}"
+        )
+    if token_pruning_mode != "none":
+        if str(_value(config, "pretrain_choice", "")) != "PMT_VIT":
+            raise ValueError("physical token pruning requires pretrain_choice='PMT_VIT'")
+        if float(_value(config, "pmt_token_prune_fraction", 0.0)) <= 0.0:
+            raise ValueError(
+                "physical token pruning requires pmt_token_prune_fraction > 0"
+            )
     ellipse_weight = float(_value(config, "ellipse_attention_weight", 0.0))
     ellipse_layer = int(_value(config, "ellipse_attention_layer", 0))
     depth = int(_value(config, "pmt_depth", 12))
@@ -364,6 +380,12 @@ def validate_runtime_config(config):
         raise ValueError(
             f"ellipse_attention_layer cannot exceed pmt_depth; "
             f"got {ellipse_layer} > {depth}"
+        )
+    if token_pruning_mode != "none" and (
+        ellipse_weight > 0.0 or ellipse_layer > 0
+    ):
+        raise ValueError(
+            "ellipse attention and physical token pruning cannot be enabled together"
         )
     if ellipse_weight > 0.0:
         if str(_value(config, "pretrain_choice", "")) != "PMT_VIT":

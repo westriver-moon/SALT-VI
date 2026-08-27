@@ -140,6 +140,13 @@ def build_parser():
     )
     parser.add_argument("--pmt_drop_path_rate", type=float, default=0.1)
     parser.add_argument("--pmt_patch_embed", type=ast.literal_eval, default=None)
+    parser.add_argument(
+        "--pmt_token_pruning_mode",
+        choices=("none", "rounded_rect"),
+        default="none",
+    )
+    parser.add_argument("--pmt_token_prune_fraction", type=float, default=0.10)
+    parser.add_argument("--pmt_token_roundness", type=float, default=4.0)
 
     ######################## text transformer settings ########################
     parser.add_argument("--text_length", type=int, default=77)
