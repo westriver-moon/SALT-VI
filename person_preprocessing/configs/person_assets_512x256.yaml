@@ -1,11 +1,24 @@
 input_root: /home/lab929/ybj/swinir_x4_pipeline/outputs
 input_manifest: /home/lab929/ybj/swinir_x4_pipeline/manifests/images.jsonl
-input_scale: 4
-output_root: /home/lab929/ybj/datasets/person-assets-512x256-v1
+quality_gate: /home/lab929/ybj/experiments/person_preprocessing/person-fit-yolo26-full-20260827/final/final_gate.jsonl
+output_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
 size_hw: [512, 256]
 person_margin: 0.05
 blur_radius: 24.0
-detection_confidence: 0.25
-no_person_fallback: full_frame_fit
-pose_imgsz: 640
-pose_weight: /home/lab929/ybj/models/qri-v1/checkpoints/yolo11x-pose.pt
+
+models:
+  primary_detector: /home/lab929/ybj/models/qri-v1/checkpoints/yolo26x.pt
+  primary_pose: /home/lab929/ybj/models/qri-v1/checkpoints/yolo26x-pose.pt
+  crosscheck_detector: /home/lab929/ybj/models/qri-v1/checkpoints/yolo11x.pt
+  human_parser: /home/lab929/ybj/models/qri-v1/checkpoints/schp_lip.pth
+
+quality_policy:
+  partial_box_max_top_ratio: 0.05
+  partial_box_min_bottom_ratio: 0.75
+  sharpening: disabled
+  ordinary_sample_size: 1800
+
+expected_counts:
+  sysu: {total: 44745, pass: 44031, fallback: 714}
+  regdb: {total: 8240, pass: 7161, fallback: 1079}
+  llcm: {total: 46767, pass: 45065, fallback: 1702}

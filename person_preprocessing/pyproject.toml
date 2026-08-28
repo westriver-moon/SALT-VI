@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "salt-person-preprocessing"
-version = "0.1.0"
-description = "Deterministic ViT-sized person images and reusable perception caches"
+version = "1.0.0"
+description = "Materialize audited V1+YOLO26 person-fit assets"
 requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.24",
@@ -14,7 +14,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-pose = ["ultralytics==8.3.179"]
 test = ["pytest>=7"]
 
 [project.scripts]

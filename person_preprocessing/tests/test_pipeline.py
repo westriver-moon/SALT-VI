@@ -1,135 +1,72 @@
 import json
-from pathlib import Path
 
-import numpy as np
 from PIL import Image
+import pytest
 
 from person_preprocessing import PersonAssetStore
 from person_preprocessing import pipeline
 
 
-def _joints(width, height):
-    xy = [
-        (0.50, 0.12), (0.46, 0.10), (0.54, 0.10), (0.42, 0.12),
-        (0.58, 0.12), (0.35, 0.28), (0.65, 0.28), (0.28, 0.43),
-        (0.72, 0.43), (0.23, 0.57), (0.77, 0.57), (0.40, 0.55),
-        (0.60, 0.55), (0.38, 0.73), (0.62, 0.73), (0.36, 0.92),
-        (0.64, 0.92),
-    ]
-    return np.asarray([[x * width, y * height, 0.9] for x, y in xy], np.float32)
-
-
-class StubEstimator:
-    calls = []
-
-    def __init__(self, weight, *args):
-        self.weight = Path(weight).resolve()
-
-    def predict(self, image):
-        self.calls.append(image.size)
-        width, height = image.size
-        return {
-            "bbox": np.asarray([1, 1, width - 1, height - 1], np.float32),
-            "confidence": 0.9,
-            "keypoints": _joints(width, height),
-            "model_path": str(self.weight),
-            "person_count": 1,
-        }
-
-
-class MissingEstimator(StubEstimator):
-    def predict(self, image):
-        self.calls.append(image.size)
-        return None
-
-
-def test_pose_is_cached_on_final_vit_image(tmp_path, monkeypatch):
+def _fixture(tmp_path):
     native = tmp_path / "native"
-    source = native / "sysu/cam1/0001/0001.png"
-    source.parent.mkdir(parents=True)
-    Image.new("RGB", (20, 50), "gray").save(source)
-    (native / "contract.json").write_text(json.dumps({"scale": 1}))
+    rows = []
+    gate = []
+    for index, decision in enumerate(("pass", "fallback"), 1):
+        source = f"cam1/0001/{index:04d}.jpg"
+        output = f"cam1/0001/{index:04d}.png"
+        path = native / "sysu" / output
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (20, 50), "gray").save(path)
+        rows.append({
+            "dataset": "sysu", "source": source, "output": output,
+            "modality": "rgb", "width": 20, "height": 50,
+            "references": [], "aliases": [],
+        })
+        gate.append({
+            "dataset": "sysu", "source_key": source,
+            "native_image": str(path), "width": 20, "height": 50,
+            "annotation_bbox": [2.0, 1.0, 18.0, 49.0],
+            "machine_decision": "pass_pending_visual",
+            "final_decision": decision, "final_reason": "fixture",
+            "risk_reasons": [], "schp_risks": [],
+        })
     manifest = tmp_path / "images.jsonl"
-    row = {
-        "dataset": "sysu",
-        "source": "cam1/0001/0001.jpg",
-        "output": "cam1/0001/0001.png",
-        "modality": "rgb",
-        "width": 20,
-        "height": 50,
-        "references": [{"index": "train", "label": 1}],
-        "aliases": [],
-    }
-    manifest.write_text(json.dumps(row) + "\n")
-    weight = tmp_path / "yolo11x-pose.pt"
-    weight.write_bytes(b"fixture")
+    manifest.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    final_gate = tmp_path / "final_gate.jsonl"
+    final_gate.write_text("".join(json.dumps(row) + "\n" for row in gate))
     config = {
-        "input_root": str(native),
-        "input_manifest": str(manifest),
-        "input_scale": 1,
-        "output_root": str(tmp_path / "assets"),
-        "size_hw": [64, 32],
-        "person_margin": 0.05,
-        "blur_radius": 2,
-        "detection_confidence": 0.25,
-        "pose_imgsz": 640,
-        "pose_weight": str(weight),
+        "input_root": str(native), "input_manifest": str(manifest),
+        "quality_gate": str(final_gate), "output_root": str(tmp_path / "assets"),
+        "size_hw": [64, 32], "person_margin": 0.05, "blur_radius": 2,
+        "models": {},
+        "quality_policy": {
+            "partial_box_max_top_ratio": 0.05,
+            "partial_box_min_bottom_ratio": 0.75,
+        },
+        "expected_counts": {"sysu": {"total": 2, "pass": 1, "fallback": 1}},
     }
-    StubEstimator.calls = []
-    monkeypatch.setattr(pipeline, "PoseEstimator", StubEstimator)
-    pipeline.prepare(config, ["sysu"], ["person_fit"], "cpu")
-    pipeline.pose(config, ["sysu"], ["person_fit"], "cpu")
-
-    assert StubEstimator.calls == [(20, 50), (32, 64)]
-    store = PersonAssetStore(tmp_path / "assets/person_fit", "sysu")
-    assert store.image(row["source"]).size == (32, 64)
-    pose = store.pose(row["source"])
-    assert tuple(pose["size_hw"]) == (64, 32)
-    assert pose["keypoints"].shape == (17, 3)
-    assert store.pose_contract()["coordinate_space"] == "final_vit_input_pixels_xy"
+    return config, gate
 
 
-def test_person_fit_preserves_inventory_when_localization_fails(tmp_path, monkeypatch):
-    native = tmp_path / "native"
-    source = native / "llcm/nir/0000/frame.png"
-    source.parent.mkdir(parents=True)
-    Image.new("RGB", (20, 50), "gray").save(source)
-    (native / "contract.json").write_text(json.dumps({"scale": 1}))
-    manifest = tmp_path / "images.jsonl"
-    row = {
-        "dataset": "llcm",
-        "source": "nir/0000/frame.png",
-        "output": "nir/0000/frame.png",
-        "modality": "ir",
-        "width": 20,
-        "height": 50,
-        "references": [],
-        "aliases": [],
+def test_materialize_current_gate_preserves_complete_inventory(tmp_path):
+    config, _gate = _fixture(tmp_path)
+    summary = pipeline.materialize(config, ["sysu"], workers=1)[0]
+    store = PersonAssetStore(tmp_path / "assets", "sysu")
+    assert summary == {
+        "dataset": "sysu", "total": 2, "passed": 1, "fallback": 1,
+        "fallback_rate": 0.5, "complete_inventory": True,
     }
-    manifest.write_text(json.dumps(row) + "\n")
-    weight = tmp_path / "yolo11x-pose.pt"
-    weight.write_bytes(b"fixture")
-    config = {
-        "input_root": str(native),
-        "input_manifest": str(manifest),
-        "input_scale": 1,
-        "output_root": str(tmp_path / "assets"),
-        "size_hw": [64, 32],
-        "person_margin": 0.05,
-        "blur_radius": 2,
-        "detection_confidence": 0.25,
-        "no_person_fallback": "full_frame_fit",
-        "pose_imgsz": 640,
-        "pose_weight": str(weight),
-    }
-    MissingEstimator.calls = []
-    monkeypatch.setattr(pipeline, "PoseEstimator", MissingEstimator)
+    assert store.image("cam1/0001/0001.jpg").size == (32, 64)
+    assert store.record("cam1/0001/0001.jpg")["localization"]["status"] == "detected_person"
+    assert store.record("cam1/0001/0002.jpg")["localization"]["status"] == "fallback_full_frame"
 
-    summary = pipeline.prepare(config, ["llcm"], ["person_fit"], "cpu")[0]
 
-    store = PersonAssetStore(tmp_path / "assets/person_fit", "llcm")
-    assert store.image(row["source"]).size == (32, 64)
-    assert store.record(row["source"])["localization"]["status"] == "fallback_full_frame"
-    assert summary["counts"] == {"complete": 1}
-    assert summary["localization_counts"] == {"fallback_full_frame": 1}
-    assert summary["complete_inventory"] is True
+def test_validate_gate_rejects_known_partial_person_failure(tmp_path):
+    config, gate = _fixture(tmp_path)
+    gate[0]["annotation_bbox"] = [2.0, 0.0, 18.0, 20.0]
+    gate[0]["risk_reasons"] = ["missing_lower_body_evidence"]
+    with open(config["quality_gate"], "w") as stream:
+        for row in gate:
+            stream.write(json.dumps(row) + "\n")
+    with pytest.raises(ValueError, match="unsafe partial-person box"):
+        pipeline.materialize(config, ["sysu"], workers=1)

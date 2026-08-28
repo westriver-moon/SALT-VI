@@ -1,7 +1,7 @@
 extends: llcm_resize.yaml
 
 config_select: configs/stage_a/person_assets/llcm_person_fit.yaml
-prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256-v1/person_fit
+prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
 experiment_name: person_assets_llcm_person_fit
 metric_experiment_id: PERSON-ASSETS-LLCM-PERSON-FIT
 output_root: train_outputs/person_assets_llcm/person_fit

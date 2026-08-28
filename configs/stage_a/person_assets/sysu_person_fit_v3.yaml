@@ -1,8 +1,0 @@
-extends: sysu_person_fit_v2.yaml
-
-config_select: configs/stage_a/person_assets/sysu_person_fit_v3.yaml
-prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256-v3-overlay
-experiment_name: person_assets_sysu_person_fit_v3
-metric_experiment_id: PERSON-ASSETS-SYSU-PERSON-FIT-V3
-output_root: train_outputs/person_assets_sysu/person_fit_v3
-metric_events_path: train_outputs/person_assets_sysu/person_fit_v3/events.jsonl
