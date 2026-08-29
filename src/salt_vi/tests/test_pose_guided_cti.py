@@ -177,14 +177,15 @@ def test_human_mask_store_unions_only_valid_parts(tmp_path):
     )
 
 
-def test_cti_config_keeps_full_grid_and_rejects_pruning():
-    config = load_train_configs(
-        "configs/stage_a/person_assets/sysu_person_fit_cti.yaml"
-    )
+@pytest.mark.parametrize("mode", ("person_fit", "resize"))
+def test_cti_config_keeps_full_grid_and_rejects_pruning(mode):
+    config = load_train_configs(f"configs/stage_a/person_assets/sysu_{mode}_cti.yaml")
     validate_runtime_config(config)
     assert config.pmt_token_pruning_mode == "none"
     assert config.ellipse_attention_weight == 0.0
     assert config.cti_enabled is True
+    assert config.prepared_data_root.endswith(f"/person-assets-512x256/{mode}")
+    assert config.cti_anatomy_root == config.prepared_data_root
 
     config.pmt_token_pruning_mode = "rounded_rect"
     config.pmt_token_prune_fraction = 0.1

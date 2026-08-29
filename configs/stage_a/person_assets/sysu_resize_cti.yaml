@@ -1,0 +1,23 @@
+extends: sysu_resize.yaml
+
+config_select: configs/stage_a/person_assets/sysu_resize_cti.yaml
+experiment_name: person_assets_sysu_resize_cti
+metric_experiment_id: PERSON-ASSETS-SYSU-RESIZE-CTI
+output_root: train_outputs/person_assets_sysu/resize_cti
+metric_events_path: train_outputs/person_assets_sysu/resize_cti/events.jsonl
+
+prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256/resize
+cti_enabled: true
+cti_anatomy_root: /home/lab929/ybj/datasets/person-assets-512x256/resize
+cti_intervention_layer: 9
+cti_delete_count: 32
+cti_human_threshold: 0.05
+cti_margin: 0.5
+cti_weight: 0.2
+cti_start_epoch: 6
+cti_warmup_epochs: 3
+
+# Original C3 objective and full grid; CTI is the only added branch.
+pmt_token_pruning_mode: none
+ellipse_attention_weight: 0.0
+ellipse_attention_layer: 0

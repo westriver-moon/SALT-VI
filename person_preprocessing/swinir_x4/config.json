@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "roots": {
+    "sysu": "/home/cgv841/datasets/SYSU-MM01",
+    "regdb": "/home/cgv841/datasets/RegDB",
+    "llcm": "/home/cgv841/datasets/LLCM"
+  },
+  "checkpoint": "/home/lab929/ybj/models/swinir/003_realSR_BSRGAN_DFO_s64w8_SwinIR-M_x4_PSNR.pth",
+  "vendor_source": "/home/lab929/ybj/SALT-VI/person_preprocessing/swinir_x4/vendor/network_swinir.py",
+  "vendor_revision": "6545850fbf8df298df73d81f3e8cba638787c8bd",
+  "scale": 4,
+  "dtype": "float32",
+  "ir_policy": "legacy_weighted_input_mean_quantized_output",
+  "pre_resize": false,
+  "post_resize": false,
+  "window": 8,
+  "tile": 0,
+  "overlap": 32,
+  "padding": "symmetric_right_bottom_to_window_multiple",
+  "png_compress_level": 3,
+  "output_dir": "/home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1/outputs",
+  "manifest_dir": "/home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1/manifests"
+}

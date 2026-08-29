@@ -23,6 +23,18 @@ The materializer refuses duplicate or missing keys, invalid boxes, count drift,
 and the observed upper-body-only failure pattern. It writes one immutable
 contract and one complete manifest per dataset.
 
+Reusable assets are consolidated under one external root:
+
+```text
+/home/lab929/ybj/datasets/person-assets-512x256/
+  person_fit/                         audited crop/fallback images + SYSU pose/anatomy
+  resize/                             native x4 -> bicubic 512x256 + SYSU pose/anatomy
+  upstream/swinir-real-sr-x4-v1/      native x4 PNGs, manifests and producer evidence
+```
+
+The exact native x4 producer is retained in `person_preprocessing/swinir_x4/`.
+Machine-readable paths and hashes are in `reports/assets/person_assets_20260829.json`.
+
 ```bash
 python -m person_preprocessing \
   --config person_preprocessing/configs/person_assets_512x256.yaml \

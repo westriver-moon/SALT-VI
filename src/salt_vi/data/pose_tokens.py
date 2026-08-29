@@ -22,7 +22,10 @@ class HumanTokenMaskStore:
         )
         if not self.root.is_dir():
             raise FileNotFoundError(f"CTI anatomy directory does not exist: {self.root}")
-        contract_path = self.root.parent / "contract.json"
+        contract_path = self.root.parent / "anatomy.contract.json"
+        if not contract_path.is_file():
+            # Backward compatibility for the original standalone PACT export.
+            contract_path = self.root.parent / "contract.json"
         if contract_path.is_file() and self.expected_grid is not None:
             contract = json.loads(contract_path.read_text(encoding="utf-8"))
             images = contract.get("person_pose_contract", {}).get("images", {})

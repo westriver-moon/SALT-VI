@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-29",
+  "canonical_root": "/home/lab929/ybj/datasets/person-assets-512x256",
+  "relocation_manifest": "/home/lab929/ybj/datasets/person-assets-512x256/relocation_20260829.json",
+  "verification_report": "reports/assets/person_assets_verification_20260829.json",
+  "assets": {
+    "person_fit": {
+      "path": "/home/lab929/ybj/datasets/person-assets-512x256/person_fit",
+      "size_approx": "16G including SYSU pose/anatomy",
+      "datasets": {
+        "sysu": {"total": 44745, "pass": 44031, "fallback": 714},
+        "regdb": {"total": 8240, "pass": 7161, "fallback": 1079},
+        "llcm": {"total": 46767, "pass": 45065, "fallback": 1702}
+      },
+      "geometry": "uniform_affine_person_crop_with_full_frame_fallback",
+      "quality_gate": "/home/lab929/ybj/experiments/person_preprocessing/person-fit-yolo26-full-20260827/final/final_gate.jsonl"
+    },
+    "resize": {
+      "path": "/home/lab929/ybj/datasets/person-assets-512x256/resize",
+      "size_approx": "13G including SYSU pose/anatomy",
+      "datasets": {"sysu": {"total": 44745, "complete": 44745}},
+      "geometry": "native_realSR_x4_then_bicubic_resize_to_512x256"
+    },
+    "swinir_real_sr_x4_v1": {
+      "path": "/home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1",
+      "size_approx": "18G",
+      "datasets": {
+        "sysu": {"unique_images": 44745, "rgb": 29033, "ir": 15712},
+        "regdb": {"unique_images": 8240, "rgb": 4120, "ir": 4120},
+        "llcm": {"unique_images": 46767, "rgb": 25626, "ir": 21141, "alias_paths": 15846}
+      },
+      "checkpoint": {
+        "path": "/home/lab929/ybj/models/swinir/003_realSR_BSRGAN_DFO_s64w8_SwinIR-M_x4_PSNR.pth",
+        "sha256": "1fd8fed99684bd271db55563e4906d36459cf535446820053f7a1081d4781dc5"
+      },
+      "output_contract": {
+        "path": "/home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1/outputs/contract.json",
+        "sha256": "9e4fa556d78ab9e679fa0cedc7e29f4e87fd890e64d939041d34e02d9f29fc6e",
+        "sha256_before_path_relocation": "c43947fff74cd0fc90e66592c0e059463bc430ebab8d5c56d9db81a262370619"
+      },
+      "producer_code": "person_preprocessing/swinir_x4"
+    },
+    "sysu_swinir_x2_c3": {
+      "path": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+      "size_approx": "14G",
+      "status": "retained_historical_control"
+    }
+  },
+  "pose_anatomy": {
+    "person_fit": {
+      "root": "/home/lab929/ybj/datasets/person-assets-512x256/person_fit/sysu",
+      "images": 44745,
+      "complete_pose": 43780,
+      "no_person_detected": 965,
+      "usable_parts": {"head": 42373, "torso": 43038, "arms": 43616, "legs": 43317},
+      "anatomy_contract_sha256": "6f4bfe07994abe9c5ab6431be63e2ad628a5fcb0ccc6cd9f6be470ce75f259fb"
+    },
+    "resize": {
+      "root": "/home/lab929/ybj/datasets/person-assets-512x256/resize/sysu",
+      "images": 44745,
+      "complete_pose": 43593,
+      "no_person_detected": 1152,
+      "usable_parts": {"head": 41947, "torso": 42831, "arms": 43360, "legs": 43047},
+      "anatomy_contract_sha256": "00e2b7ba0bdf5c0acf3b6e86d640db99ece1f487191531b65e4d93fe0eb5a4ce"
+    },
+    "format": "coco17_four_parts_v1",
+    "patch_hw": [16, 16],
+    "stride_hw": [12, 12],
+    "token_grid_hw": [42, 21]
+  },
+  "compatibility_symlinks": {
+    "/home/lab929/ybj/swinir_x4_pipeline": "/home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1",
+    "/home/lab929/ybj/datasets/person-assets-512x256-direct-resize-cti-20260828": "/home/lab929/ybj/datasets/person-assets-512x256",
+    "/home/lab929/ybj/datasets/pact-assets-512x256-cti-20260828": "/home/lab929/ybj/datasets/person-assets-512x256",
+    "/home/lab929/ybj/datasets/pact-assets-512x256-direct-resize-cti-20260828": "/home/lab929/ybj/datasets/person-assets-512x256"
+  },
+  "experiment_archives": {
+    "rounded_token_pruning": {
+      "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-c3-rounded-token-pruning-20260827",
+      "verification": {"ok": true, "checked": 34, "inventory_sha256": "30dd4efd63eae60cda9015a9f8f6e9b8f67087a5c5f51039784757b70a37bbb8"}
+    },
+    "pose_guided_cti": {
+      "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-pose-guided-cti-20260828",
+      "verification": {"ok": true, "checked": 18, "inventory_sha256": "c79e8383c6ad8cb40c13515e41e6a740515e49a467d930cd3a9d4fc115ccc0ba"}
+    }
+  }
+}

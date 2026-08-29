@@ -5,7 +5,7 @@ experiment_name: person_assets_sysu_resize
 metric_experiment_id: PERSON-ASSETS-SYSU-RESIZE
 output_root: train_outputs/person_assets_sysu/resize
 metric_events_path: train_outputs/person_assets_sysu/resize/events.jsonl
-prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256-v1/resize
+prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256/resize
 sysu_source_size: null
 sysu_sr_data_root: null
 sysu_sr_modalities: []

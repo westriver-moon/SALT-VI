@@ -1,0 +1,13 @@
+extends: sysu_resize.yaml
+
+config_select: configs/stage_a/person_assets/sysu_resize_rounded_rect_10.yaml
+experiment_name: person_assets_sysu_resize_rounded_rect_10
+metric_experiment_id: PERSON-ASSETS-SYSU-RESIZE-ROUNDRECT-10
+output_root: train_outputs/person_assets_sysu/resize_rounded_rect_10
+metric_events_path: train_outputs/person_assets_sysu/resize_rounded_rect_10/events.jsonl
+
+# Full 42x21 PatchEmbed grid, then retain 90% of tokens in a rounded rectangle.
+pmt_token_pruning_mode: rounded_rect
+pmt_token_prune_fraction: 0.10
+pmt_token_roundness: 4.0
+ellipse_attention_weight: 0.0

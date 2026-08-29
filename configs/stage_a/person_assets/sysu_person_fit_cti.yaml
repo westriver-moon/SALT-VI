@@ -6,11 +6,10 @@ metric_experiment_id: PERSON-ASSETS-SYSU-PERSON-FIT-CTI
 output_root: train_outputs/person_assets_sysu/person_fit_cti
 metric_events_path: train_outputs/person_assets_sysu/person_fit_cti/events.jsonl
 
-# The retained canonical V3 crop set. Pose/anatomy assets must cover the same
-# source keys before this experiment is launched.
+# Canonical audited V1 + YOLO26 person-fit images and co-located anatomy masks.
 prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
 cti_enabled: true
-cti_anatomy_root: /home/lab929/ybj/datasets/pact-assets-512x256-current/person_fit
+cti_anatomy_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
 cti_intervention_layer: 9
 cti_delete_count: 32
 cti_human_threshold: 0.05

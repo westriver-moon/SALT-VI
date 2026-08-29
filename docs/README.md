@@ -12,6 +12,7 @@
 - 运行与归档规范：[`operations/`](operations/archive_plan_20260822.md)
 - 实验叙述和负面结果：[`history/`](history/)
 - 字段及接口参考：[`reference/`](reference/experiment_registry.md)
+- 可复用数据资产：[`reference/data_asset_registry.md`](reference/data_asset_registry.md)
 - 组件接口：[`pasd_plugin`](../pasd_plugin/README.md)、
   [`semantic_imagination`](../semantic_imagination/README.md)、
   [`qwen_imagination`](../plugins/qwen_imagination/README.md)、

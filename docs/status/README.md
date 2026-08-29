@@ -1,36 +1,38 @@
 # SALT-VI 当前状态
 
-QRI-v6 机制更新：2026-08-26（Asia/Shanghai），主机 `cgv841-SYS-7049GP-TRT`。
-下述运行状态保留 2026-08-24 快照，不代表实时进程状态。
+更新：2026-08-29（Asia/Shanghai），主机 `lab929-3090`。
 
-## 代码与工作树
+## 代码与运行
 
-- 当前仓库为 `/home/lab929/ybj/SALT-VI`，所在分支为
-  `codex/pmt-mscm-phased-pasd-20260821-v2`；
-- 2026-08-26 的均匀候选机制直接修改现有 v6，未创建或切换分支、worktree；
-- 版本名和 schema 保持 `qri-v6` / 6；历史 V4/V5 产物不重标为 v6。
+- 当前主线工作区：`/home/lab929/ybj/SALT-VI`，分支 `main`；
+- Rounded token pruning、Pose-guided CTI、原生 SwinIR ×4 image-tree 输入及其测试
+  已整合到主线工作区；
+- 六个 token 干预训练均已完成 24 epochs，GPU 0–3 已释放；
+- 两组训练产物已从实验 worktree 原子迁入统一 archive 并通过逐文件 SHA-256 校验；
+- 实验 worktree 只等待主线测试、提交和推送完成，之后即可删除。
 
-## 运行状态
+## 当前数据资产
 
-- 最终核验时，Stage-B B5 tricks grid 调度器以及 `camera_only`、`cosine_only` 训练进程正在运行；
-- 该活动调度器、两个训练任务、输出目录和新工作树均未被清理或测试改写；
-- 一个从 2026-08-17 遗留、无训练子进程且匹配表达式错误的 watcher 已在本轮停止；
-- 其他账号和 `/home/lab929/ybj` 之外的训练/推理任务不属于本次清理范围。
+统一根目录为 `/home/lab929/ybj/datasets/person-assets-512x256/`：
 
-## QRI-v6 状态
+- `person_fit/`：审核后的 V1 + YOLO26 防拉伸输入；
+- `resize/`：相同 native realSR ×4 上游的直接 512×256 resize 对照；
+- 两套 SYSU 数据均包含 pose 与 anatomy sidecar；
+- `upstream/swinir-real-sr-x4-v1/`：SYSU、RegDB、LLCM 全量原生 ×4 PNG、
+  manifest、contract、benchmark 和日志。
 
-- 当前入口：`plugins/qwen_imagination/versions/qri-v6/plugin.yaml`；
-- 当前机制：VLM 一次生成联合候选、结构检查、complete-link 语义去重、
-  全部代表世界以 `1/K` 等权输出并逐个 LLM 改写；VLM、编码器和 LLM 仅通过接口注入；
-- 默认一次请求 8 个候选；移除重复抽样、簇频率、频率 Top-K 与 Wilson 区间；
-- V2/V5 text-annotation 配置已移入 `plugins/qwen_imagination/configs/legacy/`；
-- V6 尚未绑定真实模型或运行 SYSU 生产数据，不存在模型效果或 ReID 收益结论。
+精确计数、哈希与兼容路径只查
+[`../reference/data_asset_registry.md`](../reference/data_asset_registry.md)及其机器可读清单。
 
 ## 结果与证据入口
 
-- 2026-08-21/22 实验结果快照：[experiment_status_20260822.md](experiment_status_20260822.md)；
-- 唯一结构化总表：`reports/experiment_registry/experiment_registry.csv`；
-- V6 接口与可复现契约：[`../reference/qri_v6_contract.md`](../reference/qri_v6_contract.md)；
-- 文档总入口：[`../README.md`](../README.md)。
+- Token pruning/CTI 归档说明：
+  [`../history/stage_a/stage_a_c3_token_interventions_20260828.md`](../history/stage_a/stage_a_c3_token_interventions_20260828.md)；
+- 统一实验总表：`reports/experiment_registry/experiment_registry.csv`；
+- 机器可读资产表：`reports/assets/person_assets_20260829.json`；
+- 旧 2026-08-21/22 状态快照：
+  [`experiment_status_20260822.md`](experiment_status_20260822.md)；
+- QRI-v6 契约：[`../reference/qri_v6_contract.md`](../reference/qri_v6_contract.md)。
 
-除非新增实验经过完成门禁，不应把历史快照中的 running/deferred 字段解释为实时进程状态。
+历史快照中的 running/deferred 字段不代表当前进程状态；实时状态以上述当前页和
+服务器进程/GPU 检查为准。

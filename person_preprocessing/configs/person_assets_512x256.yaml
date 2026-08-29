@@ -1,5 +1,5 @@
-input_root: /home/lab929/ybj/swinir_x4_pipeline/outputs
-input_manifest: /home/lab929/ybj/swinir_x4_pipeline/manifests/images.jsonl
+input_root: /home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1/outputs
+input_manifest: /home/lab929/ybj/datasets/person-assets-512x256/upstream/swinir-real-sr-x4-v1/manifests/images.jsonl
 quality_gate: /home/lab929/ybj/experiments/person_preprocessing/person-fit-yolo26-full-20260827/final/final_gate.jsonl
 output_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
 size_hw: [512, 256]

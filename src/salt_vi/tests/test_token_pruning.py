@@ -182,3 +182,15 @@ def test_c3_swin_person_fit_roundrect_configs_change_only_token_pruning(
         "lrscheduler",
     ):
         assert getattr(rounded, key) == getattr(baseline, key)
+
+
+def test_c3_swin_resize_roundrect_config_uses_canonical_resize_asset():
+    baseline = load_train_configs("configs/stage_a/person_assets/sysu_resize.yaml")
+    rounded = load_train_configs(
+        "configs/stage_a/person_assets/sysu_resize_rounded_rect_10.yaml"
+    )
+    validate_runtime_config(rounded)
+    assert rounded.prepared_data_root.endswith("/person-assets-512x256/resize")
+    assert rounded.prepared_data_root == baseline.prepared_data_root
+    assert rounded.pmt_token_pruning_mode == "rounded_rect"
+    assert rounded.pmt_token_prune_fraction == 0.10
