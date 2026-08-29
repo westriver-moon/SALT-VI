@@ -440,7 +440,7 @@ def validate_runtime_config(config):
             "fixed_visual_data_parallel cannot be combined with visual branch unfreezing"
         )
     sr_backend = str(_value(config, "sysu_sr_backend", "array") or "array").lower()
-    if sr_backend not in ("array", "pasd_multiview"):
+    if sr_backend not in ("array", "pasd_multiview", "image_tree"):
         raise ValueError(f"Unsupported sysu_sr_backend {sr_backend!r}")
     if sr_backend == "pasd_multiview":
         if str(_value(config, "dataset", "")).lower() != "sysu":
@@ -465,6 +465,21 @@ def validate_runtime_config(config):
             raise ValueError(f"sysu_sr_eval_view_index must be in [0, {views - 1}]")
         if (int(_value(config, "img_h", 0)), int(_value(config, "img_w", 0))) != (512, 256):
             raise ValueError("pasd_multiview requires img_h=512 and img_w=256")
+    elif sr_backend == "image_tree":
+        if str(_value(config, "dataset", "")).lower() != "sysu":
+            raise ValueError("image_tree is supported only for SYSU-MM01")
+        modalities = {
+            str(value).lower() for value in (_value(config, "sysu_sr_modalities", []) or [])
+        }
+        if not modalities or not modalities.issubset({"rgb", "ir"}):
+            raise ValueError("image_tree requires rgb and/or ir SR modalities")
+        root = _value(config, "sysu_sr_data_root")
+        if not root:
+            raise ValueError("image_tree requires sysu_sr_data_root")
+        if bool(_value(config, "sysu_sr_exact_size", False)):
+            raise ValueError(
+                "image_tree resize mode requires sysu_sr_exact_size=false"
+            )
 
     retrieval_protocol = get_retrieval_protocol(
         _value(config, "retrieval_backend", "identity_text")
@@ -472,6 +487,8 @@ def validate_runtime_config(config):
     retrieval_protocol.validate(
         config,
         sr_backend=sr_backend,
-        sr_modalities=modalities if sr_backend == "pasd_multiview" else set(),
+        sr_modalities=(
+            modalities if sr_backend in ("pasd_multiview", "image_tree") else set()
+        ),
     )
     return config

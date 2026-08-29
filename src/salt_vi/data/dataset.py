@@ -15,6 +15,7 @@ from .pasd_multiview import (
 from .sources import (
     ArrayCaptionSource,
     ArrayVisualSource,
+    ImageTreeVisualSource,
     MultiviewCaptionSource,
     MultiviewVisualSource,
     NoCaptionSource,
@@ -166,7 +167,8 @@ def _sysu_eval_image_path(
         return image_path
     if not sr_data_root:
         raise ValueError(f"sysu_sr_data_root is required when SYSU {modality} super-resolution is enabled")
-    if normalize_backend(sr_backend) == "pasd_multiview":
+    backend = normalize_backend(sr_backend)
+    if backend == "pasd_multiview":
         if not sr_view_manifest:
             raise ValueError("sysu_sr_view_manifest is required for PASD multiview evaluation")
         return eval_view_path(
@@ -180,6 +182,13 @@ def _sysu_eval_image_path(
     relative_path = os.path.relpath(image_path, data_path)
     if relative_path.startswith(".."):
         raise ValueError(f"SYSU evaluation image is outside the dataset root: {image_path}")
+    if backend == "image_tree":
+        path = os.path.splitext(os.path.join(sr_data_root, relative_path))[0] + ".png"
+        if not os.path.isfile(path):
+            raise FileNotFoundError(
+                f"Missing SYSU {modality} image-tree evaluation image: {path}"
+            )
+        return path
     path = os.path.join(sr_data_root, "eval", relative_path)
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Missing SYSU {modality} super-resolution evaluation image: {path}")
@@ -214,6 +223,15 @@ def _build_sysu_visual_source(
             views,
         )
         return MultiviewVisualSource(store, views)
+    if sr_backend == "image_tree" and modality in sr_modalities:
+        from salt_vi.data.sysu_sources import load_train_source_records
+
+        records = load_train_source_records(data_dir, modality)
+        if [record.label for record in records] != [int(label) for label in labels]:
+            raise ValueError(f"SYSU {modality} image-tree source order does not match labels")
+        return ImageTreeVisualSource(
+            sr_data_root, [record.source_key for record in records]
+        )
     path = _sysu_train_image_path(data_dir, sr_data_root, sr_modalities, modality)
     return ArrayVisualSource(path)
 

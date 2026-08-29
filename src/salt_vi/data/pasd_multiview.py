@@ -13,7 +13,7 @@ from PIL import Image
 
 from .sysu_sources import load_train_source_records
 
-SUPPORTED_BACKENDS = ("array", "pasd_multiview")
+SUPPORTED_BACKENDS = ("array", "pasd_multiview", "image_tree")
 SUPPORTED_SAMPLING = ("independent", "paired")
 
 

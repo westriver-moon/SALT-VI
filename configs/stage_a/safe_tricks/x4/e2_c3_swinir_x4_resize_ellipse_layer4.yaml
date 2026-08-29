@@ -1,0 +1,14 @@
+extends: c3_swinir_x4_resize.yaml
+
+config_select: configs/stage_a/safe_tricks/x4/e2_c3_swinir_x4_resize_ellipse_layer4.yaml
+metric_experiment_id: ELLIPSE-C3-SWINIR-X4-RESIZE-LAYER4
+metric_events_path: ${SALT_ELLIPSE_X4_OUTPUT_ROOT}/events/layer4.jsonl
+output_root: ${SALT_ELLIPSE_X4_OUTPUT_ROOT}/layer4
+
+ellipse_attention_weight: 0.10
+ellipse_attention_layer: 4
+ellipse_attention_radius_x: 0.58
+ellipse_attention_radius_y: 0.55
+ellipse_attention_temperature: 0.12
+ellipse_attention_tolerance: 0.08
+ellipse_attention_warmup_epochs: 3

@@ -1,7 +1,9 @@
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
+from PIL import Image
 
 
 def _weighted_view(store, index):
@@ -18,6 +20,42 @@ class ArrayVisualSource:
 
     def sample(self, index):
         return self.images[int(index)], None
+
+
+class ImageTreeVisualSource:
+    """Load one derived image per canonical SYSU source without materializing NPY arrays."""
+
+    def __init__(self, root, source_keys):
+        self.root = Path(root).expanduser().resolve()
+        self.paths = []
+        missing = []
+        for source_key in source_keys:
+            relative = Path(str(source_key).replace("\\", "/"))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError(f"Invalid SYSU image-tree source key: {source_key}")
+            path = (self.root / relative).with_suffix(".png").resolve()
+            try:
+                path.relative_to(self.root)
+            except ValueError as error:
+                raise ValueError(
+                    f"SYSU image-tree path escapes its root: {source_key}"
+                ) from error
+            self.paths.append(path)
+            if not path.is_file():
+                missing.append(path)
+        if missing:
+            raise FileNotFoundError(
+                f"SYSU image-tree is missing {len(missing)} derived images; "
+                f"first missing path: {missing[0]}"
+            )
+
+    def __len__(self):
+        return len(self.paths)
+
+    def sample(self, index):
+        path = self.paths[int(index)]
+        with Image.open(path) as image:
+            return np.asarray(image.convert("RGB")).copy(), None
 
 
 class MultiviewVisualSource:

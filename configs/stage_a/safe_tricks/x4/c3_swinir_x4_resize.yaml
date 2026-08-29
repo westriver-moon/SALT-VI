@@ -1,0 +1,17 @@
+extends: ../c3_camera_diverse_cosine.yaml
+
+config_select: configs/stage_a/safe_tricks/x4/c3_swinir_x4_resize.yaml
+metric_experiment_id: C3-SWINIR-X4-RESIZE-CONTROL
+metric_events_path: ${SALT_ELLIPSE_X4_OUTPUT_ROOT}/events/c3_control.jsonl
+output_root: ${SALT_ELLIPSE_X4_OUTPUT_ROOT}/c3_control
+
+# Read the completed x4 PNG tree directly. The existing PMT transforms resize
+# every variable-size SR image to the 512x256 ViT input without person fitting.
+sysu_sr_data_root: /home/lab929/ybj/swinir_x4_pipeline/outputs/sysu
+sysu_sr_modalities: [rgb, ir]
+sysu_sr_backend: image_tree
+sysu_sr_exact_size: false
+sysu_sr_view_manifest: null
+
+# Explicitly disable the ellipse term for the matched x4 data control.
+ellipse_attention_weight: 0.0

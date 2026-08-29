@@ -67,3 +67,26 @@ def test_c3_ellipse_configs_only_change_requested_layer(monkeypatch, tmp_path):
             "pmt_gradient_checkpointing",
         ):
             assert getattr(config, key) == getattr(baseline, key)
+
+
+def test_c3_x4_resize_control_and_ellipse_configs(monkeypatch, tmp_path):
+    monkeypatch.setenv("SALT_ELLIPSE_X4_OUTPUT_ROOT", str(tmp_path / "x4-runs"))
+    control = load_train_configs(
+        "configs/stage_a/safe_tricks/x4/c3_swinir_x4_resize.yaml"
+    )
+    layer2 = load_train_configs(
+        "configs/stage_a/safe_tricks/x4/e1_c3_swinir_x4_resize_ellipse_layer2.yaml"
+    )
+    layer4 = load_train_configs(
+        "configs/stage_a/safe_tricks/x4/e2_c3_swinir_x4_resize_ellipse_layer4.yaml"
+    )
+    for config in (control, layer2, layer4):
+        validate_runtime_config(config)
+        assert config.sysu_sr_backend == "image_tree"
+        assert config.sysu_sr_data_root.endswith("/outputs/sysu")
+        assert set(config.sysu_sr_modalities) == {"rgb", "ir"}
+        assert config.sysu_sr_exact_size is False
+        assert config.img_size == [512, 256]
+    assert control.ellipse_attention_weight == 0.0
+    assert layer2.ellipse_attention_layer == 2
+    assert layer4.ellipse_attention_layer == 4
