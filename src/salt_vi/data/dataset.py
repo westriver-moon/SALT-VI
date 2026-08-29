@@ -20,6 +20,7 @@ from .sources import (
     MultiviewVisualSource,
     NoCaptionSource,
 )
+from .pose_tokens import HumanTokenMaskStore, SynchronizedTokenTransform
 
 
 PIL_BICUBIC = getattr(Image, "Resampling", Image).BICUBIC
@@ -316,6 +317,8 @@ class SYSU_Tri_Data(data.Dataset):
         sysu_sr_view_sampling="independent",
         text_modalities=("rgb", "ir"),
         prepared_data_root=None,
+        cti_anatomy_root=None,
+        cti_token_grid=None,
     ):
         self.tokenizer = SimpleTokenizer()
         self.joint_mode = joint_mode
@@ -369,6 +372,34 @@ class SYSU_Tri_Data(data.Dataset):
             raise ValueError("SYSU RGB image count does not match train labels")
         if len(self.ir_visual_source) != len(self.train_thermal_label):
             raise ValueError("SYSU IR image count does not match train labels")
+
+        self.cti_mask_store = None
+        if cti_anatomy_root:
+            if phased_transforms is not None or transform4 is not None:
+                raise ValueError(
+                    "CTI currently supports only the original three-view PMT recipe"
+                )
+            from salt_vi.data.sysu_sources import load_train_source_records
+
+            rgb_records = load_train_source_records(data_dir, "rgb")
+            ir_records = load_train_source_records(data_dir, "ir")
+            if [record.label for record in rgb_records] != list(self.train_color_label):
+                raise ValueError("CTI RGB source order does not match SYSU labels")
+            if [record.label for record in ir_records] != list(self.train_thermal_label):
+                raise ValueError("CTI IR source order does not match SYSU labels")
+            self.cti_rgb_source_keys = [record.source_key for record in rgb_records]
+            self.cti_ir_source_keys = [record.source_key for record in ir_records]
+            self.cti_mask_store = HumanTokenMaskStore(
+                cti_anatomy_root,
+                "sysu",
+                expected_grid=cti_token_grid,
+            )
+            self.cti_mask_store.require_keys(
+                self.cti_rgb_source_keys + self.cti_ir_source_keys
+            )
+            self.cti_transform1 = SynchronizedTokenTransform(transform1)
+            self.cti_transform2 = SynchronizedTokenTransform(transform2)
+            self.cti_transform3 = SynchronizedTokenTransform(transform3)
 
         text_modalities = (
             frozenset(text_modalities)
@@ -429,13 +460,35 @@ class SYSU_Tri_Data(data.Dataset):
                 "target_ir": self.train_thermal_label[thermal_index],
             }
         else:
-            batch = {
-                "img_rgb_ori": self.transform1(rgb_image),
-                "img_rgb_aug": self.transform2(rgb_image),
-                "img_ir": self.transform3(ir_image),
-                "target_rgb": self.train_color_label[color_index],
-                "target_ir": self.train_thermal_label[thermal_index],
-            }
+            cti_mask_store = getattr(self, "cti_mask_store", None)
+            if cti_mask_store is None:
+                batch = {
+                    "img_rgb_ori": self.transform1(rgb_image),
+                    "img_rgb_aug": self.transform2(rgb_image),
+                    "img_ir": self.transform3(ir_image),
+                    "target_rgb": self.train_color_label[color_index],
+                    "target_ir": self.train_thermal_label[thermal_index],
+                }
+            else:
+                rgb_mask = cti_mask_store.load(
+                    self.cti_rgb_source_keys[color_index]
+                )
+                ir_mask = cti_mask_store.load(
+                    self.cti_ir_source_keys[thermal_index]
+                )
+                rgb_ori, rgb_ori_mask = self.cti_transform1(rgb_image, rgb_mask)
+                rgb_aug, rgb_aug_mask = self.cti_transform2(rgb_image, rgb_mask)
+                ir_tensor, ir_token_mask = self.cti_transform3(ir_image, ir_mask)
+                batch = {
+                    "img_rgb_ori": rgb_ori,
+                    "img_rgb_aug": rgb_aug,
+                    "img_ir": ir_tensor,
+                    "cti_mask_rgb_ori": rgb_ori_mask,
+                    "cti_mask_rgb_aug": rgb_aug_mask,
+                    "cti_mask_ir": ir_token_mask,
+                    "target_rgb": self.train_color_label[color_index],
+                    "target_ir": self.train_thermal_label[thermal_index],
+                }
             if self.transform4 is not None:
                 # Both infrared augmentations are applied after sampling the SR asset.
                 batch["img_ir_aug"] = self.transform4(ir_image)

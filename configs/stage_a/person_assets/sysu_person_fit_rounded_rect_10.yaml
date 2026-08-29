@@ -1,0 +1,15 @@
+extends: sysu_person_fit.yaml
+
+config_select: configs/stage_a/person_assets/sysu_person_fit_rounded_rect_10.yaml
+experiment_name: person_assets_sysu_person_fit_rounded_rect_10
+metric_experiment_id: PERSON-ASSETS-SYSU-PERSON-FIT-ROUNDRECT-10
+output_root: train_outputs/person_assets_sysu/person_fit_rounded_rect_10
+metric_events_path: train_outputs/person_assets_sysu/person_fit_rounded_rect_10/events.jsonl
+
+# Keep the C3-Swin person-fit data contract unchanged. PatchEmbed still builds
+# the full 42x21 grid; only the Transformer input is reduced from 882 to 794.
+# This fraction is a normal config value and can also be overridden with
+# --set pmt_token_prune_fraction=<value> for exploratory runs.
+pmt_token_pruning_mode: rounded_rect
+pmt_token_prune_fraction: 0.10
+pmt_token_roundness: 4.0

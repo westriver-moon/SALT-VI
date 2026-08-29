@@ -140,6 +140,22 @@ def build_parser():
     )
     parser.add_argument("--pmt_drop_path_rate", type=float, default=0.1)
     parser.add_argument("--pmt_patch_embed", type=ast.literal_eval, default=None)
+    parser.add_argument(
+        "--pmt_token_pruning_mode",
+        choices=("none", "rounded_rect"),
+        default="none",
+    )
+    parser.add_argument("--pmt_token_prune_fraction", type=float, default=0.10)
+    parser.add_argument("--pmt_token_roundness", type=float, default=4.0)
+    parser.add_argument("--cti_enabled", default=False, action="store_true")
+    parser.add_argument("--cti_anatomy_root", type=str, default=None)
+    parser.add_argument("--cti_intervention_layer", type=int, default=9)
+    parser.add_argument("--cti_delete_count", type=int, default=32)
+    parser.add_argument("--cti_human_threshold", type=float, default=0.05)
+    parser.add_argument("--cti_margin", type=float, default=0.5)
+    parser.add_argument("--cti_weight", type=float, default=0.2)
+    parser.add_argument("--cti_start_epoch", type=int, default=6)
+    parser.add_argument("--cti_warmup_epochs", type=int, default=3)
 
     ######################## text transformer settings ########################
     parser.add_argument("--text_length", type=int, default=77)

@@ -428,6 +428,9 @@ class CLIP(nn.Module):
                  visual_input_backend: str = "single",
                  quadruple_branch_order=None,
                  quadruple_template_trainable: bool = False,
+                 pmt_token_pruning_mode: str = "none",
+                 pmt_token_prune_fraction: float = 0.10,
+                 pmt_token_roundness: float = 4.0,
                  ):
         super().__init__()
 
@@ -456,6 +459,9 @@ class CLIP(nn.Module):
                 visual_input_backend=visual_input_backend,
                 quadruple_branch_order=quadruple_branch_order,
                 quadruple_template_trainable=quadruple_template_trainable,
+                token_pruning_mode=pmt_token_pruning_mode,
+                token_prune_fraction=pmt_token_prune_fraction,
+                token_roundness=pmt_token_roundness,
             )
         elif visual_name == "RN50_ORI":
             vision_heads = vision_width * 32 // 64
@@ -866,6 +872,13 @@ def build_CLIP_from_openai_pretrained(name: str, image_size: Union[int, Tuple[in
         'quadruple_template_trainable': config_dict.get(
             "quadruple_template_trainable", False
         ),
+        'pmt_token_pruning_mode': config_dict.get(
+            "pmt_token_pruning_mode", "none"
+        ),
+        'pmt_token_prune_fraction': config_dict.get(
+            "pmt_token_prune_fraction", 0.10
+        ),
+        'pmt_token_roundness': config_dict.get("pmt_token_roundness", 4.0),
     }
 
 

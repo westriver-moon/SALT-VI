@@ -41,6 +41,32 @@ def ellipse_attention_weight(args, current_epoch):
     return target * progress
 
 
+def cti_loss_weight(args, current_epoch):
+    if not bool(getattr(args, "cti_enabled", False)):
+        return 0.0
+    target = float(getattr(args, "cti_weight", 0.0))
+    start = int(getattr(args, "cti_start_epoch", 0))
+    warmup_epochs = int(getattr(args, "cti_warmup_epochs", 0))
+    if current_epoch is not None and int(current_epoch) < start:
+        return 0.0
+    if current_epoch is None or warmup_epochs <= 1:
+        return target
+    progress = (int(current_epoch) - start + 1) / float(warmup_epochs)
+    return target * min(1.0, max(0.0, progress))
+
+
+def true_identity_evidence(scores, labels):
+    """Correct-class logit minus the competing-class log-sum-exp."""
+    if scores.ndim != 2 or labels.ndim != 1 or scores.shape[0] != labels.shape[0]:
+        raise ValueError("CTI evidence expects scores [B,C] and labels [B]")
+    if scores.shape[1] < 2:
+        raise ValueError("CTI evidence requires at least two identity classes")
+    labels = labels.to(device=scores.device, dtype=torch.long)
+    true_score = scores.gather(1, labels[:, None]).squeeze(1)
+    competitors = scores.scatter(1, labels[:, None], float("-inf"))
+    return true_score - torch.logsumexp(competitors, dim=1)
+
+
 def cross_modal_hard_weight(args, current_epoch):
     target = float(getattr(args, "cross_modal_hard_weight", 1.0))
     start = int(getattr(args, "cross_modal_hard_start_epoch", 0))
@@ -130,6 +156,7 @@ class PMTRecipe:
         visual_input_backend = str(
             getattr(model.args, "visual_input_backend", "single") or "single"
         ).lower()
+        active_cti_weight = cti_loss_weight(model.args, current_epoch)
         rfa_probability = float(getattr(model.args, "rfa_probability", 0.0))
         rfa_sigma = float(getattr(model.args, "rfa_gaussian_sigma", 0.1))
         if visual_input_backend == "quadruple_patch":
@@ -169,7 +196,28 @@ class PMTRecipe:
             )
             stage = "gray_ir" if gray_stage else "rgb_ir"
             images = torch.cat((visible_images, ir_images), dim=0)
-            if model.args.Fix_Visual and not model._visual_unfrozen:
+            if active_cti_weight > 0.0:
+                visible_mask_key = (
+                    "cti_mask_rgb_aug" if gray_stage else "cti_mask_rgb_ori"
+                )
+                required_masks = (visible_mask_key, "cti_mask_ir")
+                missing_masks = [key for key in required_masks if key not in batch]
+                if missing_masks:
+                    raise KeyError(
+                        "CTI batch is missing mask key(s): "
+                        + ", ".join(missing_masks)
+                    )
+                human_masks = torch.cat(
+                    (batch[visible_mask_key], batch["cti_mask_ir"]), dim=0
+                )
+                visual = model.base_model.visual.forward_counterfactual(
+                    images.type(model.base_model.dtype),
+                    human_masks,
+                    intervention_layer=int(model.args.cti_intervention_layer),
+                    delete_count=int(model.args.cti_delete_count),
+                    threshold=float(model.args.cti_human_threshold),
+                )
+            elif model.args.Fix_Visual and not model._visual_unfrozen:
                 visual = model._encode_fixed_visual(images, mode)
             else:
                 visual = model.base_model.encode_image(images, mode)
@@ -194,6 +242,30 @@ class PMTRecipe:
             )
             * model.args.id_loss_weight,
         }
+        if visual_input_backend != "quadruple_patch" and active_cti_weight > 0.0:
+            deleted_features = visual["cti_deleted_features"]
+            deleted_scores = model.classifier.counterfactual_scores(
+                deleted_features,
+                reference_features=features,
+            )
+            full_evidence = true_identity_evidence(scores, labels)
+            deleted_evidence = true_identity_evidence(deleted_scores, labels)
+            valid = visual["cti_valid"].to(dtype=torch.bool)
+            margin_terms = torch.relu(
+                float(model.args.cti_margin) - full_evidence + deleted_evidence
+            )
+            if valid.any():
+                cti_objective = margin_terms[valid].mean()
+                evidence_drop = (full_evidence - deleted_evidence)[valid].mean()
+            else:
+                cti_objective = margin_terms.sum() * 0.0
+                evidence_drop = margin_terms.detach().sum() * 0.0
+            result.update(
+                cti_loss=cti_objective * active_cti_weight,
+                cti_weight=active_cti_weight,
+                cti_valid_fraction=valid.float().mean().detach(),
+                cti_evidence_drop=evidence_drop.detach(),
+            )
         ellipse_weight = ellipse_attention_weight(model.args, current_epoch)
         if ellipse_weight > 0.0:
             if not isinstance(visual, dict):

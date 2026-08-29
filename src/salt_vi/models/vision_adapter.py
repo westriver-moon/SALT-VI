@@ -9,6 +9,106 @@ from .vision_transformer import ViT, resize_pos_embed, to_2tuple
 from .visual_inputs import build_visual_input_plugin, normalize_visual_input_backend
 
 
+SUPPORTED_TOKEN_PRUNING_MODES = ("none", "rounded_rect")
+
+
+def build_rounded_rect_keep_indices(
+    grid_size,
+    *,
+    prune_fraction=0.10,
+    roundness=4.0,
+    device=None,
+):
+    """Return a symmetry-preserving superellipse mask in row-major order.
+
+    A superellipse with exponent greater than two is a rounded rectangle.  The
+    score threshold nearest the requested pruning fraction removes complete
+    equal-score corner groups, preserving horizontal and vertical symmetry.
+    """
+    grid_height, grid_width = (int(value) for value in grid_size)
+    prune_fraction = float(prune_fraction)
+    roundness = float(roundness)
+    if grid_height < 1 or grid_width < 1:
+        raise ValueError(f"grid_size must be positive, got {grid_size!r}")
+    if not 0.0 <= prune_fraction < 1.0:
+        raise ValueError("token prune fraction must be within [0, 1)")
+    if roundness <= 2.0:
+        raise ValueError("rounded-rectangle roundness must be greater than 2")
+
+    token_count = grid_height * grid_width
+    target_remove = int(round(token_count * prune_fraction))
+    if target_remove <= 0:
+        return torch.arange(token_count, dtype=torch.long, device=device)
+
+    # Canonical integer orbit coordinates make every horizontal/vertical
+    # reflection read the exact same floating-point score.  Constructing
+    # signed floating coordinates first can differ by one ULP at a threshold.
+    y_orbit = torch.arange(grid_height, dtype=torch.long, device=device)
+    x_orbit = torch.arange(grid_width, dtype=torch.long, device=device)
+    y_orbit = torch.minimum(y_orbit, grid_height - 1 - y_orbit)
+    x_orbit = torch.minimum(x_orbit, grid_width - 1 - x_orbit)
+    y = torch.arange((grid_height + 1) // 2, dtype=torch.float64, device=device)
+    x = torch.arange((grid_width + 1) // 2, dtype=torch.float64, device=device)
+    y = (2.0 * y + 1.0 - grid_height).abs() / grid_height
+    x = (2.0 * x + 1.0 - grid_width).abs() / grid_width
+    yy, xx = torch.meshgrid(y, x, indexing="ij")
+    orbit_scores = xx.pow(roundness).add(yy.pow(roundness))
+    scores = orbit_scores[y_orbit[:, None], x_orbit[None, :]].flatten()
+
+    unique_scores, counts = torch.unique(scores, sorted=True, return_counts=True)
+    unique_scores = unique_scores.flip(0)
+    cumulative = counts.flip(0).cumsum(0)
+    threshold_index = (cumulative - target_remove).abs().argmin()
+    remove_threshold = unique_scores[threshold_index]
+    keep_mask = scores < remove_threshold
+    keep_indices = keep_mask.nonzero(as_tuple=False).flatten().to(dtype=torch.long)
+    if keep_indices.numel() < 1:
+        raise ValueError("token pruning must retain at least one patch token")
+    return keep_indices
+
+
+def sample_human_token_deletions(human_mask, delete_count, threshold=0.05):
+    """Sample a fixed-size, per-example human-token intervention."""
+    if human_mask.ndim != 2:
+        raise ValueError(
+            f"human_mask must have shape [B,N], got {tuple(human_mask.shape)}"
+        )
+    delete_count = int(delete_count)
+    threshold = float(threshold)
+    batch_size, token_count = human_mask.shape
+    if delete_count < 1 or delete_count >= token_count:
+        raise ValueError(
+            f"delete_count must be within [1, {token_count - 1}], got {delete_count}"
+        )
+    if not 0.0 < threshold <= 1.0:
+        raise ValueError("human-token threshold must be within (0, 1]")
+
+    candidates = human_mask >= threshold
+    valid = candidates.sum(dim=1) >= delete_count
+    weights = torch.where(
+        candidates,
+        human_mask.to(dtype=torch.float32).clamp_min(torch.finfo(torch.float32).eps),
+        torch.zeros((), device=human_mask.device, dtype=torch.float32),
+    )
+    # Invalid examples remain in the full C3 batch.  Give multinomial a legal
+    # placeholder distribution, then mask those examples out of CTI loss.
+    weights = torch.where(valid[:, None], weights, torch.ones_like(weights))
+    deleted = torch.multinomial(weights, delete_count, replacement=False)
+    deleted = deleted.sort(dim=1).values
+
+    delete_mask = torch.zeros(
+        batch_size, token_count, dtype=torch.bool, device=human_mask.device
+    )
+    delete_mask.scatter_(1, deleted, True)
+    all_indices = torch.arange(token_count, device=human_mask.device).expand(
+        batch_size, -1
+    )
+    kept = all_indices.masked_select(~delete_mask).reshape(
+        batch_size, token_count - delete_count
+    )
+    return kept, deleted, valid
+
+
 def _unwrap_checkpoint(checkpoint):
     if isinstance(checkpoint, dict):
         if "model" in checkpoint:
@@ -55,6 +155,9 @@ class PMTViTVisual(nn.Module):
         visual_input_backend="single",
         quadruple_branch_order=None,
         quadruple_template_trainable=False,
+        token_pruning_mode="none",
+        token_prune_fraction=0.10,
+        token_roundness=4.0,
     ):
         super().__init__()
         self.input_resolution = to_2tuple(input_resolution)
@@ -123,6 +226,19 @@ class PMTViTVisual(nn.Module):
         self.ellipse_attention_radius_x = 0.58
         self.ellipse_attention_radius_y = 0.55
         self.ellipse_attention_temperature = 0.12
+        self.token_pruning_mode = "none"
+        self.token_prune_fraction = 0.0
+        self.token_roundness = float(token_roundness)
+        self.register_buffer(
+            "token_keep_indices",
+            torch.empty(0, dtype=torch.long),
+            persistent=False,
+        )
+        self.configure_token_pruning(
+            mode=token_pruning_mode,
+            prune_fraction=token_prune_fraction,
+            roundness=token_roundness,
+        )
 
     @property
     def input_dtype(self):
@@ -154,10 +270,66 @@ class PMTViTVisual(nn.Module):
             raise ValueError("ellipse attention radii must be positive")
         if temperature <= 0:
             raise ValueError("ellipse_attention_temperature must be positive")
+        if layer > 0 and self.token_pruning_mode != "none":
+            raise ValueError(
+                "ellipse attention and physical token pruning cannot be enabled together"
+            )
         self.ellipse_attention_layer = layer
         self.ellipse_attention_radius_x = radius_x
         self.ellipse_attention_radius_y = radius_y
         self.ellipse_attention_temperature = temperature
+
+    def configure_token_pruning(
+        self,
+        *,
+        mode="none",
+        prune_fraction=0.10,
+        roundness=4.0,
+    ):
+        """Configure fixed patch-token pruning for the model's base input grid."""
+        mode = str(mode or "none").lower()
+        if mode not in SUPPORTED_TOKEN_PRUNING_MODES:
+            raise ValueError(
+                f"Unsupported token pruning mode {mode!r}; "
+                f"expected one of {SUPPORTED_TOKEN_PRUNING_MODES}"
+            )
+        prune_fraction = float(prune_fraction)
+        roundness = float(roundness)
+        if mode != "none" and self.ellipse_attention_layer > 0:
+            raise ValueError(
+                "ellipse attention and physical token pruning cannot be enabled together"
+            )
+        if mode == "none":
+            keep_indices = torch.empty(
+                0,
+                dtype=torch.long,
+                device=self.token_keep_indices.device,
+            )
+            prune_fraction = 0.0
+        else:
+            keep_indices = build_rounded_rect_keep_indices(
+                self.vit.base_grid_size,
+                prune_fraction=prune_fraction,
+                roundness=roundness,
+                device=self.token_keep_indices.device,
+            )
+        self.token_pruning_mode = mode
+        self.token_prune_fraction = prune_fraction
+        self.token_roundness = roundness
+        self.token_keep_indices = keep_indices
+
+    def _active_token_keep_indices(self, grid_size, *, device):
+        if self.token_pruning_mode == "none":
+            return None
+        actual_grid = tuple(int(value) for value in grid_size)
+        if actual_grid != tuple(self.vit.base_grid_size):
+            raise ValueError(
+                "fixed token pruning requires the configured PMT input grid; "
+                f"got {actual_grid}, expected {self.vit.base_grid_size}"
+            )
+        if self.token_keep_indices.device != device:
+            return self.token_keep_indices.to(device=device)
+        return self.token_keep_indices
 
     def _ellipse_mask(self, grid_size, *, device):
         grid_height, grid_width = (int(value) for value in grid_size)
@@ -218,6 +390,90 @@ class PMTViTVisual(nn.Module):
         }
         return tokens, auxiliary
 
+    def forward_counterfactual(
+        self,
+        images,
+        human_token_mask,
+        *,
+        intervention_layer,
+        delete_count,
+        threshold=0.05,
+    ):
+        """Run the full path and a physical fixed-K human-token deletion path."""
+        if self.input_plugin is not None:
+            raise ValueError("CTI currently requires visual_input_backend='single'")
+        if self.token_pruning_mode != "none":
+            raise ValueError("CTI cannot be combined with fixed token pruning")
+        if self.ellipse_attention_layer > 0:
+            raise ValueError("CTI cannot be combined with ellipse attention")
+        intervention_layer = int(intervention_layer)
+        depth = len(self.vit.blocks)
+        if not 1 <= intervention_layer < depth:
+            raise ValueError(
+                f"CTI intervention_layer must be within [1, {depth - 1}], "
+                f"got {intervention_layer}"
+            )
+
+        tokens, grid_size = self.prepare_tokens(images)
+        grid_token_count = int(grid_size[0]) * int(grid_size[1])
+        human_token_mask = torch.as_tensor(
+            human_token_mask, device=tokens.device, dtype=torch.float32
+        )
+        if human_token_mask.ndim == 3:
+            human_token_mask = human_token_mask.flatten(1)
+        expected_shape = (tokens.shape[0], grid_token_count)
+        if tuple(human_token_mask.shape) != expected_shape:
+            raise ValueError(
+                f"CTI human mask has shape {tuple(human_token_mask.shape)}, "
+                f"expected {expected_shape} for grid {grid_size}"
+            )
+
+        checkpoint_blocks = self.gradient_checkpoint_blocks if self.training else 0
+        prefix = self.run_blocks(
+            tokens,
+            0,
+            intervention_layer,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        keep_indices, deleted_indices, valid = sample_human_token_deletions(
+            human_token_mask,
+            delete_count,
+            threshold,
+        )
+        patch_tokens = prefix[:, 1:]
+        kept_patches = patch_tokens.gather(
+            1,
+            keep_indices.unsqueeze(-1).expand(-1, -1, patch_tokens.shape[-1]),
+        )
+        deleted_prefix = torch.cat((prefix[:, :1], kept_patches), dim=1)
+
+        full_tokens = self.run_blocks(
+            prefix,
+            intervention_layer,
+            depth,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        deleted_tokens = self.run_blocks(
+            deleted_prefix,
+            intervention_layer,
+            depth,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        packaged = self.finalize_and_package(full_tokens)
+        deleted_packaged = self.finalize_and_package(deleted_tokens)
+        packaged.update(
+            cti_deleted_tokens=deleted_packaged["tokens"],
+            cti_deleted_features=deleted_packaged["features"],
+            cti_deleted_indices=deleted_indices,
+            cti_keep_indices=keep_indices,
+            cti_valid=valid,
+            cti_intervention_layer=intervention_layer,
+        )
+        return packaged
+
     @staticmethod
     def _attach_auxiliary(packaged, auxiliary):
         if auxiliary is not None:
@@ -263,7 +519,15 @@ class PMTViTVisual(nn.Module):
             patch_embed.load_state_dict(template_state, strict=True)
 
     def _run_embedded_patches(self, patch_tokens, grid_size):
-        tokens, _grid_size = self.vit.prepare_embedded_tokens(patch_tokens, grid_size)
+        keep_indices = self._active_token_keep_indices(
+            grid_size,
+            device=patch_tokens.device,
+        )
+        tokens, _grid_size = self.vit.prepare_embedded_tokens(
+            patch_tokens,
+            grid_size,
+            patch_indices=keep_indices,
+        )
         return self._run_tokens(tokens, grid_size)
 
     @staticmethod
@@ -353,7 +617,18 @@ class PMTViTVisual(nn.Module):
             )
 
     def prepare_tokens(self, x):
-        return self.vit.prepare_tokens(x)
+        height, width = x.shape[-2:]
+        patch_height, patch_width = self.vit.patch_embed.patch_size
+        stride_height, stride_width = self.vit.patch_embed.stride_size
+        grid_size = (
+            (height - patch_height) // stride_height + 1,
+            (width - patch_width) // stride_width + 1,
+        )
+        keep_indices = self._active_token_keep_indices(
+            grid_size,
+            device=x.device,
+        )
+        return self.vit.prepare_tokens(x, patch_indices=keep_indices)
 
     def run_blocks(
         self,
