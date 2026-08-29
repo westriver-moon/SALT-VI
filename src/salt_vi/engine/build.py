@@ -228,6 +228,42 @@ class Classifier(nn.Module):
 
         self.l2_norm = Normalize(2)
 
+    def counterfactual_scores(self, features, reference_features):
+        """Score an intervention with full-path batch statistics and no BN mutation."""
+        if self.uni_BN:
+            raise ValueError("CTI counterfactual scoring does not support uni_BN")
+        bn_input = features.flatten(1) if features.ndim > 1 else features.unsqueeze(0)
+        reference = (
+            reference_features.flatten(1)
+            if reference_features.ndim > 1
+            else reference_features.unsqueeze(0)
+        )
+        if bn_input.shape[1] != reference.shape[1]:
+            raise ValueError(
+                "Counterfactual and reference classifier features must have "
+                f"the same width, got {bn_input.shape[1]} and {reference.shape[1]}"
+            )
+        with torch.no_grad():
+            statistics = reference.detach().to(dtype=torch.float32)
+            batch_mean = statistics.mean(dim=0)
+            batch_var = statistics.var(dim=0, unbiased=False)
+        bn_features = F.batch_norm(
+            bn_input,
+            batch_mean,
+            batch_var,
+            self.BN.weight,
+            self.BN.bias,
+            training=False,
+            momentum=0.0,
+            eps=self.BN.eps,
+        )
+        if self.normalized:
+            return self.scale * F.linear(
+                F.normalize(bn_features, dim=1),
+                F.normalize(self.classifier.weight, dim=1),
+            )
+        return self.classifier(bn_features)
+
     def forward(self, features, mode="RGB"): # IR, Fusion, Text, RGB
         # features = self.GAP(features_map)
         bn_input = features.flatten(1) if features.ndim > 1 else features.unsqueeze(0)

@@ -126,6 +126,15 @@ ellipse_attention_radius_y: 0.55
 ellipse_attention_temperature: 0.12
 ellipse_attention_tolerance: 0.08
 ellipse_attention_warmup_epochs: 3
+cti_enabled: false
+cti_anatomy_root: null
+cti_intervention_layer: 9
+cti_delete_count: 32
+cti_human_threshold: 0.05
+cti_margin: 0.5
+cti_weight: 0.2
+cti_start_epoch: 6
+cti_warmup_epochs: 3
 pmt_patch_embed: null
 visual_input_backend: single
 quadruple_template_trainable: false

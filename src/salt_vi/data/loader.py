@@ -222,6 +222,25 @@ class Loader:
         train_size = (config.img_h, config.img_w)
         rgb_resolution = sysu_resolution_transforms(config, "rgb")
         ir_resolution = sysu_resolution_transforms(config, "ir")
+        self.cti_enabled = bool(getattr(config, "cti_enabled", False))
+        self.cti_anatomy_root = (
+            getattr(config, "cti_anatomy_root", None)
+            if self.cti_enabled
+            else None
+        )
+        if self.cti_enabled:
+            patch_height, patch_width = (
+                int(value) for value in config.pmt_patch_size
+            )
+            stride_height, stride_width = (
+                int(value) for value in config.pmt_stride_size
+            )
+            self.cti_token_grid = (
+                (int(config.img_h) - patch_height) // stride_height + 1,
+                (int(config.img_w) - patch_width) // stride_width + 1,
+            )
+        else:
+            self.cti_token_grid = None
         self.quadruple_input = (
             str(getattr(config, "visual_input_backend", "single")).lower()
             == "quadruple_patch"
@@ -447,7 +466,9 @@ class Loader:
                                                         sysu_sr_views_per_image=self.sysu_sr_views_per_image,
                                                         sysu_sr_view_sampling=self.sysu_sr_view_sampling,
                                                         text_modalities=self.train_text_modalities,
-                                                        prepared_data_root=self.prepared_data_root)
+                                                        prepared_data_root=self.prepared_data_root,
+                                                        cti_anatomy_root=self.cti_anatomy_root,
+                                                        cti_token_grid=self.cti_token_grid)
                 self.color_pos, self.thermal_pos = GenIdx(samples.train_color_label, samples.train_thermal_label)
                 if self.sampler_type == "identity_camera_diverse":
                     rgb_records = load_train_source_records(self.sysu_data_path, "rgb")

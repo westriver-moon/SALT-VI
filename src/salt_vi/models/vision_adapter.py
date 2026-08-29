@@ -67,6 +67,48 @@ def build_rounded_rect_keep_indices(
     return keep_indices
 
 
+def sample_human_token_deletions(human_mask, delete_count, threshold=0.05):
+    """Sample a fixed-size, per-example human-token intervention."""
+    if human_mask.ndim != 2:
+        raise ValueError(
+            f"human_mask must have shape [B,N], got {tuple(human_mask.shape)}"
+        )
+    delete_count = int(delete_count)
+    threshold = float(threshold)
+    batch_size, token_count = human_mask.shape
+    if delete_count < 1 or delete_count >= token_count:
+        raise ValueError(
+            f"delete_count must be within [1, {token_count - 1}], got {delete_count}"
+        )
+    if not 0.0 < threshold <= 1.0:
+        raise ValueError("human-token threshold must be within (0, 1]")
+
+    candidates = human_mask >= threshold
+    valid = candidates.sum(dim=1) >= delete_count
+    weights = torch.where(
+        candidates,
+        human_mask.to(dtype=torch.float32).clamp_min(torch.finfo(torch.float32).eps),
+        torch.zeros((), device=human_mask.device, dtype=torch.float32),
+    )
+    # Invalid examples remain in the full C3 batch.  Give multinomial a legal
+    # placeholder distribution, then mask those examples out of CTI loss.
+    weights = torch.where(valid[:, None], weights, torch.ones_like(weights))
+    deleted = torch.multinomial(weights, delete_count, replacement=False)
+    deleted = deleted.sort(dim=1).values
+
+    delete_mask = torch.zeros(
+        batch_size, token_count, dtype=torch.bool, device=human_mask.device
+    )
+    delete_mask.scatter_(1, deleted, True)
+    all_indices = torch.arange(token_count, device=human_mask.device).expand(
+        batch_size, -1
+    )
+    kept = all_indices.masked_select(~delete_mask).reshape(
+        batch_size, token_count - delete_count
+    )
+    return kept, deleted, valid
+
+
 def _unwrap_checkpoint(checkpoint):
     if isinstance(checkpoint, dict):
         if "model" in checkpoint:
@@ -347,6 +389,90 @@ class PMTViTVisual(nn.Module):
             "ellipse_layer": layer,
         }
         return tokens, auxiliary
+
+    def forward_counterfactual(
+        self,
+        images,
+        human_token_mask,
+        *,
+        intervention_layer,
+        delete_count,
+        threshold=0.05,
+    ):
+        """Run the full path and a physical fixed-K human-token deletion path."""
+        if self.input_plugin is not None:
+            raise ValueError("CTI currently requires visual_input_backend='single'")
+        if self.token_pruning_mode != "none":
+            raise ValueError("CTI cannot be combined with fixed token pruning")
+        if self.ellipse_attention_layer > 0:
+            raise ValueError("CTI cannot be combined with ellipse attention")
+        intervention_layer = int(intervention_layer)
+        depth = len(self.vit.blocks)
+        if not 1 <= intervention_layer < depth:
+            raise ValueError(
+                f"CTI intervention_layer must be within [1, {depth - 1}], "
+                f"got {intervention_layer}"
+            )
+
+        tokens, grid_size = self.prepare_tokens(images)
+        grid_token_count = int(grid_size[0]) * int(grid_size[1])
+        human_token_mask = torch.as_tensor(
+            human_token_mask, device=tokens.device, dtype=torch.float32
+        )
+        if human_token_mask.ndim == 3:
+            human_token_mask = human_token_mask.flatten(1)
+        expected_shape = (tokens.shape[0], grid_token_count)
+        if tuple(human_token_mask.shape) != expected_shape:
+            raise ValueError(
+                f"CTI human mask has shape {tuple(human_token_mask.shape)}, "
+                f"expected {expected_shape} for grid {grid_size}"
+            )
+
+        checkpoint_blocks = self.gradient_checkpoint_blocks if self.training else 0
+        prefix = self.run_blocks(
+            tokens,
+            0,
+            intervention_layer,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        keep_indices, deleted_indices, valid = sample_human_token_deletions(
+            human_token_mask,
+            delete_count,
+            threshold,
+        )
+        patch_tokens = prefix[:, 1:]
+        kept_patches = patch_tokens.gather(
+            1,
+            keep_indices.unsqueeze(-1).expand(-1, -1, patch_tokens.shape[-1]),
+        )
+        deleted_prefix = torch.cat((prefix[:, :1], kept_patches), dim=1)
+
+        full_tokens = self.run_blocks(
+            prefix,
+            intervention_layer,
+            depth,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        deleted_tokens = self.run_blocks(
+            deleted_prefix,
+            intervention_layer,
+            depth,
+            checkpoint_blocks=checkpoint_blocks,
+            checkpoint_segments=self.gradient_checkpoint_segments,
+        )
+        packaged = self.finalize_and_package(full_tokens)
+        deleted_packaged = self.finalize_and_package(deleted_tokens)
+        packaged.update(
+            cti_deleted_tokens=deleted_packaged["tokens"],
+            cti_deleted_features=deleted_packaged["features"],
+            cti_deleted_indices=deleted_indices,
+            cti_keep_indices=keep_indices,
+            cti_valid=valid,
+            cti_intervention_layer=intervention_layer,
+        )
+        return packaged
 
     @staticmethod
     def _attach_auxiliary(packaged, auxiliary):

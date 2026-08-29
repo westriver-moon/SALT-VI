@@ -1,0 +1,25 @@
+extends: sysu_person_fit.yaml
+
+config_select: configs/stage_a/person_assets/sysu_person_fit_cti.yaml
+experiment_name: person_assets_sysu_person_fit_cti
+metric_experiment_id: PERSON-ASSETS-SYSU-PERSON-FIT-CTI
+output_root: train_outputs/person_assets_sysu/person_fit_cti
+metric_events_path: train_outputs/person_assets_sysu/person_fit_cti/events.jsonl
+
+# The retained canonical V3 crop set. Pose/anatomy assets must cover the same
+# source keys before this experiment is launched.
+prepared_data_root: /home/lab929/ybj/datasets/person-assets-512x256/person_fit
+cti_enabled: true
+cti_anatomy_root: /home/lab929/ybj/datasets/pact-assets-512x256-current/person_fit
+cti_intervention_layer: 9
+cti_delete_count: 32
+cti_human_threshold: 0.05
+cti_margin: 0.5
+cti_weight: 0.2
+cti_start_epoch: 6
+cti_warmup_epochs: 3
+
+# Keep the original C3 objective and full grid; CTI is the only added branch.
+pmt_token_pruning_mode: none
+ellipse_attention_weight: 0.0
+ellipse_attention_layer: 0
