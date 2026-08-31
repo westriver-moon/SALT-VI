@@ -370,6 +370,52 @@ class PMTDCL(nn.Module):
         return ap_mean / (an_mean + 1e-12)
 
 
+class PMTIdentityRelationLoss(nn.Module):
+    """Match within-modality identity geometry without merging RGB/IR centers.
+
+    The loss is invariant to a modality-wide orthogonal transform.  It aligns
+    pairwise identity relations rather than penalizing the absolute RGB/IR
+    center offset used by pointwise center objectives such as DCL.
+    """
+
+    def forward(
+        self,
+        visible_feats,
+        ir_feats,
+        visible_labels,
+        ir_labels,
+    ):
+        identities = torch.unique(visible_labels, sorted=True)
+        ir_identities = torch.unique(ir_labels, sorted=True)
+        if not torch.equal(identities, ir_identities):
+            raise ValueError(
+                "identity relation loss requires matching RGB/IR identities"
+            )
+        if identities.numel() < 2:
+            raise ValueError(
+                "identity relation loss requires at least two identities"
+            )
+        visible_centers = torch.stack(
+            [visible_feats[visible_labels == pid].mean(0) for pid in identities]
+        )
+        ir_centers = torch.stack(
+            [ir_feats[ir_labels == pid].mean(0) for pid in identities]
+        )
+        visible_centers = F.normalize(visible_centers, p=2, dim=-1)
+        ir_centers = F.normalize(ir_centers, p=2, dim=-1)
+        visible_relations = visible_centers @ visible_centers.t()
+        ir_relations = ir_centers @ ir_centers.t()
+        off_diagonal = ~torch.eye(
+            identities.numel(),
+            dtype=torch.bool,
+            device=identities.device,
+        )
+        return F.smooth_l1_loss(
+            visible_relations[off_diagonal],
+            ir_relations[off_diagonal],
+        )
+
+
 class PMTQuadrupleCenterTripletLoss(nn.Module):
     """Branch-aware QCT for [RGB-1, RGB-2, IR-1, IR-2] features.
 

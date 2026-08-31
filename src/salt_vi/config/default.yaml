@@ -147,9 +147,13 @@ pmt_recipe: false
 pmt_recipe_variant: original
 pmt_recipe_transforms: false
 pmt_progressive_epoch: 6
+pmt_metric_start_epoch: null
+pmt_metric_ramp_epochs: 0
 pmt_triplet_margin: 0.1
 pmt_msel_weight: 0.5
 pmt_dcl_weight: 0.5
+pmt_relation_weight: 0.0
+pmt_intra_triplet_weight: 0.0
 pmt_mscm_qct_margin: 1.2
 pmt_mscm_qct_weight: 0.1
 pmt_mscm_msel_weight: 0.0

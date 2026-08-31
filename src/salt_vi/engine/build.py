@@ -24,6 +24,7 @@ from salt_vi.utils import (
     CrossModalPMTTripletLoss,
     PMTMSEL,
     PMTDCL,
+    PMTIdentityRelationLoss,
     PMTQuadrupleCenterTripletLoss,
     HeteroCenterTripletLoss,
     LabelSmoothingCrossEntropy,
@@ -441,6 +442,7 @@ class CLIP2ReID(nn.Module):
         )
         self.pmt_msel_criterion = PMTMSEL(getattr(args, "num_pos", 4), feat_norm="no")
         self.pmt_dcl_criterion = PMTDCL(getattr(args, "num_pos", 4), feat_norm="no")
+        self.pmt_relation_criterion = PMTIdentityRelationLoss()
         self.pmt_qct_criterion = PMTQuadrupleCenterTripletLoss(
             margin=getattr(args, "pmt_mscm_qct_margin", 1.2),
             branch_weight=getattr(args, "pmt_mscm_qct_branch_weight", 0.25),

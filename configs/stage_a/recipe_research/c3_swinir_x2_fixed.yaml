@@ -1,0 +1,19 @@
+extends: ../safe_tricks/c3_camera_diverse_cosine.yaml
+
+# This is the only Stage-A data/model anchor used by the recipe study.
+config_select: configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml
+metric_experiment_id: C3-RECIPE-RESEARCH-BASE
+metric_events_path: ${SALT_C3_RECIPE_OUTPUT_ROOT}/events/base.jsonl
+output_root: ${SALT_C3_RECIPE_OUTPUT_ROOT}/runs/base
+
+# Explicitly pin the inherited C3 recipe so resolved configs remain auditable.
+total_train_epoch: 24
+pmt_progressive_epoch: 6
+pmt_metric_start_epoch: 6
+pmt_metric_ramp_epochs: 0
+pmt_triplet_margin: 0.1
+pmt_msel_weight: 0.5
+pmt_dcl_weight: 0.5
+pmt_relation_weight: 0.0
+pmt_intra_triplet_weight: 0.0
+triplet_mining: pmt_hard

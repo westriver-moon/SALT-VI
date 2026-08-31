@@ -1,0 +1,148 @@
+{
+  "batch_count": 2,
+  "checkpoint": {
+    "modified_time_ns": 1787051501838929398,
+    "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+    "size_bytes": 606793390
+  },
+  "current_epoch": 23,
+  "data_config": {
+    "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+    "img_size": [
+      512,
+      256
+    ],
+    "sampler_type": "identity_camera_diverse",
+    "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1"
+  },
+  "diagnostic": "d0_loss_gradient_conflict",
+  "gradient_norms": {
+    "dcl_loss": {
+      "count": 2,
+      "maximum": 0.028568938722742836,
+      "mean": 0.02685935759637063,
+      "minimum": 0.025149776469998424,
+      "std": 0.001709581126372206
+    },
+    "id_loss": {
+      "count": 2,
+      "maximum": 0.2640993087279549,
+      "mean": 0.1638114263926837,
+      "minimum": 0.06352354405741248,
+      "std": 0.10028788233527121
+    },
+    "msel_loss": {
+      "count": 2,
+      "maximum": 0.02184704126031687,
+      "mean": 0.01853690340636504,
+      "minimum": 0.015226765552413207,
+      "std": 0.0033101378539518314
+    },
+    "tri_loss": {
+      "count": 2,
+      "maximum": 0.13067141070244642,
+      "mean": 0.06533570535122321,
+      "minimum": 0.0,
+      "std": 0.06533570535122321
+    }
+  },
+  "loss_values": {
+    "dcl_loss": {
+      "count": 2,
+      "maximum": 0.19987696409225464,
+      "mean": 0.1802360862493515,
+      "minimum": 0.16059520840644836,
+      "std": 0.019640877842903137
+    },
+    "id_loss": {
+      "count": 2,
+      "maximum": 0.042873065918684006,
+      "mean": 0.02816164307296276,
+      "minimum": 0.013450220227241516,
+      "std": 0.014711422845721245
+    },
+    "msel_loss": {
+      "count": 2,
+      "maximum": 0.011564136482775211,
+      "mean": 0.009809889830648899,
+      "minimum": 0.008055643178522587,
+      "std": 0.0017542466521263123
+    },
+    "tri_loss": {
+      "count": 2,
+      "maximum": 0.02362113445997238,
+      "mean": 0.01181056722998619,
+      "minimum": 0.0,
+      "std": 0.01181056722998619
+    }
+  },
+  "negative_mean_pairs": [
+    "id_loss__msel_loss"
+  ],
+  "pairwise_gradient_cosine": {
+    "id_loss__dcl_loss": {
+      "count": 2,
+      "maximum": 0.11886596127732661,
+      "mean": 0.07577149842312483,
+      "minimum": 0.03267703556892305,
+      "std": 0.04309446285420178,
+      "undefined_count": 0
+    },
+    "id_loss__msel_loss": {
+      "count": 2,
+      "maximum": -0.006204863173200427,
+      "mean": -0.01011834929826213,
+      "minimum": -0.014031835423323836,
+      "std": 0.003913486125061705,
+      "undefined_count": 0
+    },
+    "id_loss__tri_loss": {
+      "count": 1,
+      "maximum": 0.14088966832603197,
+      "mean": 0.14088966832603197,
+      "minimum": 0.14088966832603197,
+      "std": 0.0,
+      "undefined_count": 1
+    },
+    "msel_loss__dcl_loss": {
+      "count": 2,
+      "maximum": 0.15114450876621568,
+      "mean": 0.09332727844559653,
+      "minimum": 0.03551004812497737,
+      "std": 0.05781723032061916,
+      "undefined_count": 0
+    },
+    "tri_loss__dcl_loss": {
+      "count": 1,
+      "maximum": 0.06867319951113746,
+      "mean": 0.06867319951113746,
+      "minimum": 0.06867319951113746,
+      "std": 0.0,
+      "undefined_count": 1
+    },
+    "tri_loss__msel_loss": {
+      "count": 1,
+      "maximum": 0.14798935428133303,
+      "mean": 0.14798935428133303,
+      "minimum": 0.14798935428133303,
+      "std": 0.0,
+      "undefined_count": 1
+    }
+  },
+  "parameter_scope": {
+    "element_count": 14175744,
+    "first_parameter": "base_model.visual.vit.blocks.10.norm1.weight",
+    "last_parameter": "base_model.visual.vit.blocks.11.mlp.fc2.bias",
+    "patterns": [
+      "base_model.visual.vit.blocks.10.",
+      "base_model.visual.vit.blocks.11."
+    ],
+    "tensor_count": 24
+  },
+  "purpose": "Measure pairwise gradient cosine among ID, triplet, MSEL, and DCL on the shared final two PMT blocks.",
+  "schema_version": 1,
+  "type": "loss_gradient_conflict",
+  "zero_gradient_losses": [
+    "tri_loss"
+  ]
+}

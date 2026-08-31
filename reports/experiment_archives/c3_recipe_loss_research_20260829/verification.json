@@ -1,0 +1,10 @@
+{
+  "failed_files": [],
+  "method": "bytewise-file-compare",
+  "new_checksum_calculated": false,
+  "original_retained": true,
+  "verified": true,
+  "verified_at": "2026-08-31T05:56:25+00:00",
+  "verified_bytes": 7675105462,
+  "verified_file_count": 58
+}

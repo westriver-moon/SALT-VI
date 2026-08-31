@@ -77,6 +77,26 @@ def cross_modal_hard_weight(args, current_epoch):
     return target * min(1.0, max(0.0, progress))
 
 
+def pmt_metric_auxiliary_scale(args, current_epoch):
+    """Schedule MSEL/DCL/relation independently from the gray-to-RGB switch."""
+    configured_start = getattr(args, "pmt_metric_start_epoch", None)
+    start = (
+        int(getattr(args, "pmt_progressive_epoch", 6))
+        if configured_start is None
+        else int(configured_start)
+    )
+    ramp_epochs = int(getattr(args, "pmt_metric_ramp_epochs", 0))
+    if current_epoch is None:
+        return 1.0
+    epoch = int(current_epoch)
+    if epoch < start:
+        return 0.0
+    if ramp_epochs <= 1:
+        return 1.0
+    progress = (epoch - start + 1) / float(ramp_epochs)
+    return min(1.0, max(0.0, progress))
+
+
 def _encode_batch(model, batch, mode):
     rgb_images = torch.cat((batch["img_rgb_ori"], batch["img_rgb_aug"]), dim=0)
     ir_images = batch["img_ir"]
@@ -287,6 +307,7 @@ class PMTRecipe:
             result["ellipse_outside_mass"] = outside_mass.mean().detach()
             result["ellipse_weight"] = ellipse_weight
         metric_loss = str(getattr(model.args, "pmt_metric_loss", "legacy"))
+        auxiliary_scale = pmt_metric_auxiliary_scale(model.args, current_epoch)
         mining = getattr(model.args, "triplet_mining", "pmt_hard")
         if mining not in {"pmt_hard", "wrt", "pmt_cross_modal_hard"}:
             raise ValueError(f"Unsupported triplet_mining: {mining}")
@@ -297,6 +318,8 @@ class PMTRecipe:
                 ) * float(getattr(model.args, "hetero_center_weight", 1.0)),
                 msel_loss=features.new_zeros(()),
                 dcl_loss=features.new_zeros(()),
+                relation_loss=features.new_zeros(()),
+                intra_tri_loss=features.new_zeros(()),
             )
         elif metric_loss != "legacy":
             raise ValueError(f"Unsupported pmt_metric_loss: {metric_loss}")
@@ -313,6 +336,8 @@ class PMTRecipe:
                 tri_loss=tri_loss,
                 msel_loss=features.new_zeros(()),
                 dcl_loss=features.new_zeros(()),
+                relation_loss=features.new_zeros(()),
+                intra_tri_loss=features.new_zeros(()),
             )
         else:
             if mining == "pmt_hard":
@@ -323,12 +348,54 @@ class PMTRecipe:
                 tri_loss = model.cross_modal_tri_criterion(
                     visible_feats, ir_feats, label_rgb
                 ) * getattr(model.args, "pmt_cross_modal_triplet_weight", 1.0)
+            zero = features.new_zeros(())
+            msel_weight = (
+                float(getattr(model.args, "pmt_msel_weight", 0.5))
+                * auxiliary_scale
+            )
+            dcl_weight = (
+                float(getattr(model.args, "pmt_dcl_weight", 0.5))
+                * auxiliary_scale
+            )
+            relation_weight = (
+                float(getattr(model.args, "pmt_relation_weight", 0.0))
+                * auxiliary_scale
+            )
+            intra_weight = (
+                float(getattr(model.args, "pmt_intra_triplet_weight", 0.0))
+                * auxiliary_scale
+            )
+            msel_loss = (
+                model.pmt_msel_criterion(features, labels) * msel_weight
+                if msel_weight > 0.0
+                else zero
+            )
+            dcl_loss = (
+                model.pmt_dcl_criterion(features, labels) * dcl_weight
+                if dcl_weight > 0.0
+                else zero
+            )
+            relation_loss = (
+                model.pmt_relation_criterion(
+                    visible_feats, ir_feats, label_rgb, label_ir
+                ) * relation_weight
+                if relation_weight > 0.0
+                else zero
+            )
+            intra_tri_loss = (
+                (
+                    model.pmt_tri_criterion(visible_feats, visible_feats, label_rgb)
+                    + model.pmt_tri_criterion(ir_feats, ir_feats, label_ir)
+                ) * intra_weight
+                if intra_weight > 0.0
+                else zero
+            )
             result.update(
                 tri_loss=tri_loss,
-                msel_loss=model.pmt_msel_criterion(features, labels)
-                * getattr(model.args, "pmt_msel_weight", 0.5),
-                dcl_loss=model.pmt_dcl_criterion(features, labels)
-                * getattr(model.args, "pmt_dcl_weight", 0.5),
+                msel_loss=msel_loss,
+                dcl_loss=dcl_loss,
+                relation_loss=relation_loss,
+                intra_tri_loss=intra_tri_loss,
             )
         acc_visible = (score_visible.argmax(dim=1) == label_rgb).float().mean()
         acc_ir = (score_ir.argmax(dim=1) == label_ir).float().mean()
@@ -336,6 +403,7 @@ class PMTRecipe:
             metric_objective=metric_loss,
             triplet_mining=mining,
             acc=(acc_visible + acc_ir) / 2,
+            metric_auxiliary_scale=auxiliary_scale,
             pmt_stage=stage,
         )
         return result

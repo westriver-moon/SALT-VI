@@ -1,0 +1,728 @@
+{
+  "best_metrics": {
+    "Rank-1": 0.7004469633102417,
+    "epoch": 23,
+    "evaluated_epochs": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23
+    ],
+    "gallery_trials": 10,
+    "mAP": 0.6843260200904848,
+    "mINP": 0.5676296611064144,
+    "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+    "selection_metric": "Rank-1"
+  },
+  "best_variant": "r0_current",
+  "diagnostics": [
+    {
+      "diagnostic": "d0_loss_gradient_conflict",
+      "diagnostic_type": "loss_gradient_conflict",
+      "exit_code": 0,
+      "finished_at": "2026-08-29T14:16:13+00:00",
+      "gpu": 2,
+      "job_type": "diagnostic",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/d0_loss_gradient_conflict.log",
+      "result": {
+        "batch_count": 2,
+        "checkpoint": {
+          "modified_time_ns": 1787051501838929398,
+          "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+          "size_bytes": 606793390
+        },
+        "current_epoch": 23,
+        "data_config": {
+          "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+          "img_size": [
+            512,
+            256
+          ],
+          "sampler_type": "identity_camera_diverse",
+          "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1"
+        },
+        "diagnostic": "d0_loss_gradient_conflict",
+        "gradient_norms": {
+          "dcl_loss": {
+            "count": 2,
+            "maximum": 0.028568938722742836,
+            "mean": 0.02685935759637063,
+            "minimum": 0.025149776469998424,
+            "std": 0.001709581126372206
+          },
+          "id_loss": {
+            "count": 2,
+            "maximum": 0.2640993087279549,
+            "mean": 0.1638114263926837,
+            "minimum": 0.06352354405741248,
+            "std": 0.10028788233527121
+          },
+          "msel_loss": {
+            "count": 2,
+            "maximum": 0.02184704126031687,
+            "mean": 0.01853690340636504,
+            "minimum": 0.015226765552413207,
+            "std": 0.0033101378539518314
+          },
+          "tri_loss": {
+            "count": 2,
+            "maximum": 0.13067141070244642,
+            "mean": 0.06533570535122321,
+            "minimum": 0.0,
+            "std": 0.06533570535122321
+          }
+        },
+        "loss_values": {
+          "dcl_loss": {
+            "count": 2,
+            "maximum": 0.19987696409225464,
+            "mean": 0.1802360862493515,
+            "minimum": 0.16059520840644836,
+            "std": 0.019640877842903137
+          },
+          "id_loss": {
+            "count": 2,
+            "maximum": 0.042873065918684006,
+            "mean": 0.02816164307296276,
+            "minimum": 0.013450220227241516,
+            "std": 0.014711422845721245
+          },
+          "msel_loss": {
+            "count": 2,
+            "maximum": 0.011564136482775211,
+            "mean": 0.009809889830648899,
+            "minimum": 0.008055643178522587,
+            "std": 0.0017542466521263123
+          },
+          "tri_loss": {
+            "count": 2,
+            "maximum": 0.02362113445997238,
+            "mean": 0.01181056722998619,
+            "minimum": 0.0,
+            "std": 0.01181056722998619
+          }
+        },
+        "negative_mean_pairs": [
+          "id_loss__msel_loss"
+        ],
+        "pairwise_gradient_cosine": {
+          "id_loss__dcl_loss": {
+            "count": 2,
+            "maximum": 0.11886596127732661,
+            "mean": 0.07577149842312483,
+            "minimum": 0.03267703556892305,
+            "std": 0.04309446285420178,
+            "undefined_count": 0
+          },
+          "id_loss__msel_loss": {
+            "count": 2,
+            "maximum": -0.006204863173200427,
+            "mean": -0.01011834929826213,
+            "minimum": -0.014031835423323836,
+            "std": 0.003913486125061705,
+            "undefined_count": 0
+          },
+          "id_loss__tri_loss": {
+            "count": 1,
+            "maximum": 0.14088966832603197,
+            "mean": 0.14088966832603197,
+            "minimum": 0.14088966832603197,
+            "std": 0.0,
+            "undefined_count": 1
+          },
+          "msel_loss__dcl_loss": {
+            "count": 2,
+            "maximum": 0.15114450876621568,
+            "mean": 0.09332727844559653,
+            "minimum": 0.03551004812497737,
+            "std": 0.05781723032061916,
+            "undefined_count": 0
+          },
+          "tri_loss__dcl_loss": {
+            "count": 1,
+            "maximum": 0.06867319951113746,
+            "mean": 0.06867319951113746,
+            "minimum": 0.06867319951113746,
+            "std": 0.0,
+            "undefined_count": 1
+          },
+          "tri_loss__msel_loss": {
+            "count": 1,
+            "maximum": 0.14798935428133303,
+            "mean": 0.14798935428133303,
+            "minimum": 0.14798935428133303,
+            "std": 0.0,
+            "undefined_count": 1
+          }
+        },
+        "parameter_scope": {
+          "element_count": 14175744,
+          "first_parameter": "base_model.visual.vit.blocks.10.norm1.weight",
+          "last_parameter": "base_model.visual.vit.blocks.11.mlp.fc2.bias",
+          "patterns": [
+            "base_model.visual.vit.blocks.10.",
+            "base_model.visual.vit.blocks.11."
+          ],
+          "tensor_count": 24
+        },
+        "purpose": "Measure pairwise gradient cosine among ID, triplet, MSEL, and DCL on the shared final two PMT blocks.",
+        "schema_version": 1,
+        "type": "loss_gradient_conflict",
+        "zero_gradient_losses": [
+          "tri_loss"
+        ]
+      },
+      "started_at": "2026-08-29T14:15:38+00:00",
+      "status": "completed"
+    },
+    {
+      "diagnostic": "d1_modality_information",
+      "diagnostic_type": "modality_information",
+      "exit_code": 0,
+      "finished_at": "2026-08-29T14:16:16+00:00",
+      "gpu": 3,
+      "job_type": "diagnostic",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/d1_modality_information.log",
+      "result": {
+        "batch_count": 6,
+        "c3_minus_pretrained": {
+          "identity_count": 0.0,
+          "identity_residual_modality_gap_over_rms": -0.5275979787111282,
+          "identity_residual_modality_probe": {
+            "test_accuracy": -0.3916666507720947,
+            "test_identity_count": 0.0,
+            "test_sample_count": 0.0,
+            "train_accuracy": 0.0,
+            "train_identity_count": 0.0,
+            "train_sample_count": 0.0
+          },
+          "paired_identity_center_cosine": 0.5012390911579132,
+          "paired_identity_center_distance": -0.8232603818178177,
+          "raw_modality_probe": {
+            "test_accuracy": -0.3999999761581421,
+            "test_identity_count": 0.0,
+            "test_sample_count": 0.0,
+            "train_accuracy": 0.0,
+            "train_identity_count": 0.0,
+            "train_sample_count": 0.0
+          },
+          "sample_count_per_modality": 0.0,
+          "within_modality_relation_mae": -0.06289994157850742,
+          "within_modality_relation_pearson": 0.8028426170349121
+        },
+        "c3_trained": {
+          "identity_count": 47,
+          "identity_residual_modality_gap_over_rms": 0.16701261699199677,
+          "identity_residual_modality_probe": {
+            "test_accuracy": 0.6083333492279053,
+            "test_identity_count": 14,
+            "test_sample_count": 120,
+            "train_accuracy": 1.0,
+            "train_identity_count": 33,
+            "train_sample_count": 264
+          },
+          "paired_identity_center_cosine": 0.9811825156211853,
+          "paired_identity_center_distance": 0.19265775382518768,
+          "raw_modality_probe": {
+            "test_accuracy": 0.6000000238418579,
+            "test_identity_count": 14,
+            "test_sample_count": 120,
+            "train_accuracy": 1.0,
+            "train_identity_count": 33,
+            "train_sample_count": 264
+          },
+          "sample_count_per_modality": 192,
+          "within_modality_relation_mae": 0.022436706349253654,
+          "within_modality_relation_pearson": 0.988349437713623
+        },
+        "checkpoint": {
+          "modified_time_ns": 1787051501838929398,
+          "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+          "size_bytes": 606793390
+        },
+        "data_config": {
+          "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+          "img_size": [
+            512,
+            256
+          ],
+          "sampler_type": "identity_camera_diverse",
+          "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1"
+        },
+        "diagnostic": "d1_modality_information",
+        "pretrained_initialization": {
+          "identity_count": 47,
+          "identity_residual_modality_gap_over_rms": 0.694610595703125,
+          "identity_residual_modality_probe": {
+            "test_accuracy": 1.0,
+            "test_identity_count": 14,
+            "test_sample_count": 120,
+            "train_accuracy": 1.0,
+            "train_identity_count": 33,
+            "train_sample_count": 264
+          },
+          "paired_identity_center_cosine": 0.4799434244632721,
+          "paired_identity_center_distance": 1.0159181356430054,
+          "raw_modality_probe": {
+            "test_accuracy": 1.0,
+            "test_identity_count": 14,
+            "test_sample_count": 120,
+            "train_accuracy": 1.0,
+            "train_identity_count": 33,
+            "train_sample_count": 264
+          },
+          "sample_count_per_modality": 192,
+          "within_modality_relation_mae": 0.08533664792776108,
+          "within_modality_relation_pearson": 0.18550682067871094
+        },
+        "purpose": "Compare pretrained and C3-trained identity geometry plus identity-residual modality-probe accuracy.",
+        "schema_version": 1,
+        "type": "modality_information"
+      },
+      "started_at": "2026-08-29T14:15:38+00:00",
+      "status": "completed"
+    }
+  ],
+  "experiment_id": "c3-recipe-loss-research-20260829",
+  "protocol": "all-search-single-shot-10-gallery-trials",
+  "schema_version": 2,
+  "selection": {
+    "final_tie_breaker": "latest_epoch",
+    "mode": "maximize",
+    "policy": "best-evaluated-epoch",
+    "primary_metric": "Rank-1",
+    "tie_breakers": []
+  },
+  "selection_policy": "best-evaluated-epoch",
+  "source": "recollected-from-evaluation-events",
+  "training_runs": [
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T20:20:15+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/r0_current.log",
+      "metrics": {
+        "Rank-1": 0.7004469633102417,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6843260200904848,
+        "mINP": 0.5676296611064144,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "schedule",
+      "started_at": "2026-08-29T14:16:16+00:00",
+      "status": "completed",
+      "variant": "r0_current"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T20:34:22+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/r1_gray4_coupled.log",
+      "metrics": {
+        "Rank-1": 0.6819089651107788,
+        "epoch": 19,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6699982226757235,
+        "mINP": 0.5549923548162632,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "schedule",
+      "started_at": "2026-08-29T14:16:16+00:00",
+      "status": "completed",
+      "variant": "r1_gray4_coupled"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T02:22:40+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/r2_gray4_decoupled_ramp3.log",
+      "metrics": {
+        "Rank-1": 0.6799894571304321,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6689927983326398,
+        "mINP": 0.5565616522297299,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "schedule",
+      "started_at": "2026-08-29T20:20:16+00:00",
+      "status": "completed",
+      "variant": "r2_gray4_decoupled_ramp3"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T02:45:24+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/l0_no_aux.log",
+      "metrics": {
+        "Rank-1": 0.6363134384155273,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6187712350747232,
+        "mINP": 0.4907341441528404,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "loss_necessity",
+      "started_at": "2026-08-29T20:34:22+00:00",
+      "status": "completed",
+      "variant": "l0_no_aux"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T08:30:26+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/l1_msel_only.log",
+      "metrics": {
+        "Rank-1": 0.6717065572738647,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6424872130806855,
+        "mINP": 0.5093490073725594,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "loss_necessity",
+      "started_at": "2026-08-30T02:22:40+00:00",
+      "status": "completed",
+      "variant": "l1_msel_only"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T09:00:13+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/l2_dcl_only.log",
+      "metrics": {
+        "Rank-1": 0.6398369073867798,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6419649134746448,
+        "mINP": 0.5341575475710549,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "loss_necessity",
+      "started_at": "2026-08-30T02:45:24+00:00",
+      "status": "completed",
+      "variant": "l2_dcl_only"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T14:49:05+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/l4_msel050_dcl010.log",
+      "metrics": {
+        "Rank-1": 0.6815934777259827,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.658002807463128,
+        "mINP": 0.5327614115067164,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "loss_necessity",
+      "started_at": "2026-08-30T08:30:26+00:00",
+      "status": "completed",
+      "variant": "l4_msel050_dcl010"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T15:15:07+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/m1_cm_margin005.log",
+      "metrics": {
+        "Rank-1": 0.692847728729248,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6630688609745862,
+        "mINP": 0.5330649894409674,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "mining_margin",
+      "started_at": "2026-08-30T09:00:13+00:00",
+      "status": "completed",
+      "variant": "m1_cm_margin005"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T20:50:13+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/m2_cm_margin010.log",
+      "metrics": {
+        "Rank-1": 0.6879568696022034,
+        "epoch": 19,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6556608507425005,
+        "mINP": 0.5227445471103906,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "mining_margin",
+      "started_at": "2026-08-30T14:49:06+00:00",
+      "status": "completed",
+      "variant": "m2_cm_margin010"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T21:28:56+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/m3_cm_margin020.log",
+      "metrics": {
+        "Rank-1": 0.685038149356842,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.6584127635901308,
+        "mINP": 0.530060402325417,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "mining_margin",
+      "started_at": "2026-08-30T15:15:07+00:00",
+      "status": "completed",
+      "variant": "m3_cm_margin020"
+    },
+    {
+      "exit_code": 0,
+      "finished_at": "2026-08-31T02:54:34+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/s0_selective_control.log",
+      "metrics": {
+        "Rank-1": 0.5889297723770142,
+        "epoch": 23,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.5760235484998567,
+        "mINP": 0.4486468938124612,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "selective_relation",
+      "started_at": "2026-08-30T20:50:13+00:00",
+      "status": "completed",
+      "variant": "s0_selective_control"
+    },
+    {
+      "exit_code": -15,
+      "finished_at": "2026-08-31T03:20:21+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/s1_relation005.log",
+      "metrics": {
+        "Rank-1": 0.5882461667060852,
+        "epoch": 21,
+        "evaluated_epochs": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21
+        ],
+        "gallery_trials": 10,
+        "mAP": 0.5752288973651072,
+        "mINP": 0.44502835597229556,
+        "protocol": "dataset=sysu|search=all|gallery=single|trial_ids=0,1,2,3,4,5,6,7,8,9|direction=infrared-to-visible|backend=identity_text|test_modality=IR|query=infrared-image|gallery_modalities=visible-image|caption_lookup=none|caption_seed=none|caption_source=none",
+        "selection_metric": "Rank-1"
+      },
+      "phase": "selective_relation",
+      "started_at": "2026-08-30T21:28:56+00:00",
+      "status": "failed",
+      "variant": "s1_relation005"
+    },
+    {
+      "exit_code": -15,
+      "finished_at": "2026-08-31T03:20:20+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "log_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/launcher_logs/s2_relation010.log",
+      "metrics": null,
+      "phase": "selective_relation",
+      "started_at": "2026-08-31T02:54:34+00:00",
+      "status": "failed",
+      "variant": "s2_relation010"
+    }
+  ],
+  "updated_at": "2026-08-31T05:51:44+00:00"
+}

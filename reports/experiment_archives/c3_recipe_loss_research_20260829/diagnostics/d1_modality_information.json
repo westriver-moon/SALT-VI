@@ -1,0 +1,96 @@
+{
+  "batch_count": 6,
+  "c3_minus_pretrained": {
+    "identity_count": 0.0,
+    "identity_residual_modality_gap_over_rms": -0.5275979787111282,
+    "identity_residual_modality_probe": {
+      "test_accuracy": -0.3916666507720947,
+      "test_identity_count": 0.0,
+      "test_sample_count": 0.0,
+      "train_accuracy": 0.0,
+      "train_identity_count": 0.0,
+      "train_sample_count": 0.0
+    },
+    "paired_identity_center_cosine": 0.5012390911579132,
+    "paired_identity_center_distance": -0.8232603818178177,
+    "raw_modality_probe": {
+      "test_accuracy": -0.3999999761581421,
+      "test_identity_count": 0.0,
+      "test_sample_count": 0.0,
+      "train_accuracy": 0.0,
+      "train_identity_count": 0.0,
+      "train_sample_count": 0.0
+    },
+    "sample_count_per_modality": 0.0,
+    "within_modality_relation_mae": -0.06289994157850742,
+    "within_modality_relation_pearson": 0.8028426170349121
+  },
+  "c3_trained": {
+    "identity_count": 47,
+    "identity_residual_modality_gap_over_rms": 0.16701261699199677,
+    "identity_residual_modality_probe": {
+      "test_accuracy": 0.6083333492279053,
+      "test_identity_count": 14,
+      "test_sample_count": 120,
+      "train_accuracy": 1.0,
+      "train_identity_count": 33,
+      "train_sample_count": 264
+    },
+    "paired_identity_center_cosine": 0.9811825156211853,
+    "paired_identity_center_distance": 0.19265775382518768,
+    "raw_modality_probe": {
+      "test_accuracy": 0.6000000238418579,
+      "test_identity_count": 14,
+      "test_sample_count": 120,
+      "train_accuracy": 1.0,
+      "train_identity_count": 33,
+      "train_sample_count": 264
+    },
+    "sample_count_per_modality": 192,
+    "within_modality_relation_mae": 0.022436706349253654,
+    "within_modality_relation_pearson": 0.988349437713623
+  },
+  "checkpoint": {
+    "modified_time_ns": 1787051501838929398,
+    "path": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+    "size_bytes": 606793390
+  },
+  "data_config": {
+    "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+    "img_size": [
+      512,
+      256
+    ],
+    "sampler_type": "identity_camera_diverse",
+    "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1"
+  },
+  "diagnostic": "d1_modality_information",
+  "pretrained_initialization": {
+    "identity_count": 47,
+    "identity_residual_modality_gap_over_rms": 0.694610595703125,
+    "identity_residual_modality_probe": {
+      "test_accuracy": 1.0,
+      "test_identity_count": 14,
+      "test_sample_count": 120,
+      "train_accuracy": 1.0,
+      "train_identity_count": 33,
+      "train_sample_count": 264
+    },
+    "paired_identity_center_cosine": 0.4799434244632721,
+    "paired_identity_center_distance": 1.0159181356430054,
+    "raw_modality_probe": {
+      "test_accuracy": 1.0,
+      "test_identity_count": 14,
+      "test_sample_count": 120,
+      "train_accuracy": 1.0,
+      "train_identity_count": 33,
+      "train_sample_count": 264
+    },
+    "sample_count_per_modality": 192,
+    "within_modality_relation_mae": 0.08533664792776108,
+    "within_modality_relation_pearson": 0.18550682067871094
+  },
+  "purpose": "Compare pretrained and C3-trained identity geometry plus identity-residual modality-probe accuracy.",
+  "schema_version": 1,
+  "type": "modality_information"
+}

@@ -1,0 +1,33 @@
+{
+  "archive_kind": "final-batch2",
+  "archive_method": "copy-bytewise-verify-preserve-original-no-new-checksum",
+  "archive_root": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-c3-recipe-loss-research-20260829-final-batch2",
+  "archived_variants": [
+    "m2_cm_margin010",
+    "m3_cm_margin020",
+    "s0_selective_control",
+    "s1_relation005",
+    "s2_relation010"
+  ],
+  "batch1_archive_root": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-c3-recipe-loss-research-20260829-completed-batch1",
+  "completed_variants": [
+    "m2_cm_margin010",
+    "m3_cm_margin020",
+    "s0_selective_control"
+  ],
+  "created_at": "2026-08-31T05:56:25+00:00",
+  "experiment_id": "c3-recipe-loss-research-20260829",
+  "git_readable_index": "reports/experiment_archives/c3_recipe_loss_research_20260829",
+  "new_checksum_calculated": false,
+  "notes": "Batch 2 closes the five variants excluded from batch 1. S1 and S2 are retained as user-stopped failures and are not promoted to completed results.",
+  "original_retained": true,
+  "scheduler_stage": "finished",
+  "scheduler_terminal_status": "failed",
+  "schema_version": 1,
+  "scientific_payload_verification": "bytewise_equal",
+  "source_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829",
+  "user_stopped_failed_variants": [
+    "s1_relation005",
+    "s2_relation010"
+  ]
+}

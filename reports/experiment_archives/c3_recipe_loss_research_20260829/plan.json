@@ -1,0 +1,1057 @@
+{
+  "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+  "created_at": "2026-08-29T14:15:38+00:00",
+  "diagnostics": {
+    "d0_loss_gradient_conflict": {
+      "batches": 2,
+      "checkpoint": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+      "current_epoch": 23,
+      "job_type": "diagnostic",
+      "name": "d0_loss_gradient_conflict",
+      "output_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/diagnostics/d0_loss_gradient_conflict.json",
+      "parameter_patterns": [
+        "base_model.visual.vit.blocks.10.",
+        "base_model.visual.vit.blocks.11."
+      ],
+      "purpose": "Measure pairwise gradient cosine among ID, triplet, MSEL, and DCL on the shared final two PMT blocks.",
+      "resolved_variant": {
+        "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+        "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+        "fixed_config": {
+          "batch_size": 32,
+          "cosine_softmax_scale": 30.0,
+          "dataset": "sysu",
+          "gallery_trials": 10,
+          "img_h": 512,
+          "img_size": [
+            512,
+            256
+          ],
+          "img_w": 256,
+          "normalized_classifier": true,
+          "num_pos": 4,
+          "sampler_type": "identity_camera_diverse",
+          "seed": 0,
+          "sysu_source_size": [
+            256,
+            128
+          ],
+          "sysu_sr_backend": "array",
+          "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+          "sysu_sr_exact_size": true,
+          "sysu_sr_modalities": [
+            "rgb",
+            "ir"
+          ],
+          "total_train_epoch": 24,
+          "visual_input_backend": "single"
+        },
+        "name": "r0_current",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current",
+        "overrides": {
+          "pmt_dcl_weight": 0.5,
+          "pmt_intra_triplet_weight": 0.0,
+          "pmt_metric_ramp_epochs": 0,
+          "pmt_metric_start_epoch": 6,
+          "pmt_msel_weight": 0.5,
+          "pmt_progressive_epoch": 6,
+          "pmt_relation_weight": 0.0,
+          "pmt_triplet_margin": 0.1,
+          "triplet_mining": "pmt_hard"
+        },
+        "phase": "schedule",
+        "purpose": "Exact current C3 recipe control.",
+        "resolved_recipe": {
+          "pmt_dcl_weight": 0.5,
+          "pmt_intra_triplet_weight": 0.0,
+          "pmt_metric_ramp_epochs": 0,
+          "pmt_metric_start_epoch": 6,
+          "pmt_msel_weight": 0.5,
+          "pmt_progressive_epoch": 6,
+          "pmt_relation_weight": 0.0,
+          "pmt_triplet_margin": 0.1,
+          "triplet_mining": "pmt_hard"
+        },
+        "runtime_overrides": {
+          "experiment_name": "r0_current",
+          "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+          "metric_experiment_id": "C3-RECIPE-R0-CURRENT",
+          "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current"
+        }
+      },
+      "type": "loss_gradient_conflict",
+      "variant": "r0_current"
+    },
+    "d1_modality_information": {
+      "batches": 6,
+      "checkpoint": "/home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth",
+      "job_type": "diagnostic",
+      "name": "d1_modality_information",
+      "output_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/diagnostics/d1_modality_information.json",
+      "probe_steps": 200,
+      "probe_train_fraction": 0.7,
+      "purpose": "Compare pretrained and C3-trained identity geometry plus identity-residual modality-probe accuracy.",
+      "resolved_variant": {
+        "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+        "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+        "fixed_config": {
+          "batch_size": 32,
+          "cosine_softmax_scale": 30.0,
+          "dataset": "sysu",
+          "gallery_trials": 10,
+          "img_h": 512,
+          "img_size": [
+            512,
+            256
+          ],
+          "img_w": 256,
+          "normalized_classifier": true,
+          "num_pos": 4,
+          "sampler_type": "identity_camera_diverse",
+          "seed": 0,
+          "sysu_source_size": [
+            256,
+            128
+          ],
+          "sysu_sr_backend": "array",
+          "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+          "sysu_sr_exact_size": true,
+          "sysu_sr_modalities": [
+            "rgb",
+            "ir"
+          ],
+          "total_train_epoch": 24,
+          "visual_input_backend": "single"
+        },
+        "name": "r0_current",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current",
+        "overrides": {
+          "pmt_dcl_weight": 0.5,
+          "pmt_intra_triplet_weight": 0.0,
+          "pmt_metric_ramp_epochs": 0,
+          "pmt_metric_start_epoch": 6,
+          "pmt_msel_weight": 0.5,
+          "pmt_progressive_epoch": 6,
+          "pmt_relation_weight": 0.0,
+          "pmt_triplet_margin": 0.1,
+          "triplet_mining": "pmt_hard"
+        },
+        "phase": "schedule",
+        "purpose": "Exact current C3 recipe control.",
+        "resolved_recipe": {
+          "pmt_dcl_weight": 0.5,
+          "pmt_intra_triplet_weight": 0.0,
+          "pmt_metric_ramp_epochs": 0,
+          "pmt_metric_start_epoch": 6,
+          "pmt_msel_weight": 0.5,
+          "pmt_progressive_epoch": 6,
+          "pmt_relation_weight": 0.0,
+          "pmt_triplet_margin": 0.1,
+          "triplet_mining": "pmt_hard"
+        },
+        "runtime_overrides": {
+          "experiment_name": "r0_current",
+          "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+          "metric_experiment_id": "C3-RECIPE-R0-CURRENT",
+          "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current"
+        }
+      },
+      "type": "modality_information",
+      "variant": "r0_current"
+    }
+  },
+  "experiment_id": "c3-recipe-loss-research-20260829",
+  "gpu_snapshots": [
+    {
+      "gpu": 2,
+      "processes": [],
+      "used_memory_mb": 11
+    },
+    {
+      "gpu": 3,
+      "processes": [],
+      "used_memory_mb": 11
+    }
+  ],
+  "job_counts": {
+    "diagnostic": 2,
+    "total": 15,
+    "training": 13
+  },
+  "job_order": [
+    "d0_loss_gradient_conflict",
+    "d1_modality_information",
+    "r0_current",
+    "r1_gray4_coupled",
+    "r2_gray4_decoupled_ramp3",
+    "l0_no_aux",
+    "l1_msel_only",
+    "l2_dcl_only",
+    "l4_msel050_dcl010",
+    "m1_cm_margin005",
+    "m2_cm_margin010",
+    "m3_cm_margin020",
+    "s0_selective_control",
+    "s1_relation005",
+    "s2_relation010"
+  ],
+  "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829",
+  "protocol": "all-search-single-shot-10-gallery-trials",
+  "schema_version": 2,
+  "selection": {
+    "final_tie_breaker": "latest_epoch",
+    "mode": "maximize",
+    "policy": "best-evaluated-epoch",
+    "primary_metric": "Rank-1",
+    "tie_breakers": []
+  },
+  "selection_policy": "best-evaluated-epoch",
+  "variants": {
+    "l0_no_aux": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l0_no_aux.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "l0_no_aux",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l0_no_aux",
+      "overrides": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "loss_necessity",
+      "purpose": "ID and PMT-hard triplet without MSEL or DCL.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "l0_no_aux",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l0_no_aux.jsonl",
+        "metric_experiment_id": "C3-RECIPE-L0-NO-AUX",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l0_no_aux"
+      }
+    },
+    "l1_msel_only": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l1_msel_only.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "l1_msel_only",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l1_msel_only",
+      "overrides": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "loss_necessity",
+      "purpose": "Isolate MSEL necessity.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "l1_msel_only",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l1_msel_only.jsonl",
+        "metric_experiment_id": "C3-RECIPE-L1-MSEL-ONLY",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l1_msel_only"
+      }
+    },
+    "l2_dcl_only": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l2_dcl_only.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "l2_dcl_only",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l2_dcl_only",
+      "overrides": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "loss_necessity",
+      "purpose": "Isolate DCL necessity and its suspected over-alignment pressure.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "l2_dcl_only",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l2_dcl_only.jsonl",
+        "metric_experiment_id": "C3-RECIPE-L2-DCL-ONLY",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l2_dcl_only"
+      }
+    },
+    "l4_msel050_dcl010": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l4_msel050_dcl010.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "l4_msel050_dcl010",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l4_msel050_dcl010",
+      "overrides": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "loss_necessity",
+      "purpose": "Preserve MSEL while reducing the late-training dominant DCL term.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "l4_msel050_dcl010",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/l4_msel050_dcl010.jsonl",
+        "metric_experiment_id": "C3-RECIPE-L4-MSEL050-DCL010",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/l4_msel050_dcl010"
+      }
+    },
+    "m1_cm_margin005": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m1_cm_margin005.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "m1_cm_margin005",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m1_cm_margin005",
+      "overrides": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.05,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "mining_margin",
+      "purpose": "Cross-modal-only hard mining with a smaller margin.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.05,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "m1_cm_margin005",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m1_cm_margin005.jsonl",
+        "metric_experiment_id": "C3-RECIPE-M1-CM-MARGIN005",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m1_cm_margin005"
+      }
+    },
+    "m2_cm_margin010": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m2_cm_margin010.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "m2_cm_margin010",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m2_cm_margin010",
+      "overrides": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "mining_margin",
+      "purpose": "Cross-modal-only hard mining at the inherited margin.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "m2_cm_margin010",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m2_cm_margin010.jsonl",
+        "metric_experiment_id": "C3-RECIPE-M2-CM-MARGIN010",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m2_cm_margin010"
+      }
+    },
+    "m3_cm_margin020": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m3_cm_margin020.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "m3_cm_margin020",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m3_cm_margin020",
+      "overrides": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.2,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "mining_margin",
+      "purpose": "Cross-modal-only hard mining with a larger margin.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.1,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.2,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "m3_cm_margin020",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/m3_cm_margin020.jsonl",
+        "metric_experiment_id": "C3-RECIPE-M3-CM-MARGIN020",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/m3_cm_margin020"
+      }
+    },
+    "r0_current": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "r0_current",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current",
+      "overrides": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 0,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 6,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "schedule",
+      "purpose": "Exact current C3 recipe control.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 0,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 6,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "r0_current",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r0_current.jsonl",
+        "metric_experiment_id": "C3-RECIPE-R0-CURRENT",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r0_current"
+      }
+    },
+    "r1_gray4_coupled": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r1_gray4_coupled.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "r1_gray4_coupled",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r1_gray4_coupled",
+      "overrides": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 0,
+        "pmt_metric_start_epoch": 4,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "schedule",
+      "purpose": "Shorter gray stage while retaining the original coupled switch.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 0,
+        "pmt_metric_start_epoch": 4,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "r1_gray4_coupled",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r1_gray4_coupled.jsonl",
+        "metric_experiment_id": "C3-RECIPE-R1-GRAY4-COUPLED",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r1_gray4_coupled"
+      }
+    },
+    "r2_gray4_decoupled_ramp3": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r2_gray4_decoupled_ramp3.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "r2_gray4_decoupled_ramp3",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r2_gray4_decoupled_ramp3",
+      "overrides": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "phase": "schedule",
+      "purpose": "RGB starts at epoch 4; MSEL/DCL start at epoch 6 with a 3-epoch ramp.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.5,
+        "pmt_intra_triplet_weight": 0.0,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.5,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "r2_gray4_decoupled_ramp3",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/r2_gray4_decoupled_ramp3.jsonl",
+        "metric_experiment_id": "C3-RECIPE-R2-GRAY4-DECOUPLED-RAMP3",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/r2_gray4_decoupled_ramp3"
+      }
+    },
+    "s0_selective_control": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s0_selective_control.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "s0_selective_control",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s0_selective_control",
+      "overrides": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "selective_relation",
+      "purpose": "Cross-modal shared alignment plus a small intra-modal identity term, without relation loss.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.0,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "s0_selective_control",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s0_selective_control.jsonl",
+        "metric_experiment_id": "C3-RECIPE-S0-SELECTIVE-CONTROL",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s0_selective_control"
+      }
+    },
+    "s1_relation005": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s1_relation005.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "s1_relation005",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s1_relation005",
+      "overrides": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.05,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "selective_relation",
+      "purpose": "Relation-preserving selective alignment with weight 0.05.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.05,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "s1_relation005",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s1_relation005.jsonl",
+        "metric_experiment_id": "C3-RECIPE-S1-RELATION005",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s1_relation005"
+      }
+    },
+    "s2_relation010": {
+      "base_config": "configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml",
+      "events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s2_relation010.jsonl",
+      "fixed_config": {
+        "batch_size": 32,
+        "cosine_softmax_scale": 30.0,
+        "dataset": "sysu",
+        "gallery_trials": 10,
+        "img_h": 512,
+        "img_size": [
+          512,
+          256
+        ],
+        "img_w": 256,
+        "normalized_classifier": true,
+        "num_pos": 4,
+        "sampler_type": "identity_camera_diverse",
+        "seed": 0,
+        "sysu_source_size": [
+          256,
+          128
+        ],
+        "sysu_sr_backend": "array",
+        "sysu_sr_data_root": "/home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1",
+        "sysu_sr_exact_size": true,
+        "sysu_sr_modalities": [
+          "rgb",
+          "ir"
+        ],
+        "total_train_epoch": 24,
+        "visual_input_backend": "single"
+      },
+      "name": "s2_relation010",
+      "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s2_relation010",
+      "overrides": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.1,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "phase": "selective_relation",
+      "purpose": "Relation-preserving selective alignment with weight 0.10.",
+      "resolved_recipe": {
+        "pmt_dcl_weight": 0.0,
+        "pmt_intra_triplet_weight": 0.25,
+        "pmt_metric_ramp_epochs": 3,
+        "pmt_metric_start_epoch": 6,
+        "pmt_msel_weight": 0.0,
+        "pmt_progressive_epoch": 4,
+        "pmt_relation_weight": 0.1,
+        "pmt_triplet_margin": 0.1,
+        "triplet_mining": "pmt_cross_modal_hard"
+      },
+      "runtime_overrides": {
+        "experiment_name": "s2_relation010",
+        "metric_events_path": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/events/s2_relation010.jsonl",
+        "metric_experiment_id": "C3-RECIPE-S2-RELATION010",
+        "output_root": "/home/lab929/ybj/experiments/stage_a/SALT-VI-c3-recipe-loss-research-20260829/runs/s2_relation010"
+      }
+    }
+  },
+  "worktree": "/home/lab929/ybj/autoresearch-v2/worktrees/c3-recipe-loss-research-20260829/w1"
+}

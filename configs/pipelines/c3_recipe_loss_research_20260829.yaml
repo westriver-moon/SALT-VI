@@ -1,0 +1,210 @@
+schema_version: 2
+experiment_id: c3-recipe-loss-research-20260829
+base_config: configs/stage_a/recipe_research/c3_swinir_x2_fixed.yaml
+protocol: all-search-single-shot-10-gallery-trials
+selection:
+  policy: best-evaluated-epoch
+  primary_metric: Rank-1
+  mode: maximize
+  tie_breakers: []
+  final_tie_breaker: latest_epoch
+
+fixed_config:
+  dataset: sysu
+  img_h: 512
+  img_w: 256
+  img_size: [512, 256]
+  sysu_source_size: [256, 128]
+  sysu_sr_data_root: /home/cgv841/datasets/derived/SYSU-MM01-swinir-x2-pmt256-v1
+  sysu_sr_modalities: [rgb, ir]
+  sysu_sr_exact_size: true
+  sysu_sr_backend: array
+  visual_input_backend: single
+  sampler_type: identity_camera_diverse
+  normalized_classifier: true
+  cosine_softmax_scale: 30.0
+  batch_size: 32
+  num_pos: 4
+  seed: 0
+  total_train_epoch: 24
+  gallery_trials: 10
+
+allowed_overrides:
+  - pmt_progressive_epoch
+  - pmt_metric_start_epoch
+  - pmt_metric_ramp_epochs
+  - pmt_triplet_margin
+  - pmt_msel_weight
+  - pmt_dcl_weight
+  - pmt_relation_weight
+  - pmt_intra_triplet_weight
+  - triplet_mining
+
+variants:
+  r0_current:
+    phase: schedule
+    purpose: Exact current C3 recipe control.
+    overrides:
+      pmt_progressive_epoch: 6
+      pmt_metric_start_epoch: 6
+      pmt_metric_ramp_epochs: 0
+      triplet_mining: pmt_hard
+      pmt_triplet_margin: 0.1
+      pmt_msel_weight: 0.5
+      pmt_dcl_weight: 0.5
+      pmt_relation_weight: 0.0
+      pmt_intra_triplet_weight: 0.0
+
+  r1_gray4_coupled:
+    phase: schedule
+    purpose: Shorter gray stage while retaining the original coupled switch.
+    overrides:
+      pmt_progressive_epoch: 4
+      pmt_metric_start_epoch: 4
+      pmt_metric_ramp_epochs: 0
+      triplet_mining: pmt_hard
+      pmt_triplet_margin: 0.1
+      pmt_msel_weight: 0.5
+      pmt_dcl_weight: 0.5
+      pmt_relation_weight: 0.0
+      pmt_intra_triplet_weight: 0.0
+
+  r2_gray4_decoupled_ramp3:
+    phase: schedule
+    purpose: RGB starts at epoch 4; MSEL/DCL start at epoch 6 with a 3-epoch ramp.
+    overrides:
+      pmt_progressive_epoch: 4
+      pmt_metric_start_epoch: 6
+      pmt_metric_ramp_epochs: 3
+      triplet_mining: pmt_hard
+      pmt_triplet_margin: 0.1
+      pmt_msel_weight: 0.5
+      pmt_dcl_weight: 0.5
+      pmt_relation_weight: 0.0
+      pmt_intra_triplet_weight: 0.0
+
+  l0_no_aux:
+    phase: loss_necessity
+    purpose: ID and PMT-hard triplet without MSEL or DCL.
+    overrides: &loss_common
+      pmt_progressive_epoch: 4
+      pmt_metric_start_epoch: 6
+      pmt_metric_ramp_epochs: 3
+      triplet_mining: pmt_hard
+      pmt_triplet_margin: 0.1
+      pmt_msel_weight: 0.0
+      pmt_dcl_weight: 0.0
+      pmt_relation_weight: 0.0
+      pmt_intra_triplet_weight: 0.0
+
+  l1_msel_only:
+    phase: loss_necessity
+    purpose: Isolate MSEL necessity.
+    overrides:
+      <<: *loss_common
+      pmt_msel_weight: 0.5
+
+  l2_dcl_only:
+    phase: loss_necessity
+    purpose: Isolate DCL necessity and its suspected over-alignment pressure.
+    overrides:
+      <<: *loss_common
+      pmt_dcl_weight: 0.5
+
+  l4_msel050_dcl010:
+    phase: loss_necessity
+    purpose: Preserve MSEL while reducing the late-training dominant DCL term.
+    overrides: &reduced_aux
+      <<: *loss_common
+      pmt_msel_weight: 0.5
+      pmt_dcl_weight: 0.1
+
+  m1_cm_margin005:
+    phase: mining_margin
+    purpose: Cross-modal-only hard mining with a smaller margin.
+    overrides:
+      <<: *reduced_aux
+      triplet_mining: pmt_cross_modal_hard
+      pmt_triplet_margin: 0.05
+
+  m2_cm_margin010:
+    phase: mining_margin
+    purpose: Cross-modal-only hard mining at the inherited margin.
+    overrides: &cm_margin010
+      <<: *reduced_aux
+      triplet_mining: pmt_cross_modal_hard
+      pmt_triplet_margin: 0.1
+
+  m3_cm_margin020:
+    phase: mining_margin
+    purpose: Cross-modal-only hard mining with a larger margin.
+    overrides:
+      <<: *reduced_aux
+      triplet_mining: pmt_cross_modal_hard
+      pmt_triplet_margin: 0.2
+
+  s0_selective_control:
+    phase: selective_relation
+    purpose: Cross-modal shared alignment plus a small intra-modal identity term, without relation loss.
+    overrides: &selective_common
+      <<: *cm_margin010
+      pmt_msel_weight: 0.0
+      pmt_dcl_weight: 0.0
+      pmt_intra_triplet_weight: 0.25
+      pmt_relation_weight: 0.0
+
+  s1_relation005:
+    phase: selective_relation
+    purpose: Relation-preserving selective alignment with weight 0.05.
+    overrides:
+      <<: *selective_common
+      pmt_relation_weight: 0.05
+
+  s2_relation010:
+    phase: selective_relation
+    purpose: Relation-preserving selective alignment with weight 0.10.
+    overrides:
+      <<: *selective_common
+      pmt_relation_weight: 0.1
+
+diagnostics:
+  d0_loss_gradient_conflict:
+    type: loss_gradient_conflict
+    purpose: Measure pairwise gradient cosine among ID, triplet, MSEL, and DCL on the shared final two PMT blocks.
+    variant: r0_current
+    checkpoint: /home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth
+    batches: 2
+    current_epoch: 23
+    parameter_patterns:
+      - base_model.visual.vit.blocks.10.
+      - base_model.visual.vit.blocks.11.
+
+  d1_modality_information:
+    type: modality_information
+    purpose: Compare pretrained and C3-trained identity geometry plus identity-residual modality-probe accuracy.
+    variant: r0_current
+    checkpoint: /home/lab929/ybj/experiments/archive/stage_a/SALT-VI-safe-tricks-pairs-c1-c3-20260818/c3_camera_diverse_cosine/sysu/Base/Baseline_train[RGB_IR]_pmt_recipe/models/model_IR_19.pth
+    batches: 6
+    probe_steps: 200
+    probe_train_fraction: 0.7
+
+scheduling:
+  default_gpus: [2, 3]
+  max_idle_memory_mb: 1024
+  poll_seconds: 30
+  job_order:
+    - d0_loss_gradient_conflict
+    - d1_modality_information
+    - r0_current
+    - r1_gray4_coupled
+    - r2_gray4_decoupled_ramp3
+    - l0_no_aux
+    - l1_msel_only
+    - l2_dcl_only
+    - l4_msel050_dcl010
+    - m1_cm_margin005
+    - m2_cm_margin010
+    - m3_cm_margin020
+    - s0_selective_control
+    - s1_relation005
+    - s2_relation010

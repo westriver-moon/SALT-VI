@@ -1,0 +1,16 @@
+extends: c3_swinir_x2_fixed.yaml
+
+# True stride-16 counterpart of the C3 fused patch embedding.  The anchor
+# branch changes from 16/12 overlap to 16/16 non-overlap.  The half-width
+# branch keeps the same 2:1 horizontal token-density ratio with stride 16/8.
+config_select: configs/stage_a/recipe_research/c3_swinir_x2_stride16.yaml
+pmt_stride_size:
+  - 16
+  - 16
+pmt_patch_embed:
+  anchor_branch: 0
+  branches:
+    - patch_size: [16, 16]
+      stride_size: [16, 16]
+    - patch_size: [16, 8]
+      stride_size: [16, 8]

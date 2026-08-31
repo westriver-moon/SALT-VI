@@ -1,0 +1,160 @@
+{
+  "experiment_id": "c3-recipe-loss-research-20260829",
+  "finished_at": "2026-08-31T03:20:21+00:00",
+  "jobs": {
+    "d0_loss_gradient_conflict": {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T14:16:13+00:00",
+      "gpu": 2,
+      "job_type": "diagnostic",
+      "started_at": "2026-08-29T14:15:38+00:00",
+      "status": "completed"
+    },
+    "d1_modality_information": {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T14:16:16+00:00",
+      "gpu": 3,
+      "job_type": "diagnostic",
+      "started_at": "2026-08-29T14:15:38+00:00",
+      "status": "completed"
+    },
+    "l0_no_aux": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T02:45:24+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-29T20:34:22+00:00",
+      "status": "completed"
+    },
+    "l1_msel_only": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T08:30:26+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-30T02:22:40+00:00",
+      "status": "completed"
+    },
+    "l2_dcl_only": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T09:00:13+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-30T02:45:24+00:00",
+      "status": "completed"
+    },
+    "l4_msel050_dcl010": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T14:49:05+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-30T08:30:26+00:00",
+      "status": "completed"
+    },
+    "m1_cm_margin005": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T15:15:07+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-30T09:00:13+00:00",
+      "status": "completed"
+    },
+    "m2_cm_margin010": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T20:50:13+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-30T14:49:06+00:00",
+      "status": "completed"
+    },
+    "m3_cm_margin020": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T21:28:56+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-30T15:15:07+00:00",
+      "status": "completed"
+    },
+    "r0_current": {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T20:20:15+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-29T14:16:16+00:00",
+      "status": "completed"
+    },
+    "r1_gray4_coupled": {
+      "exit_code": 0,
+      "finished_at": "2026-08-29T20:34:22+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-29T14:16:16+00:00",
+      "status": "completed"
+    },
+    "r2_gray4_decoupled_ramp3": {
+      "exit_code": 0,
+      "finished_at": "2026-08-30T02:22:40+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-29T20:20:16+00:00",
+      "status": "completed"
+    },
+    "s0_selective_control": {
+      "exit_code": 0,
+      "finished_at": "2026-08-31T02:54:34+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-30T20:50:13+00:00",
+      "status": "completed"
+    },
+    "s1_relation005": {
+      "exit_code": -15,
+      "finished_at": "2026-08-31T03:20:21+00:00",
+      "gpu": 3,
+      "job_type": "training",
+      "started_at": "2026-08-30T21:28:56+00:00",
+      "status": "failed"
+    },
+    "s2_relation010": {
+      "exit_code": -15,
+      "finished_at": "2026-08-31T03:20:20+00:00",
+      "gpu": 2,
+      "job_type": "training",
+      "started_at": "2026-08-31T02:54:34+00:00",
+      "status": "failed"
+    }
+  },
+  "queues": {
+    "diagnostics": {
+      "2": [
+        "d0_loss_gradient_conflict"
+      ],
+      "3": [
+        "d1_modality_information"
+      ]
+    },
+    "training": {
+      "2": [
+        "r0_current",
+        "r2_gray4_decoupled_ramp3",
+        "l1_msel_only",
+        "l4_msel050_dcl010",
+        "m2_cm_margin010",
+        "s0_selective_control",
+        "s2_relation010"
+      ],
+      "3": [
+        "r1_gray4_coupled",
+        "l0_no_aux",
+        "l2_dcl_only",
+        "m1_cm_margin005",
+        "m3_cm_margin020",
+        "s1_relation005"
+      ]
+    }
+  },
+  "scheduler_pid": 2208334,
+  "schema_version": 2,
+  "stage": "finished",
+  "started_at": "2026-08-29T14:15:38+00:00",
+  "status": "failed"
+}
