@@ -24,6 +24,13 @@ Confidence dropout masks patches as attention keys/values and zeros their
 states, but does not physically shorten the global sequence. This preserves
 the fixed positional geometry used by the attention prior.
 
+## Stage-B addition
+
+8. Add a model-independent Stage-B hard-mining schedule and a separate offline
+   Qwen-world text adapter.
+
+The Qwen-derived Stage-B profile is a separate code path.
+
 ## Completion status
 
 All seven stages are implemented. The remote baseline package passes 19

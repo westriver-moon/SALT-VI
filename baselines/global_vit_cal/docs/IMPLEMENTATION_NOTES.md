@@ -11,14 +11,9 @@ intermediate feature head or unrelated objective was migrated with it.
 
 ## Successful ellipse-family loss
 
-Run:
-
-    /home/lab929/ybj/experiments/c3-ellipse-radius-layer2-20260829/r045_050
-
-The exact successful contract was layer 2, radii 0.45/0.50, temperature 0.12,
-tolerance 0.08, weight 0.1 and a three-epoch warm-up. Best epoch 19 recorded
-Rank-1 0.7080725431 and mAP 0.6912178607. The exponent used by the actual code
-was 2, not the untrained p=4 shape from earlier geometric analyses.
+The retained contract is layer 2, radii 0.45/0.50, temperature 0.12,
+tolerance 0.08, weight 0.1 and a three-epoch warm-up. The exponent used by the
+actual code is 2, not the untrained p=4 shape from earlier geometric analyses.
 
 ## Qwen ROI and empirical sampling
 

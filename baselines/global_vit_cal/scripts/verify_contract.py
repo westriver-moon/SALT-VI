@@ -14,6 +14,7 @@ from salt_vi_global_cal.backbone import VisionTransformerConfig  # noqa: E402
 from salt_vi_global_cal.pose_posterior import DEFAULT_TTA, PoseSupportConfig  # noqa: E402
 from salt_vi_global_cal.qwen.pipeline import QwenSamplingConfig  # noqa: E402
 from salt_vi_global_cal.token_dropout import TokenDropoutConfig  # noqa: E402
+from salt_vi_global_cal.stage_b import StageBHardMiningConfig, stage_b_hard_weight  # noqa: E402
 
 
 def main() -> None:
@@ -23,6 +24,10 @@ def main() -> None:
     pose = PoseSupportConfig()
     ellipse = SuperellipseLossConfig()
     qwen = QwenSamplingConfig()
+    stage_b = StageBHardMiningConfig()
+    stage_b_profile = yaml.safe_load(
+        (ROOT / "configs" / "stage_b_hard_mining.yaml").read_text()
+    )
 
     assert model.grid_size == (28, 13) and model.patch_token_count == 364
     assert set(document["losses"]) == {
@@ -42,6 +47,8 @@ def main() -> None:
     ) == (8, 64, 8, 0.85, 4)
     assert document["qwen_roi"]["main_vit_uses_super_resolution"] is False
     assert document["qwen_roi"]["pose"]["detector"] == "yolo26x-pose"
+    assert stage_b_profile["stage_b"]["cross_modal_hard"]["margin"] == stage_b.triplet_margin
+    assert [stage_b_hard_weight(epoch) for epoch in (3, 4, 7)] == [0.0, 0.3125, 1.25]
     report = {
         "vit_grid": list(model.grid_size),
         "patch_tokens": model.patch_token_count,
@@ -58,6 +65,10 @@ def main() -> None:
         "qwen_sampling": [
             qwen.atomic_sample_count, qwen.world_sample_count, qwen.max_worlds,
         ],
+        "stage_b_code_profile": {
+            "hard_ramp": [stage_b.hard_start_epoch, stage_b.hard_ramp_epochs],
+            "qwen_mode": "offline_optional",
+        },
     }
     print(json.dumps(report, indent=2))
 

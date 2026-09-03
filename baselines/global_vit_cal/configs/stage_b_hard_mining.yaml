@@ -1,0 +1,21 @@
+# Pure Stage-B code profile. No checkpoint, dataset path or result is recorded.
+stage_b:
+  image_size_hw: [512, 256]
+  batch_size: 32
+  num_pos: 4
+  total_train_epochs: 30
+  optimizer: AdamW
+  scheduler: cosine
+  visual_lr: 0.0003
+  text_lr: 0.0000075
+  training_modalities: [RGB, IR, Text, Fusion]
+  fusion_way: parameter_add
+  loss_names: [id, cross_modal_hard]
+  cross_modal_hard:
+    margin: 0.10
+    target_weight: 1.25
+    start_epoch: 3
+    ramp_epochs: 5
+    pair_weights: {RGB-IR: 1.0, RGB-Fusion: 0.0, RGB-Text: 1.0, IR-Fusion: 0.0, IR-Text: 1.0, Fusion-Text: 0.0}
+qwen_offline_text:
+  enabled: false

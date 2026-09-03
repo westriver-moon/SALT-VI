@@ -1,0 +1,10 @@
+# Offline-only derived profile. No Qwen call is allowed during training.
+extends: stage_b_hard_mining.yaml
+qwen_offline_text:
+  enabled: true
+  source: empirical-atomic-v1
+  source_key: image_or_track_anchor
+  candidate_limit: 8
+  tokenize_before_training: true
+  aggregation: selected_weighted_feature_mean
+  training_time_qwen_calls: false

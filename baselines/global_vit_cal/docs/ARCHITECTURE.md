@@ -29,6 +29,14 @@ recipe.py combines global identity/triplet terms with CAL and the separately
 validated soft ellipse attention loss. No local or intermediate auxiliary
 feature objective exists in the implementation package.
 
+## Optional Stage-B training bridge
+
+stage_b.py carries a model-independent Stage-B schedule: bidirectional hard
+mining across RGB/IR/text/fusion features and an epoch-3-to-7 hard-loss ramp.
+Qwen regional worlds may be converted to offline text candidates, encoded
+before training and reduced by their selected weights. They never invoke Qwen
+within the online model path.
+
 ## File ownership
 
 - backbone.py: single global ViT
@@ -37,5 +45,6 @@ feature objective exists in the implementation package.
 - losses.py: exact CAL and validated superellipse-family loss
 - recipe.py: training objective assembly
 - qwen/: ROI boards, prompts, validation, clustering, worlds and HTTP backend
+- stage_b.py: Stage-B hard-mining schedule, reusable without a legacy runner
 - configs/: one fixed method configuration
 - tests/: deterministic component and integration contracts

@@ -9,6 +9,12 @@ from .token_dropout import (
     TokenDropoutConfig,
     effective_support,
 )
+from .stage_b import (
+    StageBHardMiningConfig,
+    cross_modal_hard_triplet,
+    stage_b_hard_weight,
+    weighted_cross_modal_hard_loss,
+)
 
 __all__ = [
     "CenterAggregationLoss",
@@ -18,8 +24,12 @@ __all__ = [
     "PoseObservation",
     "PoseSupportConfig",
     "SoftSuperellipseAttentionLoss",
+    "StageBHardMiningConfig",
     "TokenDropoutConfig",
     "VisionTransformerConfig",
     "build_pose_posterior",
+    "cross_modal_hard_triplet",
     "effective_support",
+    "stage_b_hard_weight",
+    "weighted_cross_modal_hard_loss",
 ]
