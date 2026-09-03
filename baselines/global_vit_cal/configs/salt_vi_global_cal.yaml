@@ -1,0 +1,85 @@
+model:
+  image_size_hw: [288, 144]
+  patch_size: 16
+  patch_stride: 10
+  embed_dim: 768
+  depth: 12
+  heads: 12
+  apply_final_norm: false
+
+losses:
+  identity_weight: 1.0
+  triplet_weight: 1.0
+  cal_weight: 1.0
+
+token_dropout:
+  target_fraction: 0.15
+  gamma: 2.0
+  p_max: 0.95
+  min_image_reliability: 0.30
+  min_successful_tta: 4
+  selection: exact_topk
+  layer_rates: uniform_0.15
+  preserve_token_positions: true
+
+pose_posterior:
+  source_size_hw: [512, 256]
+  output_size_hw: [288, 144]
+  patch_size_hw: [16, 16]
+  stride_size_hw: [10, 10]
+  backend: yolo26x-pose+rtmpose-l-wholebody
+  keypoint_confidence: 0.30
+  tta:
+    - {name: identity, scale: 1.00, tx: 0.00, ty: 0.00, flip: false}
+    - {name: hflip, scale: 1.00, tx: 0.00, ty: 0.00, flip: true}
+    - {name: scale_in, scale: 0.92, tx: 0.00, ty: 0.00, flip: false}
+    - {name: scale_out, scale: 1.08, tx: 0.00, ty: 0.00, flip: false}
+    - {name: shift_left, scale: 1.00, tx: -0.04, ty: 0.00, flip: false}
+    - {name: shift_right, scale: 1.00, tx: 0.04, ty: 0.00, flip: false}
+  fusion: noisy_or
+  tau_aug: 0.020
+  ellipse_rx_over_width: 0.42
+  ellipse_ry_over_height: 0.48
+  token_pool_mean_weight: 0.50
+  token_pool_top_fraction: 0.20
+
+superellipse_attention:
+  layer: 2
+  radius_x: 0.45
+  radius_y: 0.50
+  exponent: 2.0
+  temperature: 0.12
+  tolerance: 0.08
+  weight: 0.10
+  warmup_epochs: 3
+
+qwen_roi:
+  main_vit_uses_super_resolution: false
+  auxiliary_swinir_size_wh: [256, 512]
+  roi_board_size_px: 512
+  context_margin_ratio: 0.75
+  selected_region_count: 3
+  max_selected_region_count: 8
+  strategy: track_anchor
+  pose:
+    detector: yolo26x-pose
+    estimator: rtmpose-l-coco-wholebody-384x288
+    detector_confidence: 0.25
+    keypoint_confidence: 0.30
+    geometric_eye_fallback: false
+    refiners: [schp-lip, sam-vit-b]
+  qwen:
+    model: Qwen3.8-27B-UD-Q4_K_XL.gguf
+    response_profile: swin_separated_v1
+    primary_temperature: 0.25
+    atomic_temperature: 0.75
+    thinking: false
+  sampling:
+    atomic_samples_per_region: 8
+    similarity_threshold: 0.85
+    cluster_linkage: complete
+    max_attempts: 4
+    invalid_policy: exclude
+    joint_world_samples: 64
+    max_retained_worlds: 8
+    weights: empirical_cluster_frequency
